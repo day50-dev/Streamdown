@@ -10,3 +10,5 @@ I needed a streaming markdwon parser and honestly all the ones I found sucked. T
 This will work with [swillison's llm](https://github.com/simonw/llm) unlike with richify.py which jumps around the page or shows useless elipss or glow which buffers everything, this streams and does exactly what you want.
 
 There's nothing too fancy about it other than that it works.
+
+Certainly room for improvement.
