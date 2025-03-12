@@ -19,7 +19,11 @@
      1. we can go deeper
      1. at multiple levels
    1. and then pull back
-2. Ordered List Item 2
+     1. we can go deeper
+     1. at multiple levels
+   1. and then pull back
+1. Ordered List Item 2
+1. Ordered List Item 2
 
 This is a **Bold Text** example
 This is an *Italic Text* example
