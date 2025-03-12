@@ -1,4 +1,10 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run
+# /// script
+# requires-python = ">=3.8"
+# dependencies = [
+#     "pygments",
+# ]
+# ///
 import sys
 import re
 import shutil
@@ -44,6 +50,7 @@ class ParseState:
         self.first_line = True
         self.last_line_empty = False
         self.code_buffer = []
+        self.ordered_list_numbers = []
 
     def debug(self):
         """ print out every variable in ParseState and TableState"""
@@ -231,24 +238,33 @@ def parse(stdin):
                     # Handle stack
                     while state.list_item_stack and state.list_item_stack[-1][0] > indent:
                         state.list_item_stack.pop()  # Remove deeper nested items
+                        if state.ordered_list_numbers:
+                            state.ordered_list_numbers.pop()
                     if state.list_item_stack and state.list_item_stack[-1][0] < indent:
                         # new nested list
                         state.list_item_stack.append((indent, list_type))
+                        state.ordered_list_numbers.append(1)
                     elif not state.list_item_stack:
                         # first list
                         state.list_item_stack.append((indent, list_type))
+                        state.ordered_list_numbers.append(1)
+                    elif state.list_item_stack and state.list_item_stack[-1][0] == indent:
+                        if list_type == "number":
+                            state.ordered_list_numbers[-1] += 1
 
                     terminal_width = get_terminal_width()
                     wrap_width = terminal_width - indent - 5
 
                     if list_type == "number":
-                        line_indent = 3
-                        bullet = list_item_match.group(2)
-                        first_line_prefix = " " * (indent - len(bullet)) + bullet + " "
+                        line_indent = 2
+                        list_number = state.ordered_list_numbers[-1]
+                        state.ordered_list_numbers[-1] += 1
+                        bullet = f"{list_number}"
+                        first_line_prefix = " " * (indent - len(bullet)) + f"\033[38;2;175;130;230m{bullet}\033[0m" + " "
                         subsequent_line_prefix = " " * indent
                     else:
                         line_indent = 2
-                        first_line_prefix = " " * (indent - 1) + "• "
+                        first_line_prefix = " " * indent + f"\033[38;2;175;130;230m•\033[0m" + " "
                         subsequent_line_prefix = " " * indent
 
                     wrapped_lines = wrap_text(content, wrap_width, line_indent, first_line_prefix, subsequent_line_prefix)
