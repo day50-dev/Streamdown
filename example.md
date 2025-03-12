@@ -43,3 +43,8 @@ More text after the table.
 ---
 
 Here's another paragraph
+
+```python
+      def indented_function():
+          print("Indented code")
+```

@@ -55,6 +55,9 @@ class ParseState:
         self.first_line = True
         self.last_line_empty = False
         self.code_buffer = []
+        self.code_language = None
+        self.code_first_line = False
+        self.code_indent = 0
         self.ordered_list_numbers = []
 
     def debug(self):
@@ -171,9 +174,34 @@ def parse(stdin):
             line = ''.join(state.buffer).rstrip('\n')
             state.reset_buffer()
 
+            # --- Collapse Multiple Empty Lines ---
+            is_empty = line.strip() == ''
+
+            if is_empty and state.last_line_empty:
+                continue  # Skip processing this line
+            elif is_empty:
+                state.last_line_empty = True
+            else:
+                state.last_line_empty = False
+
             if state.in_code:
                 background="\033[48;2;36;0;26m"
                 width = int(get_terminal_width() * 0.8)
+
+                if state.code_first_line:
+                    state.code_first_line = False
+                    for i, char in enumerate(line):
+                        if char == ' ':
+                            state.code_indent += 1
+                        else:
+                            break
+                    line = line[state.code_indent:]
+
+                else:
+                    # Dedent subsequent lines
+                    if line.startswith(' ' * state.code_indent):
+                        line = line[state.code_indent:]
+
                 if line.strip() == '```':
                     state.in_code = False
                     # Process code buffer with Pygments if language is specified
@@ -185,13 +213,13 @@ def parse(stdin):
                             custom_style.background_color = '#1c021d'
                             formatter = Terminal256Formatter(style=custom_style)
                             highlighted_code = highlight(''.join(state.code_buffer), lexer, formatter)
-                            # Take the highlighted code and split it into lines. 
+                            # Take the highlighted code and split it into lines.
                             # Yield each individual line
                             yield f"  {background}  {' ' * (width)} \033[0m\n"
 
                             for code_line in highlighted_code.split('\n'):
                                 # Wrap the code line in a very dark fuschia background, padding to terminal width
-                                padding = width - visible_length(code_line) 
+                                padding = width - visible_length(code_line)
                                 yield f"  {background}  {code_line}{' ' * max(0, padding)} \033[0m\n"
 
                         except Exception as e:
@@ -200,12 +228,13 @@ def parse(stdin):
                             import traceback
                             traceback.print_exc()
                             # print(f"Error highlighting: {e}") # Removed duplicate error message
-                            yield ''.join(state.code_buffer)  # yield the raw buffer
+                            yield ''.join(state.code_buffer)  # yield the raw buffer - REMOVE
                     else:
-                        # yield raw buffer
-                        yield ''.join(state.code_buffer)
+                        # yield raw buffer - REMOVE
+                        pass # yield ''.join(state.code_buffer)
                     state.code_language = None
                     state.code_buffer = []
+                    state.code_indent = 0
                 else:
                     state.code_buffer.append(line + '\n')
                 continue
@@ -214,6 +243,7 @@ def parse(stdin):
             if code_match:
                 yield "\n"
                 state.in_code = True
+                state.code_first_line = True
                 state.code_language = code_match.group(1)
                 continue
 
