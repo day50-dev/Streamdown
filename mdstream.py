@@ -172,6 +172,8 @@ def parse(stdin):
             state.reset_buffer()
 
             if state.in_code:
+                background="\033[48;2;36;0;26m"
+                width = int(get_terminal_width() * 0.8)
                 if line.strip() == '```':
                     state.in_code = False
                     # Process code buffer with Pygments if language is specified
@@ -185,12 +187,12 @@ def parse(stdin):
                             highlighted_code = highlight(''.join(state.code_buffer), lexer, formatter)
                             # Take the highlighted code and split it into lines. 
                             # Yield each individual line
-                            yield f"  \033[48;2;36;0;26m  {' ' * (get_terminal_width() - 40)} \033[0m\n"
+                            yield f"  {background}  {' ' * (width)} \033[0m\n"
 
                             for code_line in highlighted_code.split('\n'):
                                 # Wrap the code line in a very dark fuschia background, padding to terminal width
-                                padding = get_terminal_width() - visible_length(code_line) - 40
-                                yield f"  \033[48;2;36;0;26m  {code_line}{' ' * max(0, padding)} \033[0m\n"
+                                padding = width - visible_length(code_line) 
+                                yield f"  {background}  {code_line}{' ' * max(0, padding)} \033[0m\n"
 
                         except Exception as e:
                             # Improve error handling: print to stderr and include traceback
