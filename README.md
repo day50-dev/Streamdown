@@ -4,11 +4,11 @@ I needed a streaming Markdown TUI CLI shell parser and honestly all the ones I f
 
 [simplescreenrecorder-2025-03-12_17.58.07.webm](https://github.com/user-attachments/assets/de4860d5-dd0e-411f-bda3-e3d60deb7938)
 
-![sshot](https://github.com/user-attachments/assets/43cf7f5f-d11f-467e-8186-d5df9de84fb0)
-
-This will work with [swillison's llm](https://github.com/simonw/llm) unlike with richify.py which jumps around the page or shows useless elipss or glow which buffers everything, this streams and does exactly what you want.
+This will work with [swillison's llm](https://github.com/simonw/llm) unlike with [richify.py](https://github.com/gianlucatruda/richify) which jumps around the page or shows useless elipses or [glow](https://github.com/charmbracelet/glow) which buffers everything, this streams and does exactly what you want.
 
 There's nothing too fancy about it other than that it works.
+![2025-03-12_19-07](https://github.com/user-attachments/assets/eeb46c66-6ce3-41d6-94d4-89a7aefdc470)
+
 
 Certainly room for improvement.
 
