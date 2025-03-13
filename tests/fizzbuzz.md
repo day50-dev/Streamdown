@@ -42,7 +42,7 @@ def fizzbuzz(n):
         else:
             print(i)
 
-# Example usage: Print FizzBuzz up to 100
+# Example usage: Print FizzBuzz up to 100 Example usage: Print FizzBuzz up to 100 Example usage: Print FizzBuzz up to 100 Example usage: Print FizzBuzz up to 100
 fizzbuzz(100)
 
 #  Example usage: different range:

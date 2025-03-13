@@ -24,6 +24,8 @@ DARK = "54;36;77m"
 FG = "\033[38;2;"
 BG = "\033[48;2;"
 RESET = "\033[0m"
+FGRESET = "\033[39m"
+BGRESET = "\033[49m"
 STYLE = "monokai"
 
 def get_terminal_width():
@@ -35,11 +37,13 @@ def get_terminal_width():
 
 WIDTH = int(get_terminal_width() * 11 / 12 - LEFT_INDENT)
 CODEBG = f"{BG}36;0;26m"
+CODEBREAK = f'{BG}72;0;52m {CODEBG} '
 CODEPAD = f"{LEFT_INDENT_SPACES}{CODEBG}{' ' * WIDTH}{RESET}\n"
-
-def visible_length(s):
-    """Calculates the length of a string without ANSI escape codes."""
-    return len(re.sub(r"\033\[[0-9;]*[mK]", "", s))
+ANSIESCAPE = r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
+UNDERLINE = f"\033[4m"
+LINK= f"{FG}{BRIGHT}{UNDERLINE}"
+visible = lambda x: re.sub(ANSIESCAPE, "", x)
+visible_length = lambda x: len(visible(x)) 
 
 
 def extract_ansi_codes(text):
@@ -66,12 +70,15 @@ class ParseState:
         self.in_code = False
         self.table = TableState()
         self.buffer = []
-        # self.in_list_item = False
-        # self.list_item_indent = 0
         self.list_item_stack = []  # stack of (indent, type)
         self.first_line = True
         self.last_line_empty = False
+
+        # These are part of a trick to get
+        # streaming code blocks while preserving
+        # multiline parsing.
         self.code_buffer = []
+        self.code_gen = 0
         self.code_language = None
         self.code_first_line = False
         self.code_indent = 0
@@ -119,14 +126,14 @@ def format_table(table_rows):
         for header, width in zip(headers, col_widths)
     ]
     header_line = "│".join(header_cells)
-    formatted.append(f" \033[48;2;29;0;49m{header_line}{RESET}")
+    formatted.append(f" {BG}29;0;49m{header_line}{RESET}")
 
     # Data rows
     for i, row in enumerate(rows):
         color = 236 if i % 2 == 0 else 238
         row_cells = [f" {cell.ljust(width)} " for cell, width in zip(row, col_widths)]
         row_line = "│".join(row_cells)
-        formatted.append(f" \033[48;2;19;0;30m{row_line}\033[0m")
+        formatted.append(f" {BG}19;0;30m{row_line}{RESET}")
     return formatted
 
 
@@ -137,9 +144,14 @@ def code_wrap(text_in):
     mywidth = WIDTH - indent - LEFT_INDENT * 2
     # We take special care to preserve empty lines
     if len(text) == 0:
-        return [text_in]
-
-    return [ (' ' * indent) + text[i : i + mywidth] for i in range(0, len(text), mywidth)]
+        return (0, [text_in])
+    res = [text[:mywidth]]
+    # We are including a break, which is length 2
+    mywidth_with_break = mywidth - 2
+    for i in range(mywidth, len(text), mywidth_with_break):
+        res.append(text[i : i + mywidth_with_break]) 
+    
+    return (indent, res)
 
 def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_line_prefix=""):
     """
@@ -187,6 +199,14 @@ def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_
     return final_lines
 
 def line_format(line):
+    # Apply OSC 8 hyperlink formatting after other formatting
+    def process_links(match):
+        description = match.group(1)
+        url = match.group(2)
+        return f'\033]8;;{url}\033\\{LINK}{description}{RESET}\033]8;;\033\\'
+    
+    line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
+    
     tokens = re.findall(r"(\*\*|\*|_|`|[^_*`]+)", line)
     in_bold = False
     in_italic = False
@@ -221,10 +241,7 @@ def line_format(line):
                 result += RESET 
         else:
             result += token  # Always output text tokens
-
-    # Apply OSC 8 hyperlink formatting after other formatting
-    line = re.sub(r"(https?://[^\s]+)", r"\033]8;;\1\033\\\1\033]8;;\033\\", result)
-    return line
+    return result
 
 def parse(input_source):
     if isinstance(input_source, str):
@@ -265,7 +282,9 @@ def parse(input_source):
             else:
                 state.in_list = False
 
-            # <code>
+            #
+            # <code><pre>
+            #
             if state.in_code:
                 if state.code_first_line:
                     state.code_first_line = False
@@ -288,8 +307,7 @@ def parse(input_source):
                     if line.startswith(" " * state.code_indent):
                         line = line[state.code_indent :]
 
-                if line.strip() == "```":
-                    
+                if line.strip() == "```":     
                     state.in_code = False
                     state.code_language = None
                     state.code_indent = 0
@@ -298,14 +316,31 @@ def parse(input_source):
                     continue
 
                 elif state.code_language:
+                    # By now we have the properly stripped code line
+                    # in the line variable. Add it to the buffer.
+                    
                     try:     
-                        for tline in code_wrap(line):
-                            highlighted_code = highlight(tline, lexer, formatter)
-                          
-                            for code_line in highlighted_code.strip('\n').split("\n"):
-                                # Wrap the code line in a very dark fuschia background, padding to terminal width
-                                padding = WIDTH - visible_length(code_line) - 2
-                                yield f"{LEFT_INDENT_SPACES}{CODEBG}  {code_line}{' ' * max(0, padding)}{RESET}\n"
+                        indent, line_wrap = code_wrap(line)
+                        state.code_buffer.append('')
+                        break_token = ""
+
+                        for tline in line_wrap:
+                            state.code_buffer[-1] += tline
+                            highlighted_code = highlight("\n".join(state.code_buffer), lexer, formatter)
+                            # Since we are streaming we ignore the resets and newlines at the end
+                            highlighted_code = highlighted_code[: -(1 + len(FGRESET))]
+
+                            this_batch = highlighted_code[state.code_gen :]
+                            if this_batch.startswith(FGRESET):
+                                this_batch = this_batch[len(FGRESET) :]
+                            state.code_gen = len(highlighted_code)
+                           
+                            # Wrap the code line in a very dark fuschia background, padding to terminal width
+                            code_line = ' ' * indent + break_token + this_batch.strip() 
+                            #print(f"({code_line})")
+                            padding = WIDTH - visible_length(code_line) - 2
+                            break_token = CODEBREAK
+                            yield f"{LEFT_INDENT_SPACES}{CODEBG}  {code_line}{' ' * max(0, padding)}{BGRESET}\n"
                         continue
                     except pygments.util.ClassNotFound as e:
                         print(f"Error: Lexer for language '{state.code_language}' not found.", file=sys.stderr)
@@ -320,13 +355,16 @@ def parse(input_source):
             code_match = re.match(r"```([\w+-]*)", line.strip())
             if code_match:
                 state.code_buffer = []
+                state.code_gen = 0
                 state.in_code = True
                 state.code_first_line = True
                 state.code_language = code_match.group(1) or 'Bash'
                 yield CODEPAD
                 continue
-
-            # Table state machine <table>
+            
+            #
+            # <table>
+            #
             if re.match(r"^\s*\|.+\|\s*$", line) and not state.in_code:
                 if not state.table.in_header and not state.table.in_body:
                     state.table.in_header = True
@@ -356,7 +394,9 @@ def parse(input_source):
                         yield f" {l}\n"
                     state.table.reset()
 
-                # --- List Items --- <li> <ul> <ol>
+                #
+                # <li> <ul> <ol>
+                #
                 list_item_match = re.match(r"^(\s*)([*\-]|\d+\.)\s+(.*)", line)
                 if list_item_match:
                     state.in_list = True
@@ -413,7 +453,10 @@ def parse(input_source):
                         yield f"{LEFT_INDENT_SPACES}{wrapped_line}\n"
                     continue
 
-                # Header processing
+                # 
+                # <h1> <h2> <h3>
+                # <h4> <h5> <h6>
+                #
                 header_match = re.match(r"^\s*(#{1,6})\s+(.*)", line)
                 if header_match:
                     level = len(header_match.group(1))
@@ -433,7 +476,9 @@ def parse(input_source):
                         yield f"{LEFT_INDENT_SPACES}{text}{RESET}\n"  
 
                 else:
-                    # Horizontal rule
+                    #
+                    # <hr>
+                    #
                     if re.match(r"^[\s]*[-*_]{3,}[\s]*$", line):
                         # print a horizontal rule using a unicode midline with a unicode fleur de lis in the middle
                         yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}{'─' * WIDTH}{RESET}\n"
