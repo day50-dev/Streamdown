@@ -1,4 +1,4 @@
-# StreamingMarkdown
+# Streamdown
 
 I needed a streaming Markdown TUI CLI shell parser and honestly all the ones I found sucked. They were broken or janky in some kind of way. So here we go:
 
