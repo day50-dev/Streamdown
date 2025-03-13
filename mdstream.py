@@ -8,10 +8,15 @@
 import sys
 import re
 import shutil
+from io import StringIO
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import Terminal256Formatter
 from pygments.styles import get_style_by_name
+
+
+LEFT_INDENT = 2
+LEFT_INDENT_SPACES = " " * LEFT_INDENT
 
 
 def get_terminal_width():
@@ -158,8 +163,14 @@ def wrap_text(text, width, indent, first_line_prefix="", subsequent_line_prefix=
     return final_lines
 
 
-def parse(stdin):
+def parse(input_source, style_name="monokai"):
     """Parse markdown with robust table state tracking"""
+
+    if isinstance(input_source, str):
+        stdin = StringIO(input_source)
+    else:
+        stdin = input_source
+
     state = ParseState()
     try:
         while True:
@@ -211,7 +222,16 @@ def parse(stdin):
                         try:
                             lexer = get_lexer_by_name(state.code_language)
                             # Create a custom style with a dark fuchsia background
-                            custom_style = get_style_by_name("monokai")
+                            try:
+                                custom_style = get_style_by_name(style_name)
+                            except pygments.util.ClassNotFound:
+                                print(
+                                    f"Warning: Style '{style_name}' not found. Using default style.",
+                                    file=sys.stderr,
+                                )
+                                custom_style = get_style_by_name("default")
+                                print(f"Using Pygments style: default", file=sys.stderr)
+
                             custom_style.background_color = "#1c021d"
                             formatter = Terminal256Formatter(style=custom_style)
                             highlighted_code = highlight(
@@ -219,26 +239,21 @@ def parse(stdin):
                             )
                             # Take the highlighted code and split it into lines.
                             # Yield each individual line
-                            yield f"  {background}  {' ' * (width)} \033[0m\n"
+                            yield f"{LEFT_INDENT_SPACES}{background}  {' ' * (width)} \033[0m\n"
 
                             for code_line in highlighted_code.split("\n"):
                                 # Wrap the code line in a very dark fuschia background, padding to terminal width
                                 padding = width - visible_length(code_line)
-                                yield f"  {background}  {code_line}{' ' * max(0, padding)} \033[0m\n"
+                                yield f"{LEFT_INDENT_SPACES}{background}  {code_line}{' ' * max(0, padding)} \033[0m\n"
 
+                        except pygments.util.ClassNotFound as e:
+                            print(f"Error: Lexer for language '{state.code_language}' not found.", file=sys.stderr)
                         except Exception as e:
                             # Improve error handling: print to stderr and include traceback
                             print(f"Error highlighting: {e}", file=sys.stderr)
                             import traceback
 
                             traceback.print_exc()
-                            # print(f"Error highlighting: {e}") # Removed duplicate error message
-                            yield "".join(
-                                state.code_buffer
-                            )  # yield the raw buffer - REMOVE
-                    else:
-                        # yield raw buffer - REMOVE
-                        pass  # yield ''.join(state.code_buffer)
                     state.code_language = None
                     state.code_buffer = []
                     state.code_indent = 0
@@ -248,7 +263,7 @@ def parse(stdin):
 
             code_match = re.match(r"```([\w+-]*)", line.strip())
             if code_match:
-                yield "\n"
+                yield f"{LEFT_INDENT_SPACES}\n"
                 state.in_code = True
                 state.code_first_line = True
                 state.code_language = code_match.group(1)
@@ -283,13 +298,13 @@ def parse(stdin):
                     state.table.rows.append(cells)
 
                 if not state.table.intable():
-                    yield line + "\n"
+                    yield f"{line}\n"
                 continue
             else:
                 if state.table.in_body or state.table.in_header:
                     formatted = format_table(state.table.rows)
                     for l in formatted:
-                        yield l + "\n"
+                        yield f" {l}\n"
                     state.table.reset()
 
                 # --- List Items ---
@@ -349,7 +364,7 @@ def parse(stdin):
                         subsequent_line_prefix,
                     )
                     for wrapped_line in wrapped_lines:
-                        yield wrapped_line + "\n"
+                        yield f"{LEFT_INDENT_SPACES}{wrapped_line}\n"
                     continue
 
                 # Header processing
@@ -360,7 +375,7 @@ def parse(stdin):
                     if level == 1:
                         yield f"\033[48;2;25;25;112m\033[38;2;255;255;240m {text} \033[0m\n"  # Midnight Blue background, light text
                     elif level == 2:
-                        yield f"\033[38;2;95;50;150m {text} \033[0m\n"  # Lighter Indigo
+                        yield f"\033[48;2;95;50;150m \033[0m {text} \n"  # Lighter Indigo
                     elif level == 3:
                         yield f"\033[38;2;115;70;170m {text} \033[0m\n"  # More desaturated Indigo
                     elif level == 4:
@@ -374,26 +389,71 @@ def parse(stdin):
                     # Horizontal rule
                     if re.match(r"^[\s]*[-*_]{3,}[\s]*$", line):
                         # print a horizontal rule using a unicode midline with a unicode fleur de lis in the middle
-                        yield f"  \033[38;5;240m{'─' * (get_terminal_width() - 8)}\033[0m\n"
+                        yield f"{LEFT_INDENT_SPACES}\033[38;5;240m{'─' * (get_terminal_width() - 8)}\033[0m\n"
                     else:
-                        yield line + "\n"
+                        yield f"{LEFT_INDENT_SPACES}{line}\n"
 
-        # Process any remaining table data
-        if state.table.rows:
-            formatted = format_table(state.table.rows)
-            for l in formatted:
-                yield l + "\n"
-            state.table.reset()
+                # Process any remaining table data
+                if state.table.rows:
+                    formatted = format_table(state.table.rows)
+                    for l in formatted:
+                        yield f"{LEFT_INDENT_SPACES}{l}\n"
+                    state.table.reset()
 
     except Exception as e:
         print(f"Parser error: {str(e)}", file=sys.stderr)
         raise
 
 
+help_text = """
+# mdstream
+
+A markdown renderer for the terminal.
+
+## Usage
+
+```bash
+mdstream [filename]
+```
+
+Or, pipe markdown to stdin:
+
+```bash
+cat README.md | mdstream
+```
+
+If no filename is provided and no input is piped, this help message is displayed.
+
+## Features
+
+- Supports basic markdown formatting (headers, bold, italic, lists, tables, code blocks).
+- Uses Pygments for syntax highlighting.
+- Falls back to a default style if the specified Pygments style is not found.
+"""
+
+
 if __name__ == "__main__":
     try:
-        for chunk in parse(sys.stdin):
-            sys.stdout.write(chunk)
-            sys.stdout.flush()
+        if len(sys.argv) > 1:
+            # File argument provided
+            try:
+                with open(sys.argv[1], "r") as f:
+                    for chunk in parse(f, style_name="monokai"):
+                        sys.stdout.write(chunk)
+                        sys.stdout.flush()
+            except FileNotFoundError:
+                print(f"Error: File not found: {sys.argv[1]}", file=sys.stderr)
+        else:
+            # No file argument, check stdin
+            if sys.stdin.isatty():
+                # No input piped, print help
+                for chunk in parse(help_text, style_name="monokai"):
+                    sys.stdout.write(chunk)
+                    sys.stdout.flush()
+            else:
+                # Input piped, process stdin
+                for chunk in parse(sys.stdin, style_name="monokai"):
+                    sys.stdout.write(chunk)
+                    sys.stdout.flush()
     except KeyboardInterrupt:
         pass
