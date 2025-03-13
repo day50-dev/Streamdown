@@ -186,25 +186,41 @@ def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_
 
     return final_lines
 
-def line_format(text):
-    def format_inner(text):
-        # Format text outside of inline code blocks
-        text = re.sub(r"\*\*(.+?)\*\*", r"\033[1m\1\033[0m", text)  # Bold
-        text = re.sub(r"\*(.+?)\*", r"\033[3m\1\033[0m", text)  # Italic
-        text = re.sub(r"_(.+?)_", r"\033[4m\1\033[0m", text)  # Underline
-        return text
-
+def line_format(line):
+    tokens = re.findall(r"(\*\*|\*|_|`|[^_*`]+)", line)
+    in_bold = False
+    in_italic = False
+    in_underline = False
+    in_code = False
     result = ""
-    start = 0
-    for match in re.finditer(r"`(.+?)`", text):
-        # Process text before the code block
-        result += format_inner(text[start:match.start()])
-        # Add the code block itself (with formatting)
-        result += "\033[48;2;49;0;85m " + match.group(1) + " \033[0m"
-        start = match.end()
 
-    # Process any remaining text after the last code block
-    result += format_inner(text[start:])
+    for token in tokens:
+        if token == "**":
+            in_bold = not in_bold
+            if not in_code:
+                result += "\033[1m" if in_bold else "\033[22m"
+            else:
+                result += token  # Output the delimiter inside code
+        elif token == "*":
+            in_italic = not in_italic
+            if not in_code:
+                result += "\033[3m" if in_italic else "\033[23m"
+            else:
+                result += token
+        elif token == "_":
+            in_underline = not in_underline
+            if not in_code:
+                result += "\033[4m" if in_underline else "\033[24m"
+            else:
+                result += token
+        elif token == "`":
+            in_code = not in_code
+            if in_code:
+                result += "\033[48;2;49;0;85m"  # Add backtick when entering code
+            else:
+                result += "\033[0m"  # Add backtick when exiting code
+        else:
+            result += token  # Always output text tokens
 
     return result
 
@@ -275,7 +291,8 @@ def parse(input_source):
                     if line.startswith(" " * state.code_indent):
                         line = line[state.code_indent :]
 
-                if line.strip() == "```":              
+                if line.strip() == "```":
+                    
                     state.in_code = False
                     state.code_language = None
                     state.code_indent = 0
@@ -446,21 +463,21 @@ def parse(input_source):
 help_text = """
  **sd**: A markdown renderer for modern terminals.
 
-### Usage
+ ### Usage
 
-```bash
-sd [filename]
-```
+ ```bash
+ sd [filename]
+ ```
 
-Or, pipe markdown to stdin:
+ Or, pipe markdown to stdin:
 
-```bash
-cat README.md | sd
-```
+ ```bash
+ cat README.md | sd
+ ```
 
-If no filename is provided and no input is piped, this help message is displayed.
+ If no filename is provided and no input is piped, this help message is displayed.
 
-"""
+ """
 
 
 if __name__ == "__main__":
