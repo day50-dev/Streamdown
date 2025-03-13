@@ -74,7 +74,11 @@ class ParseState:
         self.code_first_line = False
         self.code_indent = 0
         self.ordered_list_numbers = []
+        self.in_list = False
 
+    def isempty(self):
+        return self.in_code
+    
     def debug(self):
         """print out every variable in ParseState and TableState"""
         for key, value in self.__dict__.items():
@@ -125,9 +129,16 @@ def format_table(table_rows):
     return formatted
 
 
-def code_wrap(text):
-    # split text into a list of lines of WIDTH characters wide
-    return [text[i : i + WIDTH] for i in range(0, len(text), WIDTH)]
+def code_wrap(text_in):
+    # get the indentation of the first line
+    indent = len(text_in) - len(text_in.lstrip())
+    text = text_in.lstrip()
+    mywidth = WIDTH - indent - LEFT_INDENT * 2
+    # We take special care to preserve empty lines
+    if len(text) == 0:
+        return [text_in]
+
+    return [ (' ' * indent) + text[i : i + mywidth] for i in range(0, len(text), WIDTH)]
 
 def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_line_prefix=""):
     """
@@ -186,6 +197,7 @@ def parse(input_source, style_name="monokai"):
     state = ParseState()
     try:
         while True:
+   
             char = stdin.read(1)
             if not char:
                 break
@@ -199,15 +211,24 @@ def parse(input_source, style_name="monokai"):
             line = "".join(state.buffer).rstrip("\n")
             state.reset_buffer()
 
-            # --- Collapse Multiple Empty Lines ---
-            is_empty = line.strip() == ""
+            # --- Collapse Multiple Empty Lines if not in code blocks ---
+            if not state.in_code:
+                is_empty = line.strip() == ""
 
-            if is_empty and state.last_line_empty:
-                continue  # Skip processing this line
-            elif is_empty:
-                state.last_line_empty = True
+                if is_empty and state.last_line_empty:
+                    continue  # Skip processing this line
+                elif is_empty:
+                    state.last_line_empty = True
+                    yield "\n"
+                    continue
+                else:
+                    state.last_line_empty = False
+
+            # This is to reset our top-level list counter.
+            if not state.in_list and len(state.ordered_list_numbers) > 0:
+                state.ordered_list_numbers[0] = 0
             else:
-                state.last_line_empty = False
+                state.in_list = False
 
             # <code>
             if state.in_code:
@@ -250,13 +271,13 @@ def parse(input_source, style_name="monokai"):
 
                 elif state.code_language:
                     try:     
-                        highlighted_code = highlight(line, lexer, formatter)
-                        
-                        code_rows = code_wrap(highlighted_code.strip('\n'))
-                        for code_line in code_rows:
-                            # Wrap the code line in a very dark fuschia background, padding to terminal width
-                            padding = WIDTH - visible_length(code_line) - 2
-                            yield f"{LEFT_INDENT_SPACES}{CODEBG}  {code_line}{' ' * max(0, padding)}{RESET}\n"
+                        for tline in code_wrap(line):
+                            highlighted_code = highlight(tline, lexer, formatter)
+                          
+                            for code_line in highlighted_code.strip('\n').split("\n"):
+                                # Wrap the code line in a very dark fuschia background, padding to terminal width
+                                padding = WIDTH - visible_length(code_line) - 2
+                                yield f"{LEFT_INDENT_SPACES}{CODEBG}  {code_line}{' ' * max(0, padding)}{RESET}\n"
                         continue
                     except pygments.util.ClassNotFound as e:
                         print(f"Error: Lexer for language '{state.code_language}' not found.", file=sys.stderr)
@@ -317,6 +338,7 @@ def parse(input_source, style_name="monokai"):
                 # --- List Items --- <li> <ul> <ol>
                 list_item_match = re.match(r"^(\s*)([*\-]|\d+\.)\s+(.*)", line)
                 if list_item_match:
+                    state.in_list = True
                     indent = len(list_item_match.group(1))
                     list_type = (
                         "number" if list_item_match.group(2)[0].isdigit() else "bullet"
@@ -343,6 +365,8 @@ def parse(input_source, style_name="monokai"):
                         # print(json.dumps([indent, state.ordered_list_numbers]))
                         state.ordered_list_numbers[-1] += 1
 
+                    indent = len(state.list_item_stack) * 2
+
                     wrap_width = WIDTH - indent - 4
 
                     if list_type == "number":
@@ -350,22 +374,22 @@ def parse(input_source, style_name="monokai"):
                         bullet = f"{list_number}"
                         first_line_prefix = (
                             " " * (indent - len(bullet))
-                            + f"\033[38;2;{SYMBOL}{bullet}\033[0m"
+                            + f"{FG}{SYMBOL}{bullet}{RESET}"
                             + " "
                         )
-                        subsequent_line_prefix = " " * indent
+                        subsequent_line_prefix = " " * (indent-1)
                     else:
                         first_line_prefix = (
-                            " " * (indent - 1) + f"\033[38;2;{SYMBOL}•\033[0m" + " "
+                            " " * (indent - 1) + f"{FG}{SYMBOL}•{RESET}" + " "
                         )
-                        subsequent_line_prefix = " " * indent
+                        subsequent_line_prefix = " " * (indent-1)
 
                     wrapped_lines = wrap_text(
                         content,
                         wrap_width,
                         2,
                         first_line_prefix,
-                        subsequent_line_prefix,
+                        f"{subsequent_line_prefix}",
                     )
                     for wrapped_line in wrapped_lines:
                         yield f"{LEFT_INDENT_SPACES}{wrapped_line}\n"
@@ -382,13 +406,13 @@ def parse(input_source, style_name="monokai"):
                     elif level == 2:
                         yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}▌ {FG}{BRIGHT}{text} \n"  # Lighter Indigo
                     elif level == 3:
-                        yield f"{LEFT_INDENT_SPACES}{FG}{BRIGHT}{text} {RESET}\n"  # More desaturated Indigo
+                        yield f"{LEFT_INDENT_SPACES}{FG}{BRIGHT}{text}{RESET}\n"  # More desaturated Indigo
                     elif level == 4:
-                        yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}{text} {RESET}\n"  # Even more desaturated Indigo
+                        yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}{text}{RESET}\n"  # Even more desaturated Indigo
                     elif level == 5:
-                        yield f"{LEFT_INDENT_SPACES}{text} {RESET}\n"  
+                        yield f"{LEFT_INDENT_SPACES}{text}{RESET}\n"  
                     else:  # level == 6
-                        yield f"{LEFT_INDENT_SPACES}{text} {RESET}\n"  
+                        yield f"{LEFT_INDENT_SPACES}{text}{RESET}\n"  
 
                 else:
                     # Horizontal rule
