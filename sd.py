@@ -202,15 +202,12 @@ def parse(input_source):
     state = ParseState()
     try:
         while True:
-   
             char = stdin.read(1)
-            if not char:
-                break
+            if not char: break
 
             state.buffer.append(char)
 
-            if char != "\n":
-                continue
+            if char != "\n": continue
 
             # Process complete line
             line = "".join(state.buffer).rstrip("\n")
@@ -250,7 +247,6 @@ def parse(input_source):
                         custom_style = get_style_by_name("default")
                         print(f"Using Pygments style: default", file=sys.stderr)
 
-                    custom_style.background_color = "#1c021d"
                     formatter = Terminal256Formatter(style=custom_style)
                     for i, char in enumerate(line):
                         if char == " ":
@@ -374,9 +370,7 @@ def parse(input_source):
                         )
                         subsequent_line_prefix = " " * (indent-1)
                     else:
-                        first_line_prefix = (
-                            " " * (indent - 1) + f"{FG}{SYMBOL}•{RESET}" + " "
-                        )
+                        first_line_prefix = ( " " * (indent - 1) + f"{FG}{SYMBOL}•{RESET}" + " ")
                         subsequent_line_prefix = " " * (indent-1)
 
                     wrapped_lines = wrap_text(
@@ -397,7 +391,7 @@ def parse(input_source):
                     text = header_match.group(2)
                     spaces_to_center = ' ' * ((WIDTH - visible_length(text)) // 2)
                     if level == 1:
-                        yield f"{LEFT_INDENT_SPACES}{BG}{DARK}{spaces_to_center}{text}{spaces_to_center}{RESET}\n"  # Midnight Blue background, light text
+                        yield f"{LEFT_INDENT_SPACES}{BG}{DARK}{spaces_to_center}{text}{spaces_to_center}{RESET}\n"  
                     elif level == 2:
                         yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}▌ {FG}{BRIGHT}{text}{RESET}\n" 
                     elif level == 3:
