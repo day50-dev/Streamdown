@@ -118,7 +118,7 @@ def format_table(table_rows):
         for header, width in zip(headers, col_widths)
     ]
     header_line = "│".join(header_cells)
-    formatted.append(f" \033[48;2;29;0;49m{header_line}\033[0m")
+    formatted.append(f" \033[48;2;29;0;49m{header_line}{RESET}")
 
     # Data rows
     for i, row in enumerate(rows):
@@ -346,7 +346,6 @@ def parse(input_source, style_name="monokai"):
                     content = list_item_match.group(3)
 
                     # Handle stack
-                    # print(f"Before stack handling: indent={indent}, list_type={list_type}, content={content.strip()}, stack={state.list_item_stack}, numbers={state.ordered_list_numbers}", file=sys.stderr)
                     while (
                         state.list_item_stack and state.list_item_stack[-1][0] > indent
                     ):
@@ -402,13 +401,13 @@ def parse(input_source, style_name="monokai"):
                     text = header_match.group(2)
                     spaces_to_center = ' ' * ((WIDTH - visible_length(text)) // 2)
                     if level == 1:
-                        yield f"{LEFT_INDENT_SPACES}{BG}{DARK}{spaces_to_center}{text}{spaces_to_center}\033[0m\n"  # Midnight Blue background, light text
+                        yield f"{LEFT_INDENT_SPACES}{BG}{DARK}{spaces_to_center}{text}{spaces_to_center}{RESET}\n"  # Midnight Blue background, light text
                     elif level == 2:
-                        yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}▌ {FG}{BRIGHT}{text} \n"  # Lighter Indigo
+                        yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}▌ {FG}{BRIGHT}{text}{RESET}\n" 
                     elif level == 3:
-                        yield f"{LEFT_INDENT_SPACES}{FG}{BRIGHT}{text}{RESET}\n"  # More desaturated Indigo
+                        yield f"{LEFT_INDENT_SPACES}{FG}{BRIGHT}{text}{RESET}\n" 
                     elif level == 4:
-                        yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}{text}{RESET}\n"  # Even more desaturated Indigo
+                        yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}{text}{RESET}\n" 
                     elif level == 5:
                         yield f"{LEFT_INDENT_SPACES}{text}{RESET}\n"  
                     else:  # level == 6
@@ -427,7 +426,6 @@ def parse(input_source, style_name="monokai"):
                             wrapped_lines = wrap_text(line)
                             for wrapped_line in wrapped_lines:
                                 yield f"{LEFT_INDENT_SPACES}{wrapped_line}\n" 
-                            #yield f"{LEFT_INDENT_SPACES}{line}\n"
 
                 # Process any remaining table data
                 if state.table.rows:
@@ -442,29 +440,22 @@ def parse(input_source, style_name="monokai"):
 
 
 help_text = """
-# mdstream
+ **sd**: A markdown renderer for modern terminals.
 
-A markdown renderer for the terminal.
-
-## Usage
+### Usage
 
 ```bash
-mdstream [filename]
+sd [filename]
 ```
 
 Or, pipe markdown to stdin:
 
 ```bash
-cat README.md | mdstream
+cat README.md | sd
 ```
 
 If no filename is provided and no input is piped, this help message is displayed.
 
-## Features
-
-- Supports basic markdown formatting (headers, bold, italic, lists, tables, code blocks).
-- Uses Pygments for syntax highlighting.
-- Falls back to a default style if the specified Pygments style is not found.
 """
 
 
