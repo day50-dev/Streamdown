@@ -13,7 +13,7 @@ from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import Terminal256Formatter
 from pygments.styles import get_style_by_name
-
+import pdb
 
 LEFT_INDENT = 2
 LEFT_INDENT_SPACES = " " * LEFT_INDENT
@@ -32,6 +32,8 @@ def get_terminal_width():
         return 80
 
 WIDTH = int(get_terminal_width() * 11 / 12 - LEFT_INDENT)
+CODEBG = f"{BG}36;0;26m"
+CODEPAD = f"{LEFT_INDENT_SPACES}{CODEBG}{' ' * WIDTH}{RESET}\n"
 
 def visible_length(s):
     """Calculates the length of a string without ANSI escape codes."""
@@ -123,6 +125,10 @@ def format_table(table_rows):
     return formatted
 
 
+def code_wrap(text):
+    # split text into a list of lines of WIDTH characters wide
+    return [text[i : i + WIDTH] for i in range(0, len(text), WIDTH)]
+
 def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_line_prefix=""):
     """
     Wraps text to the given width, preserving ANSI escape codes across lines.
@@ -205,11 +211,22 @@ def parse(input_source, style_name="monokai"):
 
             # <code>
             if state.in_code:
-                background = "\033[48;2;36;0;26m"
-                width = int(get_terminal_width() * 10 / 12)
-
                 if state.code_first_line:
                     state.code_first_line = False
+                    lexer = get_lexer_by_name(state.code_language)
+                    # Create a custom style with a dark fuchsia background
+                    try:
+                        custom_style = get_style_by_name(style_name)
+                    except pygments.util.ClassNotFound:
+                        print(
+                            f"Warning: Style '{style_name}' not found. Using default style.",
+                            file=sys.stderr,
+                        )
+                        custom_style = get_style_by_name("default")
+                        print(f"Using Pygments style: default", file=sys.stderr)
+
+                    custom_style.background_color = "#1c021d"
+                    formatter = Terminal256Formatter(style=custom_style)
                     for i, char in enumerate(line):
                         if char == " ":
                             state.code_indent += 1
@@ -223,56 +240,40 @@ def parse(input_source, style_name="monokai"):
                         line = line[state.code_indent :]
 
                 if line.strip() == "```":
+                    
                     state.in_code = False
-                    # Process code buffer with Pygments if language is specified
-                    if state.code_language:
-                        try:
-                            lexer = get_lexer_by_name(state.code_language)
-                            # Create a custom style with a dark fuchsia background
-                            try:
-                                custom_style = get_style_by_name(style_name)
-                            except pygments.util.ClassNotFound:
-                                print(
-                                    f"Warning: Style '{style_name}' not found. Using default style.",
-                                    file=sys.stderr,
-                                )
-                                custom_style = get_style_by_name("default")
-                                print(f"Using Pygments style: default", file=sys.stderr)
-
-                            custom_style.background_color = "#1c021d"
-                            formatter = Terminal256Formatter(style=custom_style)
-                            highlighted_code = highlight(
-                                "".join(state.code_buffer), lexer, formatter
-                            )
-                            # Take the highlighted code and split it into lines.
-                            # Yield each individual line
-                            yield f"{LEFT_INDENT_SPACES}{background}  {' ' * (width)} {RESET}\n"
-
-                            for code_line in highlighted_code.split("\n"):
-                                # Wrap the code line in a very dark fuschia background, padding to terminal width
-                                padding = width - visible_length(code_line)
-                                yield f"{LEFT_INDENT_SPACES}{background}  {code_line}{' ' * max(0, padding)} \033[0m\n"
-
-                        except pygments.util.ClassNotFound as e:
-                            print(f"Error: Lexer for language '{state.code_language}' not found.", file=sys.stderr)
-                        except Exception as e:
-                            # Improve error handling: print to stderr and include traceback
-                            print(f"Error highlighting: {e}", file=sys.stderr)
-                            import traceback
-
-                            traceback.print_exc()
                     state.code_language = None
-                    state.code_buffer = []
                     state.code_indent = 0
-                else:
-                    state.code_buffer.append(line + "\n")
-                continue
+            
+                    yield CODEPAD
+                    continue
+
+                elif state.code_language:
+                    try:     
+                        highlighted_code = highlight(line, lexer, formatter)
+                        
+                        code_rows = code_wrap(highlighted_code.strip('\n'))
+                        for code_line in code_rows:
+                            # Wrap the code line in a very dark fuschia background, padding to terminal width
+                            padding = WIDTH - visible_length(code_line) - 2
+                            yield f"{LEFT_INDENT_SPACES}{CODEBG}  {code_line}{' ' * max(0, padding)}{RESET}\n"
+                        continue
+                    except pygments.util.ClassNotFound as e:
+                        print(f"Error: Lexer for language '{state.code_language}' not found.", file=sys.stderr)
+                    except Exception as e:
+                        # Improve error handling: print to stderr and include traceback
+                        print(f"Error highlighting: {e}", file=sys.stderr)
+                        import traceback
+
+                        traceback.print_exc()
+                
 
             code_match = re.match(r"```([\w+-]*)", line.strip())
             if code_match:
                 state.in_code = True
                 state.code_first_line = True
                 state.code_language = code_match.group(1)
+                yield CODEPAD
                 continue
 
             # --- Inline formatting ---
