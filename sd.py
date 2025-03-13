@@ -253,7 +253,11 @@ def parse(input_source):
     try:
         while True:
             char = stdin.read(1)
-            if not char: break
+            if not char: 
+              if len(state.buffer):
+                char = "\n"
+              else:
+                break
 
             state.buffer.append(char)
 
