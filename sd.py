@@ -23,6 +23,7 @@ DARK = "54;36;77m"
 FG = "\033[38;2;"
 BG = "\033[48;2;"
 RESET = "\033[0m"
+STYLE = "monokai"
 
 def get_terminal_width():
     try:
@@ -144,7 +145,7 @@ def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_
     """
     Wraps text to the given width, preserving ANSI escape codes across lines.
     """
-    words = text.split()
+    words = line_format(text).split()
     lines = []
     current_line = ""
     current_style = ""
@@ -185,10 +186,14 @@ def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_
 
     return final_lines
 
+def line_format(line):
+    line = re.sub(r"\*\*(.+?)\*\*", r"\033[1m\1\033[0m", line)  # Bold
+    line = re.sub(r"\*(.+?)\*", r"\033[3m\1\033[0m", line)  # Italic
+    line = re.sub(r"_(.+?)_", r"\033[4m\1\033[0m", line)  # Underline
+    line = re.sub( r"`(.+?)`", r"\033[48;2;49;0;85m \1 \033[0m", line)  # Inline code
+    return line
 
-def parse(input_source, style_name="monokai"):
-    """Parse markdown with robust table state tracking"""
-
+def parse(input_source):
     if isinstance(input_source, str):
         stdin = StringIO(input_source)
     else:
@@ -235,12 +240,11 @@ def parse(input_source, style_name="monokai"):
                 if state.code_first_line:
                     state.code_first_line = False
                     lexer = get_lexer_by_name(state.code_language)
-                    # Create a custom style with a dark fuchsia background
                     try:
-                        custom_style = get_style_by_name(style_name)
+                        custom_style = get_style_by_name(STYLE)
                     except pygments.util.ClassNotFound:
                         print(
-                            f"Warning: Style '{style_name}' not found. Using default style.",
+                            f"Warning: Style '{STYLE}' not found. Using default style.",
                             file=sys.stderr,
                         )
                         custom_style = get_style_by_name("default")
@@ -296,14 +300,6 @@ def parse(input_source, style_name="monokai"):
                 state.code_language = code_match.group(1)
                 yield CODEPAD
                 continue
-
-            # --- Inline formatting ---
-            line = re.sub(r"\*\*(.+?)\*\*", r"\033[1m\1\033[0m", line)  # Bold
-            line = re.sub(r"\*(.+?)\*", r"\033[3m\1\033[0m", line)  # Italic
-            line = re.sub(r"_(.+?)_", r"\033[4m\1\033[0m", line)  # Underline
-            line = re.sub(
-                r"`(.+?)`", r"\033[48;2;49;0;85m \1 \033[0m", line
-            )  # Inline code
 
             # Table state machine <table>
             if re.match(r"^\s*\|.+\|\s*$", line) and not state.in_code:
@@ -388,7 +384,7 @@ def parse(input_source, style_name="monokai"):
                         wrap_width,
                         2,
                         first_line_prefix,
-                        f"{subsequent_line_prefix}",
+                        subsequent_line_prefix,
                     )
                     for wrapped_line in wrapped_lines:
                         yield f"{LEFT_INDENT_SPACES}{wrapped_line}\n"
@@ -461,26 +457,19 @@ If no filename is provided and no input is piped, this help message is displayed
 
 if __name__ == "__main__":
     try:
+        inp = None
         if len(sys.argv) > 1:
-            # File argument provided
             try:
-                with open(sys.argv[1], "r") as f:
-                    for chunk in parse(f, style_name="monokai"):
-                        sys.stdout.write(chunk)
-                        sys.stdout.flush()
+                inp = open(sys.argv[1], "r")
             except FileNotFoundError:
                 print(f"Error: File not found: {sys.argv[1]}", file=sys.stderr)
+        elif sys.stdin.isatty():
+            inp = help_text
         else:
-            # No file argument, check stdin
-            if sys.stdin.isatty():
-                # No input piped, print help
-                for chunk in parse(help_text, style_name="monokai"):
-                    sys.stdout.write(chunk)
-                    sys.stdout.flush()
-            else:
-                # Input piped, process stdin
-                for chunk in parse(sys.stdin, style_name="monokai"):
-                    sys.stdout.write(chunk)
-                    sys.stdout.flush()
+            inp = sys.stdin
+
+        for chunk in parse(inp):
+            sys.stdout.write(chunk)
+            sys.stdout.flush()
     except KeyboardInterrupt:
         pass
