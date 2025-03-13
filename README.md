@@ -1,7 +1,9 @@
 # StreamingMarkdown
-[simplescreenrecorder-2025-03-12_01.10.42.webm](https://github.com/user-attachments/assets/cfc2d90a-bcf0-4774-a5ae-e1477e431369)
 
-I needed a streaming Markdown TUI CLI shell parser and honestly all the ones I found sucked. They were broken or janky in some kind of way. So I spent about 14 million tokens and did some minor human tweaks over the course of about 8 hours, here we go:
+I needed a streaming Markdown TUI CLI shell parser and honestly all the ones I found sucked. They were broken or janky in some kind of way. So here we go:
+
+[simplescreenrecorder-2025-03-12_17.58.07.webm](https://github.com/user-attachments/assets/de4860d5-dd0e-411f-bda3-e3d60deb7938)
+
 ![sshot](https://github.com/user-attachments/assets/43cf7f5f-d11f-467e-8186-d5df9de84fb0)
 
 This will work with [swillison's llm](https://github.com/simonw/llm) unlike with richify.py which jumps around the page or shows useless elipss or glow which buffers everything, this streams and does exactly what you want.
