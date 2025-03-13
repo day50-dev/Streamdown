@@ -9,6 +9,7 @@ import sys
 import re
 import shutil
 from io import StringIO
+import pygments.util
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import Terminal256Formatter
@@ -162,18 +163,18 @@ def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_
         else:
             # Close previous line with reset and then re-apply current style
             if not lines:  # First line
-                lines.append(first_line_prefix + current_line + "\033[0m")
+                lines.append(first_line_prefix + current_line + RESET)
             else:
-                lines.append(subsequent_line_prefix + current_line + "\033[0m")
+                lines.append(subsequent_line_prefix + current_line + RESET)
 
             # Reset current line and apply the preserved style
             current_line = (" " * indent) + current_style + word
 
     if current_line:
         if not lines:  # only one line
-            lines.append(first_line_prefix + current_line + "\033[0m")
+            lines.append(first_line_prefix + current_line + RESET)
         else:
-            lines.append(subsequent_line_prefix + current_line + "\033[0m")
+            lines.append(subsequent_line_prefix + current_line + RESET)
 
     # Re-apply current style to the beginning of each line (except the first)
     final_lines = []
@@ -215,9 +216,9 @@ def line_format(line):
         elif token == "`":
             in_code = not in_code
             if in_code:
-                result += "\033[48;2;49;0;85m"  # Add backtick when entering code
+                result += "\033[48;2;49;0;85m"  
             else:
-                result += "\033[0m"  # Add backtick when exiting code
+                result += RESET 
         else:
             result += token  # Always output text tokens
 
@@ -268,16 +269,12 @@ def parse(input_source):
             if state.in_code:
                 if state.code_first_line:
                     state.code_first_line = False
-                    lexer = get_lexer_by_name(state.code_language)
                     try:
+                        lexer = get_lexer_by_name(state.code_language)
                         custom_style = get_style_by_name(STYLE)
                     except pygments.util.ClassNotFound:
-                        print(
-                            f"Warning: Style '{STYLE}' not found. Using default style.",
-                            file=sys.stderr,
-                        )
+                        lexer = get_lexer_by_name("Bash")
                         custom_style = get_style_by_name("default")
-                        print(f"Using Pygments style: default", file=sys.stderr)
 
                     formatter = Terminal256Formatter(style=custom_style)
                     for i, char in enumerate(line):
@@ -288,7 +285,6 @@ def parse(input_source):
                     line = line[state.code_indent :]
 
                 else:
-                    # Dedent subsequent lines
                     if line.startswith(" " * state.code_indent):
                         line = line[state.code_indent :]
 
@@ -323,9 +319,10 @@ def parse(input_source):
 
             code_match = re.match(r"```([\w+-]*)", line.strip())
             if code_match:
+                state.code_buffer = []
                 state.in_code = True
                 state.code_first_line = True
-                state.code_language = code_match.group(1)
+                state.code_language = code_match.group(1) or 'Bash'
                 yield CODEPAD
                 continue
 
@@ -417,7 +414,7 @@ def parse(input_source):
                     continue
 
                 # Header processing
-                header_match = re.match(r"^(#{1,6})\s+(.*)", line)
+                header_match = re.match(r"^\s*(#{1,6})\s+(.*)", line)
                 if header_match:
                     level = len(header_match.group(1))
                     text = header_match.group(2)
@@ -474,7 +471,7 @@ if __name__ == "__main__":
 
                  ### Usage
 
-                 ```bash
+                 ```
                  sd [filename]
                  ```
 
