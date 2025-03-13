@@ -123,7 +123,7 @@ def format_table(table_rows):
     return formatted
 
 
-def wrap_text(text, width, indent, first_line_prefix="", subsequent_line_prefix=""):
+def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_line_prefix=""):
     """
     Wraps text to the given width, preserving ANSI escape codes across lines.
     """
@@ -205,7 +205,7 @@ def parse(input_source, style_name="monokai"):
 
             if state.in_code:
                 background = "\033[48;2;36;0;26m"
-                width = int(get_terminal_width() * 0.8)
+                width = int(get_terminal_width() * 10 / 12)
 
                 if state.code_first_line:
                     state.code_first_line = False
@@ -398,13 +398,20 @@ def parse(input_source, style_name="monokai"):
                         # print a horizontal rule using a unicode midline with a unicode fleur de lis in the middle
                         yield f"{LEFT_INDENT_SPACES}\033[38;5;240m{'─' * (get_terminal_width() - 8)}\033[0m\n"
                     else:
-                        yield f"{LEFT_INDENT_SPACES}{line}\n"
+                        if len(line) == 0:
+                            print("")
+                        else:
+                            # This is the basic unformatted text. We still want to word wrap it.
+                            wrapped_lines = wrap_text(line)
+                            for wrapped_line in wrapped_lines:
+                                yield f"{LEFT_INDENT_SPACES}{wrapped_line}\n" 
+                            #yield f"{LEFT_INDENT_SPACES}{line}\n"
 
                 # Process any remaining table data
                 if state.table.rows:
                     formatted = format_table(state.table.rows)
                     for l in formatted:
-                        yield f"{LEFT_INDENT_SPACES}{l}\n"
+                        yield f"{l}\n"
                     state.table.reset()
 
     except Exception as e:
