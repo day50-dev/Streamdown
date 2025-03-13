@@ -17,7 +17,12 @@ from pygments.styles import get_style_by_name
 
 LEFT_INDENT = 2
 LEFT_INDENT_SPACES = " " * LEFT_INDENT
-
+SYMBOL = "175;130;230m"
+BRIGHT = "222;195;254m"
+DARK = "54;36;77m"
+FG = "\033[38;2;"
+BG = "\033[48;2;"
+RESET = "\033[0m"
 
 def get_terminal_width():
     try:
@@ -26,6 +31,7 @@ def get_terminal_width():
         # Fallback to 80 columns
         return 80
 
+WIDTH = int(get_terminal_width() * 11 / 12 - LEFT_INDENT)
 
 def visible_length(s):
     """Calculates the length of a string without ANSI escape codes."""
@@ -308,7 +314,7 @@ def parse(input_source, style_name="monokai"):
                     state.table.reset()
 
                 # --- List Items ---
-                list_item_match = re.match(r"^(\s*)([*]|\d+\.)\s+(.*)", line)
+                list_item_match = re.match(r"^(\s*)([*\-]|\d+\.)\s+(.*)", line)
                 if list_item_match:
                     indent = len(list_item_match.group(1))
                     list_type = (
@@ -346,13 +352,13 @@ def parse(input_source, style_name="monokai"):
                         bullet = f"{list_number}"
                         first_line_prefix = (
                             " " * (indent - len(bullet))
-                            + f"\033[38;2;175;130;230m{bullet}\033[0m"
+                            + f"\033[38;2;{SYMBOL}{bullet}\033[0m"
                             + " "
                         )
                         subsequent_line_prefix = " " * indent
                     else:
                         first_line_prefix = (
-                            " " * (indent - 1) + f"\033[38;2;175;130;230m•\033[0m" + " "
+                            " " * (indent - 1) + f"\033[38;2;{SYMBOL}•\033[0m" + " "
                         )
                         subsequent_line_prefix = " " * indent
 
@@ -372,10 +378,11 @@ def parse(input_source, style_name="monokai"):
                 if header_match:
                     level = len(header_match.group(1))
                     text = header_match.group(2)
+                    spaces_to_center = ' ' * ((WIDTH - visible_length(text)) // 2)
                     if level == 1:
-                        yield f"\033[48;2;25;25;112m\033[38;2;255;255;240m {text} \033[0m\n"  # Midnight Blue background, light text
+                        yield f"{LEFT_INDENT_SPACES}{BG}{DARK}{spaces_to_center}{text}{spaces_to_center}\033[0m\n"  # Midnight Blue background, light text
                     elif level == 2:
-                        yield f"\033[48;2;95;50;150m \033[0m {text} \n"  # Lighter Indigo
+                        yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}▌ {FG}{BRIGHT}{text} \n"  # Lighter Indigo
                     elif level == 3:
                         yield f"\033[38;2;115;70;170m {text} \033[0m\n"  # More desaturated Indigo
                     elif level == 4:
