@@ -89,7 +89,6 @@ class ParseState:
 
     def reset_buffer(self):
         self.buffer = []
-        # self.code_buffer = []
 
 
 def format_table(table_rows):
@@ -222,7 +221,9 @@ def line_format(line):
         else:
             result += token  # Always output text tokens
 
-    return result
+    # Apply OSC 8 hyperlink formatting after other formatting
+    line = re.sub(r"(https?://[^\s]+)", r"\033]8;;\1\033\\\1\033]8;;\033\\", result)
+    return line
 
 def parse(input_source):
     if isinstance(input_source, str):
