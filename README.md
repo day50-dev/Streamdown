@@ -9,6 +9,10 @@ This will work with [swillison's llm](https://github.com/simonw/llm) unlike with
 There's nothing too fancy about it other than that it works.
 ![2025-03-12_19-07](https://github.com/user-attachments/assets/eeb46c66-6ce3-41d6-94d4-89a7aefdc470)
 
+## Demo
+Do this
+
+    $ ./tester.sh tests/*md | ./sd.py
 
 Certainly room for improvement.
 
