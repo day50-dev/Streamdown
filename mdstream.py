@@ -203,6 +203,7 @@ def parse(input_source, style_name="monokai"):
             else:
                 state.last_line_empty = False
 
+            # <code>
             if state.in_code:
                 background = "\033[48;2;36;0;26m"
                 width = int(get_terminal_width() * 10 / 12)
@@ -245,7 +246,7 @@ def parse(input_source, style_name="monokai"):
                             )
                             # Take the highlighted code and split it into lines.
                             # Yield each individual line
-                            yield f"{LEFT_INDENT_SPACES}{background}  {' ' * (width)} \033[0m\n"
+                            yield f"{LEFT_INDENT_SPACES}{background}  {' ' * (width)} {RESET}\n"
 
                             for code_line in highlighted_code.split("\n"):
                                 # Wrap the code line in a very dark fuschia background, padding to terminal width
@@ -269,7 +270,6 @@ def parse(input_source, style_name="monokai"):
 
             code_match = re.match(r"```([\w+-]*)", line.strip())
             if code_match:
-                yield f"{LEFT_INDENT_SPACES}\n"
                 state.in_code = True
                 state.code_first_line = True
                 state.code_language = code_match.group(1)
@@ -283,7 +283,7 @@ def parse(input_source, style_name="monokai"):
                 r"`(.+?)`", r"\033[48;2;49;0;85m \1 \033[0m", line
             )  # Inline code
 
-            # Table state machine
+            # Table state machine <table>
             if re.match(r"^\s*\|.+\|\s*$", line) and not state.in_code:
                 if not state.table.in_header and not state.table.in_body:
                     state.table.in_header = True
@@ -313,7 +313,7 @@ def parse(input_source, style_name="monokai"):
                         yield f" {l}\n"
                     state.table.reset()
 
-                # --- List Items ---
+                # --- List Items --- <li> <ul> <ol>
                 list_item_match = re.match(r"^(\s*)([*\-]|\d+\.)\s+(.*)", line)
                 if list_item_match:
                     indent = len(list_item_match.group(1))
@@ -342,10 +342,7 @@ def parse(input_source, style_name="monokai"):
                         # print(json.dumps([indent, state.ordered_list_numbers]))
                         state.ordered_list_numbers[-1] += 1
 
-                    # print(f"After stack handling: indent={indent}, list_type={list_type}, content={content.strip()}, stack={state.list_item_stack}, numbers={state.ordered_list_numbers}", file=sys.stderr)
-
-                    terminal_width = get_terminal_width()
-                    wrap_width = terminal_width - indent - 5
+                    wrap_width = WIDTH - indent - 4
 
                     if list_type == "number":
                         list_number = state.ordered_list_numbers[-1]
@@ -384,19 +381,19 @@ def parse(input_source, style_name="monokai"):
                     elif level == 2:
                         yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}▌ {FG}{BRIGHT}{text} \n"  # Lighter Indigo
                     elif level == 3:
-                        yield f"\033[38;2;115;70;170m {text} \033[0m\n"  # More desaturated Indigo
+                        yield f"{LEFT_INDENT_SPACES}{FG}{BRIGHT}{text} {RESET}\n"  # More desaturated Indigo
                     elif level == 4:
-                        yield f"\033[38;2;135;90;190m {text} \033[0m\n"  # Even more desaturated Indigo
+                        yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}{text} {RESET}\n"  # Even more desaturated Indigo
                     elif level == 5:
-                        yield f"\033[38;2;155;110;210m {text} \033[0m\n"  # Very light desaturated Indigo
+                        yield f"{LEFT_INDENT_SPACES}{text} {RESET}\n"  
                     else:  # level == 6
-                        yield f"\033[38;2;175;130;230m {text} \033[0m\n"  # Very light Indigo
+                        yield f"{LEFT_INDENT_SPACES}{text} {RESET}\n"  
 
                 else:
                     # Horizontal rule
                     if re.match(r"^[\s]*[-*_]{3,}[\s]*$", line):
                         # print a horizontal rule using a unicode midline with a unicode fleur de lis in the middle
-                        yield f"{LEFT_INDENT_SPACES}\033[38;5;240m{'─' * (get_terminal_width() - 8)}\033[0m\n"
+                        yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}{'─' * WIDTH}{RESET}\n"
                     else:
                         if len(line) == 0:
                             print("")
