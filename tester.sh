@@ -4,7 +4,7 @@ while [[ $# -gt 0 ]]; do
     echo "----"
     for i in $(seq 1 $(cat $1 | wc -l)); do
         head -$i $1 | tail -1
-        sleep 0.05
+        sleep 0.02
     done
     shift
 done
