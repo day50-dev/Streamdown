@@ -14,7 +14,7 @@ from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import Terminal256Formatter
 from pygments.styles import get_style_by_name
-import pdb
+import math
 
 LEFT_INDENT = 2
 LEFT_INDENT_SPACES = " " * LEFT_INDENT
@@ -37,7 +37,7 @@ def get_terminal_width():
 
 WIDTH = int(get_terminal_width() * 11 / 12 - LEFT_INDENT)
 CODEBG = f"{BG}36;0;26m"
-CODEBREAK = f'{BG}72;0;52m {CODEBG} '
+CODEBREAK = f'{BG}72;0;52m {CODEBG}'
 CODEPAD = f"{LEFT_INDENT_SPACES}{CODEBG}{' ' * WIDTH}{RESET}\n"
 ANSIESCAPE = r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
 UNDERLINE = f"\033[4m"
@@ -142,12 +142,14 @@ def code_wrap(text_in):
     indent = len(text_in) - len(text_in.lstrip())
     text = text_in.lstrip()
     mywidth = WIDTH - indent - LEFT_INDENT * 2
+
     # We take special care to preserve empty lines
     if len(text) == 0:
         return (0, [text_in])
     res = [text[:mywidth]]
+
     # We are including a break, which is length 2
-    mywidth_with_break = mywidth - 2
+    mywidth_with_break = mywidth - 1
     for i in range(mywidth, len(text), mywidth_with_break):
         res.append(text[i : i + mywidth_with_break]) 
     
@@ -231,7 +233,7 @@ def line_format(line):
                 result += "\033[3m" if in_italic else "\033[23m"
             else:
                 result += token
-        elif token == "_" and (in_underline or not_text(last_token)):
+        elif token == "_":  # and (in_underline or not_text(last_token)):
             in_underline = not in_underline
             if not in_code:
                 result += "\033[4m" if in_underline else "\033[24m"
@@ -471,9 +473,9 @@ def parse(input_source):
                 if header_match:
                     level = len(header_match.group(1))
                     text = header_match.group(2)
-                    spaces_to_center = ' ' * ((WIDTH - visible_length(text)) // 2)
+                    spaces_to_center = ((WIDTH - visible_length(text)) // 2)
                     if level == 1:
-                        yield f"{LEFT_INDENT_SPACES}{BG}{DARK}{spaces_to_center}{text}{spaces_to_center}{RESET}\n"  
+                        yield f"{LEFT_INDENT_SPACES}{BG}{DARK}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n"  
                     elif level == 2:
                         yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}▌ {FG}{BRIGHT}{text}{RESET}\n" 
                     elif level == 3:
