@@ -219,25 +219,25 @@ def line_format(line):
     last_token = None
 
     for token in tokens:
-        if token == "**":
+        if token == "**" and (in_bold or not_text(last_token)):
             in_bold = not in_bold
             if not in_code:
                 result += "\033[1m" if in_bold else "\033[22m"
             else:
                 result += token  # Output the delimiter inside code
-        elif token == "*":
+        elif token == "*" and (in_italic or not_text(last_token)):
             in_italic = not in_italic
             if not in_code:
                 result += "\033[3m" if in_italic else "\033[23m"
             else:
                 result += token
-        elif token == "_" and not_text(last_token):
+        elif token == "_" and (in_underline or not_text(last_token)):
             in_underline = not in_underline
             if not in_code:
                 result += "\033[4m" if in_underline else "\033[24m"
             else:
                 result += token
-        elif token == "`":
+        elif token == "`" and (in_code or not_text(last_token)):
             in_code = not in_code
             if in_code:
                 result += "\033[48;2;49;0;85m"  
