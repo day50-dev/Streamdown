@@ -473,7 +473,7 @@ def parse(input_source):
                 if header_match:
                     level = len(header_match.group(1))
                     text = header_match.group(2)
-                    spaces_to_center = ((WIDTH - visible_length(text)) // 2)
+                    spaces_to_center = ((WIDTH - visible_length(text)) / 2)
                     if level == 1:
                         yield f"{LEFT_INDENT_SPACES}{BG}{DARK}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n"  
                     elif level == 2:
