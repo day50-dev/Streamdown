@@ -202,7 +202,7 @@ def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_
 
 def line_format(line):
     def not_text(token):
-        return not token or token.strip() == 0
+        return not token or len(token.rstrip()) != len(token)
 
     # Apply OSC 8 hyperlink formatting after other formatting
     def process_links(match):
@@ -233,7 +233,7 @@ def line_format(line):
                 result += "\033[3m" if in_italic else "\033[23m"
             else:
                 result += token
-        elif token == "_":  # and (in_underline or not_text(last_token)):
+        elif token == "_" and (in_underline or not_text(last_token)):
             in_underline = not in_underline
             if not in_code:
                 result += "\033[4m" if in_underline else "\033[24m"
