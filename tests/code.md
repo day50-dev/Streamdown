@@ -1,6 +1,6 @@
-Here are the implementations in Python, JavaScript, and C++:
-
-# python
+_italics_
+some_name
+`_somevariable`
 
 ----
 
@@ -15,12 +15,6 @@ def fizzbuzz(n):
             print("Buzz")
         else:
             print(i)
-
-
-
-
-
-
 
 
 # Example usage: Print FizzBuzz up to 100
