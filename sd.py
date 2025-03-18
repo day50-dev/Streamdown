@@ -35,8 +35,8 @@ def get_terminal_width():
         # Fallback to 80 columns
         return 80
 
-WIDTH = int(get_terminal_width() * 11 / 12 - LEFT_INDENT)
 FULLWIDTH = int(get_terminal_width())
+WIDTH = FULLWIDTH - 2*LEFT_INDENT
 CODEBG = f"{BG}21;9;31m"
 CODEBREAK = f'{BG}72;0;52m {CODEBG}'
 CODEPAD = f"{RESET}{CODEBG}{' ' * FULLWIDTH}{RESET}\n"
