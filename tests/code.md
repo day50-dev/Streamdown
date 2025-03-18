@@ -1,6 +1,6 @@
-_italics_
-some_name
-`_somevariable`
+*italics*
+some_name_
+`_somevariable_`
 
 ----
 
