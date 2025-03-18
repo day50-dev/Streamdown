@@ -337,6 +337,10 @@ def parse(input_source):
                         break_token = ""
 
                         for tline in line_wrap:
+                            # wrap-around is a bunch of tricks. We essentially format longer and longer portions of code. The problem is 
+                            # the length can change based on look-ahead context so we need to use our expected place (state.code_gen) and
+                            # then naively search back until our visible_lengths() match. This is not fast and there's certainly smarter
+                            # ways of doing it but this thing is way trickery than you think
                             highlighted_code = highlight("\n".join(state.code_buffer) + tline, lexer, formatter)
 
                             # Since we are streaming we ignore the resets and newlines at the end
@@ -347,11 +351,8 @@ def parse(input_source):
                             while visible_length(highlighted_code[:(state.code_gen-delta)]) > visible_length("\n".join(state.code_buffer)):
                                 delta += 1
 
-                            #print(visible_length(highlighted_code[:state.code_gen-delta]), visible_length("\n".join(state.code_buffer)))
-
                             state.code_buffer[-1] += tline
 
-                            #print(bytes(highlighted_code[state.code_gen-20:], 'utf-8'))
                             this_batch = highlighted_code[state.code_gen-delta :]
                             if this_batch.startswith(FGRESET):
                                 this_batch = this_batch[len(FGRESET) :]
@@ -359,15 +360,12 @@ def parse(input_source):
                             ## this is the crucial counter that will determine
                             # the begninning of the next line
                             state.code_gen = len(highlighted_code)
-                            #print(state.code_gen)
                            
                             # Wrap the code line in a very dark fuschia background, padding to terminal width
                             code_line = ' ' * indent + break_token + this_batch.strip() 
-                            #print(f"({code_line})")
                             padding = WIDTH - visible_length(code_line) - 2
                             break_token = CODEBREAK
                             yield f"{LEFT_INDENT_SPACES}{CODEBG}  {code_line}{' ' * max(0, padding)}{BGRESET}\n"
-                            #print("\n\n")
                         continue
                     except pygments.util.ClassNotFound as e:
                         print(f"Error: Lexer for language '{state.code_language}' not found.", file=sys.stderr)
