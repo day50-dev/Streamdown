@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv run
+#!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
@@ -335,15 +335,29 @@ def parse(input_source):
                         break_token = ""
 
                         for tline in line_wrap:
-                            state.code_buffer[-1] += tline
-                            highlighted_code = highlight("\n".join(state.code_buffer), lexer, formatter)
-                            # Since we are streaming we ignore the resets and newlines at the end
-                            highlighted_code = highlighted_code[: -(1 + len(FGRESET))]
+                            highlighted_code = highlight("\n".join(state.code_buffer) + tline, lexer, formatter)
 
-                            this_batch = highlighted_code[state.code_gen :]
+                            # Since we are streaming we ignore the resets and newlines at the end
+                            if highlighted_code.endswith(FGRESET + "\n"):
+                                highlighted_code = highlighted_code[: -(1 + len(FGRESET))]
+
+                            delta = 0
+                            while visible_length(highlighted_code[:(state.code_gen-delta)]) > visible_length("\n".join(state.code_buffer)):
+                                delta += 1
+
+                            #print(visible_length(highlighted_code[:state.code_gen-delta]), visible_length("\n".join(state.code_buffer)))
+
+                            state.code_buffer[-1] += tline
+
+                            #print(bytes(highlighted_code[state.code_gen-20:], 'utf-8'))
+                            this_batch = highlighted_code[state.code_gen-delta :]
                             if this_batch.startswith(FGRESET):
                                 this_batch = this_batch[len(FGRESET) :]
+
+                            ## this is the crucial counter that will determine
+                            # the begninning of the next line
                             state.code_gen = len(highlighted_code)
+                            #print(state.code_gen)
                            
                             # Wrap the code line in a very dark fuschia background, padding to terminal width
                             code_line = ' ' * indent + break_token + this_batch.strip() 
@@ -351,6 +365,7 @@ def parse(input_source):
                             padding = WIDTH - visible_length(code_line) - 2
                             break_token = CODEBREAK
                             yield f"{LEFT_INDENT_SPACES}{CODEBG}  {code_line}{' ' * max(0, padding)}{BGRESET}\n"
+                            #print("\n\n")
                         continue
                     except pygments.util.ClassNotFound as e:
                         print(f"Error: Lexer for language '{state.code_language}' not found.", file=sys.stderr)
