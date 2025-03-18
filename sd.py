@@ -348,8 +348,13 @@ def parse(input_source):
                                 highlighted_code = highlighted_code[: -(1 + len(FGRESET))]
 
                             delta = 0
+                            # This is a less dumb then linear way
                             while visible_length(highlighted_code[:(state.code_gen-delta)]) > visible_length("\n".join(state.code_buffer)):
-                                delta += 1
+                                delta += 5
+
+                            if delta > 0:
+                                while visible_length(highlighted_code[:(state.code_gen-delta)]) < visible_length("\n".join(state.code_buffer)):
+                                    delta -= 1
 
                             state.code_buffer[-1] += tline
 
