@@ -8,8 +8,7 @@ This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [r
 
 ## Some Features
 
-#### Provides wrap-around in code for long code blocks and short terminals. It just has a block of a different background to signify it so if you copy and paste all it does is inject whitespace ... not terrible, not terrible
-
+#### Provides clean copyable code for long code blocks and short terminals. 
   
 ![wraparound](https://github.com/user-attachments/assets/8a4319a3-1182-4dba-92ce-7b240d3c7dec)
 
