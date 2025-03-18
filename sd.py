@@ -37,6 +37,7 @@ def get_terminal_width():
 
 FULLWIDTH = int(get_terminal_width())
 WIDTH = FULLWIDTH - 2*LEFT_INDENT
+BOLD = ["\033[1m", "\033[22m"]
 CODEBG = f"{BG}21;9;31m"
 CODEBREAK = f'{BG}72;0;52m {CODEBG}'
 CODEPAD = f"{RESET}{CODEBG}{' ' * FULLWIDTH}{RESET}\n"
@@ -123,7 +124,7 @@ def format_table(table_rows):
 
     # Header row
     header_cells = [
-        f"\033[1m {header.ljust(width)} \033[22m"
+        f"{BOLD[0]} {header.ljust(width)} {BOLD[1]}"
         for header, width in zip(headers, col_widths)
     ]
     header_line = "│".join(header_cells)
@@ -206,7 +207,7 @@ def line_format(line):
         if token == "**" and (in_bold or not_text(last_token)):
             in_bold = not in_bold
             if not in_code:
-                result += "\033[1m" if in_bold else "\033[22m"
+                result += BOLD[0] if in_bold else BOLD[1]
             else:
                 result += token  # Output the delimiter inside code
         elif token == "*" and (in_italic or not_text(last_token)):
