@@ -17,7 +17,7 @@ This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [r
 
 
 #### Doesn't consume characters like _ and * as style when they are in `blocks like this` because `_they_can_be_varaiables_`
-![dunder](https://github.com/user-attachments/assets/5425caf0-67be-4e8e-b5d4-765913fd54aa)
+![dunder](https://github.com/user-attachments/assets/eb9ab001-3bc7-4e4b-978f-bc00f29c2a41)
 
 ## Demo
 Do this
