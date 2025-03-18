@@ -443,7 +443,7 @@ def parse(input_source):
                     wrap_width = WIDTH - indent - 4
 
                     if list_type == "number":
-                        list_number = state.ordered_list_numbers[-1]
+                        list_number = int(max(state.ordered_list_numbers[-1], float(list_item_match.group(2))))
                         bullet = f"{list_number}"
                         first_line_prefix = (
                             " " * (indent - len(bullet))
