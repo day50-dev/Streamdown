@@ -36,9 +36,10 @@ def get_terminal_width():
         return 80
 
 WIDTH = int(get_terminal_width() * 11 / 12 - LEFT_INDENT)
-CODEBG = f"{BG}36;0;26m"
+FULLWIDTH = int(get_terminal_width())
+CODEBG = f"{BG}21;9;31m"
 CODEBREAK = f'{BG}72;0;52m {CODEBG}'
-CODEPAD = f"{LEFT_INDENT_SPACES}{CODEBG}{' ' * WIDTH}{RESET}\n"
+CODEPAD = f"{RESET}{CODEBG}{' ' * FULLWIDTH}{RESET}\n"
 ANSIESCAPE = r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
 UNDERLINE = f"\033[4m"
 LINK= f"{FG}{BRIGHT}{UNDERLINE}"
@@ -135,25 +136,6 @@ def format_table(table_rows):
         row_line = "│".join(row_cells)
         formatted.append(f" {BG}19;0;30m{row_line}{RESET}")
     return formatted
-
-
-def code_wrap(text_in):
-    # get the indentation of the first line
-    indent = len(text_in) - len(text_in.lstrip())
-    text = text_in.lstrip()
-    mywidth = WIDTH - indent - LEFT_INDENT * 2
-
-    # We take special care to preserve empty lines
-    if len(text) == 0:
-        return (0, [text_in])
-    res = [text[:mywidth]]
-
-    # We are including a break, which is length 2
-    mywidth_with_break = mywidth - 1
-    for i in range(mywidth, len(text), mywidth_with_break):
-        res.append(text[i : i + mywidth_with_break]) 
-    
-    return (indent, res)
 
 def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_line_prefix=""):
     """
@@ -332,11 +314,10 @@ def parse(input_source):
                     # in the line variable. Add it to the buffer.
                     
                     try:     
-                        indent, line_wrap = code_wrap(line)
                         state.code_buffer.append('')
                         break_token = ""
 
-                        for tline in line_wrap:
+                        for tline in line.split('\n'):
                             # wrap-around is a bunch of tricks. We essentially format longer and longer portions of code. The problem is 
                             # the length can change based on look-ahead context so we need to use our expected place (state.code_gen) and
                             # then naively search back until our visible_lengths() match. This is not fast and there's certainly smarter
@@ -367,10 +348,11 @@ def parse(input_source):
                             state.code_gen = len(highlighted_code)
                            
                             # Wrap the code line in a very dark fuschia background, padding to terminal width
-                            code_line = ' ' * indent + break_token + this_batch.strip() 
-                            padding = WIDTH - visible_length(code_line) - 2
+                            code_line = this_batch.strip() 
+                            
+                            padding = FULLWIDTH - visible_length(code_line)
                             break_token = CODEBREAK
-                            yield f"{LEFT_INDENT_SPACES}{CODEBG}  {code_line}{' ' * max(0, padding)}{BGRESET}\n"
+                            yield f"{CODEBG}{code_line}{' ' * max(0, padding)}{BGRESET}\n"
                         continue
                     except pygments.util.ClassNotFound as e:
                         print(f"Error: Lexer for language '{state.code_language}' not found.", file=sys.stderr)
@@ -534,7 +516,7 @@ def parse(input_source):
 
 if __name__ == "__main__":
     try:
-        inp = None
+        inp = sys.stdin
         if len(sys.argv) > 1:
             try:
                 inp = open(sys.argv[1], "r")
@@ -559,8 +541,6 @@ if __name__ == "__main__":
                  If no filename is provided and no input is piped, this help message is displayed.
 
                  """
-        else:
-            inp = sys.stdin
 
         for chunk in parse(inp):
             sys.stdout.write(chunk)
