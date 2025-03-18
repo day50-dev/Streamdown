@@ -9,9 +9,7 @@ This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [r
 ## Some Features
 
 #### Provides clean copyable code for long code blocks and short terminals. 
-  
-![wraparound](https://github.com/user-attachments/assets/8a4319a3-1182-4dba-92ce-7b240d3c7dec)
-
+![copyable](https://github.com/user-attachments/assets/7462c278-904c-4dbc-b09d-72254e7e639d)
 
 #### Does OSC 8 links for modern terminals.
 
