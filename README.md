@@ -1,7 +1,8 @@
 # Streamdown
 
 I needed a streaming Markdown TUI CLI shell parser and honestly all the ones I found lacking. They were broken or janky in some kind of way. So here we go. From the ground up. It's a bad idea but it has to be done.
-[sd demo](https://github.com/user-attachments/assets/11fef2da-e90f-407d-af12-ee97190cb7c8)
+
+[sd demo](https://github.com/user-attachments/assets/48dba6fa-2282-4be9-8087-a2ad8e7c7d12)
 
 
 This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [richify.py](https://github.com/gianlucatruda/richify) which jumps around the page or blocks with an elipses or [glow](https://github.com/charmbracelet/glow) which buffers everything, this streams and does exactly what you want.
