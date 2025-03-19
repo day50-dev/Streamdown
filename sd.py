@@ -478,7 +478,7 @@ def parse(input_source):
                     if level == 1:
                         yield f"\n{LEFT_INDENT_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n\n"  
                     elif level == 2:
-                        yield f"\n{LEFT_INDENT_SPACES}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"  
+                        yield f"\n{LEFT_INDENT_SPACES}{BOLD[0]}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"  
                     elif level == 3:
                         yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}  {FG}{BRIGHT}{text}{RESET}\n\n" 
                     elif level == 4:
