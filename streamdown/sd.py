@@ -515,7 +515,7 @@ def parse(input_source):
         print(f"Parser error: {str(e)}", file=sys.stderr)
         raise
 
-if __name__ == "__main__":
+def main():
     try:
         inp = sys.stdin
         if len(sys.argv) > 1:
@@ -525,18 +525,13 @@ if __name__ == "__main__":
                 print(f"Error: File not found: {sys.argv[1]}", file=sys.stderr)
         elif sys.stdin.isatty():
             inp = """
-                 **sd**: A markdown renderer for modern terminals.
+                 **A markdown renderer for modern terminals**
+                 ##### Usage examples:
 
-                 ### Usage
-
-                 ```
+                 ``` bash
                  sd [filename]
-                 ```
-
-                 Or, pipe markdown to stdin:
-
-                 ```bash
                  cat README.md | sd
+                 stdbuf -oL llm chat | sd 
                  ```
 
                  If no filename is provided and no input is piped, this help message is displayed.
@@ -548,3 +543,5 @@ if __name__ == "__main__":
             sys.stdout.flush()
     except KeyboardInterrupt:
         pass
+if __name__ == "__main__":
+    main()

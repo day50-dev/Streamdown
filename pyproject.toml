@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "streamdown"
 version = "0.1.0"
-description = "A markdown renderer for modern terminals with syntax highlighting"
+description = "A streaming markdown renderer for modern terminals with syntax highlighting"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
