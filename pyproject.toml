@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "streamdown"
+version = "0.1.0"
+description = "A markdown renderer for modern terminals with syntax highlighting"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Chris McKenzie", email = "kristopolous@yahoo.com"},
+]
+keywords = ["markdown", "terminal", "renderer", "cli", "syntax-highlighting"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Text Processing :: Markup",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "pygments",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/kristopolous/Streamdown"
+"Bug Tracker" = "https://github.com/kristopolous/Streamdown/issues"
+
+[project.scripts]
+streamdown = "streamdown.sd:main"
+sd = "streamdown.sd:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["streamdown"]
