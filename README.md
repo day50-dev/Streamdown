@@ -22,6 +22,19 @@ This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [r
 #### Doesn't consume characters like _ and * as style when they are in `blocks like this` because `_they_can_be_varaiables_`
 ![dunder](https://github.com/user-attachments/assets/eb9ab001-3bc7-4e4b-978f-bc00f29c2a41)
 
+#### Palette is configurable
+It's HSV based and accepts the `SD_BASEHSV` environment variable where it is a comma separated HSV in the range: `[0-360, 0-1, 0-1]`
+
+For instance:
+
+        $ BASE_HSV=150 sd
+
+Yields a nice navy green.
+
+        $ SD_BASEHSV=240,0.8,0.8 sd
+
+Is this fun neon blue. Choose your own adventure.
+
 ## Demo
 Do this
 

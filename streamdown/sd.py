@@ -15,9 +15,12 @@ from pygments.lexers import get_lexer_by_name
 from pygments.formatters import Terminal256Formatter
 from pygments.styles import get_style_by_name
 import math
+import os
 
 # the ranges here are 0-360, 0-1, 0-1
 def hsv2rgb(h, s, v):
+    s = min(1, s)
+    v = min(1, v)
     h = h % 360
     c = v * s
     x = c * (1 - abs((h / 60) % 2 - 1))
@@ -42,10 +45,24 @@ def hsv2rgb(h, s, v):
         min(255,int((b + m) * 255))
     ]]) + "m"
             
-# Coloring starts with a base HSV
+# Coloring starts with a base HSV, which can be overridden
+# by the SD_COLORS environment variable.
 H = 320
 S = 0.5
 V = 0.5
+
+try:
+    sd_colors = os.getenv("SD_BASEHSV")
+    if sd_colors:
+        colors = sd_colors.split(",")
+        if len(colors) > 0:
+            H = float(colors[0])
+        if len(colors) > 1:
+            S = float(colors[1])
+        if len(colors) > 2:
+            V = float(colors[2])
+except Exception as e:
+    print(f"Error parsing SD_BASEHSV: {e}", file=sys.stderr)
 
 # Then we have a few theme variations based
 # on multipliers
@@ -567,9 +584,10 @@ def main():
             except FileNotFoundError:
                 print(f"Error: File not found: {sys.argv[1]}", file=sys.stderr)
         elif sys.stdin.isatty():
-            print("Palette: ", end=" ")
+            print(f"Base HSV: {H}, {S}, {V} Palette: ", end=" ")
             for (a,b) in (("DARK", DARK), ("MID", MID), ("SYMBOL", SYMBOL), ("BRIGHT", BRIGHT)):
                 print(f"{FG}{b}{a}{RESET} {BG}{b}{a}{RESET}", end=" | ")
+            print("")
 
             inp = """
                  **A markdown renderer for modern terminals**
