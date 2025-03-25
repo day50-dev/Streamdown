@@ -16,17 +16,54 @@ from pygments.formatters import Terminal256Formatter
 from pygments.styles import get_style_by_name
 import math
 
-LEFT_INDENT = 2
-LEFT_INDENT_SPACES = " " * LEFT_INDENT
-SYMBOL = "175;130;230m"
-BRIGHT = "222;195;254m"
-DARK = "54;36;77m"
+# the ranges here are 0-360, 0-1, 0-1
+def hsv2rgb(h, s, v):
+    h = h % 360
+    c = v * s
+    x = c * (1 - abs((h / 60) % 2 - 1))
+    m = v - c
+    if h < 60:
+        r, g, b = c, x, 0
+    elif h < 120:
+        r, g, b = x, c, 0
+    elif h < 180:
+        r, g, b = 0, c, x
+    elif h < 240:
+        r, g, b = 0, x, c
+    elif h < 300:
+        r, g, b = x, 0, c
+    else:
+        r, g, b = c, 0, x
+    # scale this to 0-255 and return it in R;G;Bm format
+
+    return ';'.join([str(x) for x in [
+        min(255,int((r + m) * 255)), 
+        min(255,int((g + m) * 255)), 
+        min(255,int((b + m) * 255))
+    ]]) + "m"
+            
+# Coloring starts with a base HSV
+H = 190
+S = 0.5
+V = 0.5
+
+# Then we have a few theme variations based
+# on multipliers
+DARK   = hsv2rgb(H, S       , V * 0.25)
+MID    = hsv2rgb(H, S       , V * 0.50)
+SYMBOL = hsv2rgb(H, S       , V * 1.50) 
+BRIGHT = hsv2rgb(H, S * 2.00, V       )
+STYLE  = "monokai"
+# And that is all.
+
+INDENT = 2
+INDENT_SPACES = " " * INDENT
+
 FG = "\033[38;2;"
 BG = "\033[48;2;"
 RESET = "\033[0m"
 FGRESET = "\033[39m"
 BGRESET = "\033[49m"
-STYLE = "monokai"
 
 def get_terminal_width():
     try:
@@ -36,14 +73,20 @@ def get_terminal_width():
         return 80
 
 FULLWIDTH = int(get_terminal_width())
-WIDTH = FULLWIDTH - 2*LEFT_INDENT
-BOLD = ["\033[1m", "\033[22m"]
-CODEBG = f"{BG}21;9;31m"
-CODEBREAK = f'{BG}72;0;52m {CODEBG}'
+WIDTH = FULLWIDTH - 2 * INDENT
+
+BOLD =      ["\033[1m", "\033[22m"]
+UNDERLINE = ["\033[4m", "\033[24m"]
+ITALIC    = ["\033[3m", "\033[23m"]
+
+CODEBG = f"{BG}{DARK}"
+CODEBREAK = f'{BG}{DARK} {CODEBG}'
 CODEPAD = f"{RESET}{CODEBG}{' ' * FULLWIDTH}{RESET}\n"
+
+LINK= f"{FG}{BRIGHT}{UNDERLINE[0]}"
+
 ANSIESCAPE = r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
-UNDERLINE = f"\033[4m"
-LINK= f"{FG}{BRIGHT}{UNDERLINE}"
+
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
 visible_length = lambda x: len(visible(x)) 
 
@@ -128,14 +171,14 @@ def format_table(table_rows):
         for header, width in zip(headers, col_widths)
     ]
     header_line = "│".join(header_cells)
-    formatted.append(f" {BG}29;0;49m{header_line}{RESET}")
+    formatted.append(f" {BG}{MID}{header_line}{RESET}")
 
     # Data rows
     for i, row in enumerate(rows):
         color = 236 if i % 2 == 0 else 238
         row_cells = [f" {cell.ljust(width)} " for cell, width in zip(row, col_widths)]
         row_line = "│".join(row_cells)
-        formatted.append(f" {BG}19;0;30m{row_line}{RESET}")
+        formatted.append(f" {BG}{DARK}{row_line}{RESET}")
     return formatted
 
 def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_line_prefix=""):
@@ -213,19 +256,19 @@ def line_format(line):
         elif token == "*" and (in_italic or not_text(last_token)):
             in_italic = not in_italic
             if not in_code:
-                result += "\033[3m" if in_italic else "\033[23m"
+                result += ITALIC[0] if in_italic else ITALIC[1]
             else:
                 result += token
         elif token == "_" and (in_underline or not_text(last_token)):
             in_underline = not in_underline
             if not in_code:
-                result += "\033[4m" if in_underline else "\033[24m"
+                result += UNDERLINE[0] if in_underline else UNDERLINE[1]
             else:
                 result += token
         elif token == "`":
             in_code = not in_code
             if in_code:
-                result += "\033[48;2;49;0;85m"  
+                result += f"{BG}{MID}"  
             else:
                 result += RESET 
         else:
@@ -463,7 +506,7 @@ def parse(input_source):
                         subsequent_line_prefix,
                     )
                     for wrapped_line in wrapped_lines:
-                        yield f"{LEFT_INDENT_SPACES}{wrapped_line}\n"
+                        yield f"{INDENT_SPACES}{wrapped_line}\n"
                     continue
 
                 # 
@@ -476,17 +519,17 @@ def parse(input_source):
                     text = header_match.group(2)
                     spaces_to_center = ((WIDTH - visible_length(text)) / 2)
                     if level == 1:
-                        yield f"\n{LEFT_INDENT_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n\n"  
+                        yield f"\n{INDENT_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n\n"  
                     elif level == 2:
-                        yield f"\n{LEFT_INDENT_SPACES}{BOLD[0]}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"  
+                        yield f"\n{INDENT_SPACES}{BOLD[0]}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"  
                     elif level == 3:
-                        yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}  {FG}{BRIGHT}{text}{RESET}\n\n" 
+                        yield f"{INDENT_SPACES}{FG}{SYMBOL}  {FG}{BRIGHT}{text}{RESET}\n\n" 
                     elif level == 4:
-                        yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}{text}{RESET}\n" 
+                        yield f"{INDENT_SPACES}{FG}{SYMBOL}{text}{RESET}\n" 
                     elif level == 5:
-                        yield f"{LEFT_INDENT_SPACES}{text}{RESET}\n"  
+                        yield f"{INDENT_SPACES}{text}{RESET}\n"  
                     else:  # level == 6
-                        yield f"{LEFT_INDENT_SPACES}{text}{RESET}\n"  
+                        yield f"{INDENT_SPACES}{text}{RESET}\n"  
 
                 else:
                     #
@@ -494,7 +537,7 @@ def parse(input_source):
                     #
                     if re.match(r"^[\s]*[-*_]{3,}[\s]*$", line):
                         # print a horizontal rule using a unicode midline with a unicode fleur de lis in the middle
-                        yield f"{LEFT_INDENT_SPACES}{FG}{SYMBOL}{'─' * WIDTH}{RESET}\n"
+                        yield f"{INDENT_SPACES}{FG}{SYMBOL}{'─' * WIDTH}{RESET}\n"
                     else:
                         if len(line) == 0:
                             print("")
@@ -502,7 +545,7 @@ def parse(input_source):
                             # This is the basic unformatted text. We still want to word wrap it.
                             wrapped_lines = wrap_text(line)
                             for wrapped_line in wrapped_lines:
-                                yield f"{LEFT_INDENT_SPACES}{wrapped_line}\n" 
+                                yield f"{INDENT_SPACES}{wrapped_line}\n" 
 
                 # Process any remaining table data
                 if state.table.rows:
