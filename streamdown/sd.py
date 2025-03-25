@@ -16,6 +16,7 @@ from pygments.formatters import Terminal256Formatter
 from pygments.styles import get_style_by_name
 import math
 import os
+import logging
 
 # the ranges here are 0-360, 0-1, 0-1
 def hsv2rgb(h, s, v):
@@ -62,7 +63,7 @@ try:
         if len(colors) > 2:
             V = float(colors[2])
 except Exception as e:
-    print(f"Error parsing SD_BASEHSV: {e}", file=sys.stderr)
+    logging.warn(f"Error parsing SD_BASEHSV: {e}")
 
 # Then we have a few theme variations based
 # on multipliers
@@ -97,7 +98,6 @@ UNDERLINE = ["\033[4m", "\033[24m"]
 ITALIC    = ["\033[3m", "\033[23m"]
 
 CODEBG = f"{BG}{DARK}"
-CODEBREAK = f'{BG}{DARK} {CODEBG}'
 CODEPAD = f"{RESET}{CODEBG}{' ' * FULLWIDTH}{RESET}\n"
 
 LINK= f"{FG}{SYMBOL}{UNDERLINE[0]}"
@@ -153,9 +153,9 @@ class ParseState:
     def debug(self):
         """print out every variable in ParseState and TableState"""
         for key, value in self.__dict__.items():
-            print(f"{key:20}: {value}")
+            logging.debug(f"{key:20}: {value}")
         for key, value in self.table.__dict__.items():
-            print(f"table.{key:20}: {value}")
+            logging.debug(f"table.{key:20}: {value}")
 
     def reset_buffer(self):
         self.buffer = []
@@ -197,6 +197,22 @@ def format_table(table_rows):
         row_line = "│".join(row_cells)
         formatted.append(f" {BG}{DARK}{row_line}{RESET}")
     return formatted
+
+def code_wrap(text_in):
+    # get the indentation of the first line
+    indent = len(text_in) - len(text_in.lstrip())
+    text = text_in.lstrip()
+    mywidth = FULLWIDTH
+
+    # We take special care to preserve empty lines
+    if len(text) == 0:
+        return (0, [text_in])
+    res = [text[:mywidth]]
+
+    for i in range(mywidth, len(text), mywidth):
+        res.append(text[i : i + mywidth]) 
+    
+    return (indent, res)
 
 def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_line_prefix=""):
     """
@@ -375,29 +391,29 @@ def parse(input_source):
                     # in the line variable. Add it to the buffer.
                     
                     try:     
+                        indent, line_wrap = code_wrap(line)
                         state.code_buffer.append('')
-                        break_token = ""
 
-                        for tline in line.split('\n'):
+                        for tline in line_wrap:
                             # wrap-around is a bunch of tricks. We essentially format longer and longer portions of code. The problem is 
                             # the length can change based on look-ahead context so we need to use our expected place (state.code_gen) and
                             # then naively search back until our visible_lengths() match. This is not fast and there's certainly smarter
                             # ways of doing it but this thing is way trickery than you think
                             highlighted_code = highlight("\n".join(state.code_buffer) + tline, lexer, formatter)
 
+
                             # Since we are streaming we ignore the resets and newlines at the end
                             if highlighted_code.endswith(FGRESET + "\n"):
                                 highlighted_code = highlighted_code[: -(1 + len(FGRESET))]
 
+                            # turns out highlight will eat leading newlines on empty lines
+                            vislen = visible_length("\n".join(state.code_buffer).lstrip())
+
                             delta = 0
-                            # This is a less dumb then linear way
-                            while visible_length(highlighted_code[:(state.code_gen-delta)]) > visible_length("\n".join(state.code_buffer)):
-                                delta += 5
+                            while visible_length(highlighted_code[:(state.code_gen-delta)]) > vislen:
+                                delta += 1
 
-                            if delta > 0:
-                                while visible_length(highlighted_code[:(state.code_gen-delta)]) < visible_length("\n".join(state.code_buffer)):
-                                    delta -= 1
-
+                            logging.debug(f"{delta} {state.code_gen} {bytes(highlighted_code, 'utf-8')}")
                             state.code_buffer[-1] += tline
 
                             this_batch = highlighted_code[state.code_gen-delta :]
@@ -408,18 +424,16 @@ def parse(input_source):
                             # the begninning of the next line
                             state.code_gen = len(highlighted_code)
                            
-                            # Wrap the code line in a very dark fuschia background, padding to terminal width
-                            code_line = this_batch.strip() 
+                            code_line = ' ' * indent + this_batch.strip() 
                             
                             padding = FULLWIDTH - visible_length(code_line)
-                            break_token = CODEBREAK
                             yield f"{CODEBG}{code_line}{' ' * max(0, padding)}{BGRESET}\n"
                         continue
                     except pygments.util.ClassNotFound as e:
-                        print(f"Error: Lexer for language '{state.code_language}' not found.", file=sys.stderr)
+                        logging.warn(f"Error: Lexer for language '{state.code_language}' not found.")
                     except Exception as e:
                         # Improve error handling: print to stderr and include traceback
-                        print(f"Error highlighting: {e}", file=sys.stderr)
+                        logging.warn(f"Error highlighting: {e}")
                         import traceback
 
                         traceback.print_exc()
@@ -572,17 +586,20 @@ def parse(input_source):
                     state.table.reset()
 
     except Exception as e:
-        print(f"Parser error: {str(e)}", file=sys.stderr)
+        logging.error(f"Parser error: {str(e)}")
         raise
 
 def main():
+    logging.basicConfig(
+        stream=sys.stdout,
+        level=os.getenv('LOGLEVEL') or logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     try:
         inp = sys.stdin
         if len(sys.argv) > 1:
             try:
                 inp = open(sys.argv[1], "r")
             except FileNotFoundError:
-                print(f"Error: File not found: {sys.argv[1]}", file=sys.stderr)
+                logging.error(f"Error: File not found: {sys.argv[1]}")
         elif sys.stdin.isatty():
             print(f"Base HSV: {H}, {S}, {V} Palette: ", end=" ")
             for (a,b) in (("DARK", DARK), ("MID", MID), ("SYMBOL", SYMBOL), ("BRIGHT", BRIGHT)):
