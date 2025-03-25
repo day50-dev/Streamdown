@@ -27,11 +27,11 @@ It's HSV based and accepts the `SD_BASEHSV` environment variable where it is a c
 
 For instance:
 
-        $ BASE_HSV=150 sd
+    $ BASE_HSV=150 sd
 
 Yields a nice navy green.
 
-        $ SD_BASEHSV=240,0.8,0.8 sd
+    $ SD_BASEHSV=240,0.8,0.8 sd
 
 Is this fun neon blue. Choose your own adventure.
 

@@ -68,8 +68,8 @@ except Exception as e:
 # on multipliers
 DARK   = hsv2rgb(H, S * 1.50, V * 0.30)
 MID    = hsv2rgb(H, S       , V * 0.50)
-SYMBOL = hsv2rgb(H, S       , V * 1.50) 
 BRIGHT = hsv2rgb(H, S * 2.00, V       )
+SYMBOL = hsv2rgb(H, S       , V * 1.50) 
 STYLE  = "monokai"
 # And that is all.
 
@@ -100,7 +100,7 @@ CODEBG = f"{BG}{DARK}"
 CODEBREAK = f'{BG}{DARK} {CODEBG}'
 CODEPAD = f"{RESET}{CODEBG}{' ' * FULLWIDTH}{RESET}\n"
 
-LINK= f"{FG}{BRIGHT}{UNDERLINE[0]}"
+LINK= f"{FG}{SYMBOL}{UNDERLINE[0]}"
 
 ANSIESCAPE = r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
 
