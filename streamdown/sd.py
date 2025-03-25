@@ -43,13 +43,13 @@ def hsv2rgb(h, s, v):
     ]]) + "m"
             
 # Coloring starts with a base HSV
-H = 190
+H = 320
 S = 0.5
 V = 0.5
 
 # Then we have a few theme variations based
 # on multipliers
-DARK   = hsv2rgb(H, S       , V * 0.25)
+DARK   = hsv2rgb(H, S * 1.50, V * 0.30)
 MID    = hsv2rgb(H, S       , V * 0.50)
 SYMBOL = hsv2rgb(H, S       , V * 1.50) 
 BRIGHT = hsv2rgb(H, S * 2.00, V       )
@@ -567,6 +567,10 @@ def main():
             except FileNotFoundError:
                 print(f"Error: File not found: {sys.argv[1]}", file=sys.stderr)
         elif sys.stdin.isatty():
+            print("Palette: ", end=" ")
+            for (a,b) in (("DARK", DARK), ("MID", MID), ("SYMBOL", SYMBOL), ("BRIGHT", BRIGHT)):
+                print(f"{FG}{b}{a}{RESET} {BG}{b}{a}{RESET}", end=" | ")
+
             inp = """
                  **A markdown renderer for modern terminals**
                  ##### Usage examples:
