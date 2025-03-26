@@ -129,7 +129,9 @@ class TableState:
 
 class ParseState:
     def __init__(self):
+        # So this can either be False, "backtick" or "spaces"
         self.in_code = False
+
         self.table = TableState()
         self.buffer = []
         self.list_item_stack = []  # stack of (indent, type)
@@ -349,10 +351,43 @@ def parse(input_source):
             else:
                 state.in_list = False
 
+
+            # This order is important because the 4 space version of the code
+            # isn't a consumed formatting line.
+            code_match = re.match(r"^(    |\s*```)\s*([^\s]+|$)", line)
+            if code_match:
+                logging.debug("In code")
+            if code_match and ((code_match.groups(1)[0] == '    ' and not state.in_list) or code_match.groups(1)[0] == '```'):
+
+                logging.debug("In code")
+                state.code_buffer = []
+                state.code_gen = 0
+                state.code_first_line = True
+
+                yield CODEPAD
+
+                # spaced version doesn't have language specification ability
+                state.in_code = 'spaces'
+                state.code_language = 'Bash'
+
+                if code_match.groups(1)[0] == '```':
+                    state.code_language = code_match.group(1)[1] or 'Bash'
+                    state.in_code = 'backtick'
+                    continue
             #
             # <code><pre>
             #
             if state.in_code:
+                if not state.code_first_line and (line.strip() == "```" or (state.in_code == 'spaces' and not line.startswith('    '))):     
+                    logging.debug("Not in code")
+                    state.code_language = None
+                    state.code_indent = 0
+                    yield CODEPAD
+                    code_type = state.in_code 
+                    state.in_code = False
+                    if code_type == 'backtick':
+                        continue
+                    # otherwise we don't want to consume
                 if state.code_first_line:
                     state.code_first_line = False
                     try:
@@ -374,15 +409,8 @@ def parse(input_source):
                     if line.startswith(" " * state.code_indent):
                         line = line[state.code_indent :]
 
-                if line.strip() == "```":     
-                    state.in_code = False
-                    state.code_language = None
-                    state.code_indent = 0
-            
-                    yield CODEPAD
-                    continue
 
-                elif state.code_language:
+                if state.code_language:
                     # By now we have the properly stripped code line
                     # in the line variable. Add it to the buffer.
                     
@@ -435,15 +463,6 @@ def parse(input_source):
                         traceback.print_exc()
                 
 
-            code_match = re.match(r"```([\w+-]*)", line.strip())
-            if code_match:
-                state.code_buffer = []
-                state.code_gen = 0
-                state.in_code = True
-                state.code_first_line = True
-                state.code_language = code_match.group(1) or 'Bash'
-                yield CODEPAD
-                continue
             
             #
             # <table>
