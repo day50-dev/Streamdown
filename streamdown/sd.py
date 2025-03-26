@@ -103,10 +103,10 @@ ITALIC    = ["\033[3m", "\033[23m"]
 CODEBG = f"{BG}{DARK}"
 CODEPAD = [
         f"{RESET}{FG}{DARK}{'▄' * FULLWIDTH}{RESET}\n",
-        f"{RESET}{FG}{DARK}{'▀' * FULLWIDTH}{RESET}\n"
+        f"{RESET}{FG}{DARK}{'▀' * FULLWIDTH}{RESET}"
 ]
 
-LINK= f"{FG}{SYMBOL}{UNDERLINE[0]}"
+LINK = f"{FG}{SYMBOL}{UNDERLINE[0]}"
 
 ANSIESCAPE = r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
 
@@ -306,18 +306,21 @@ def line_format(line):
                 result += BOLD[0] if in_bold else BOLD[1]
             else:
                 result += token  # Output the delimiter inside code
+
         elif token == "*" and (in_italic or not_text(last_token)):
             in_italic = not in_italic
             if not in_code:
                 result += ITALIC[0] if in_italic else ITALIC[1]
             else:
                 result += token
+
         elif token == "_" and (in_underline or not_text(last_token)):
             in_underline = not in_underline
             if not in_code:
                 result += UNDERLINE[0] if in_underline else UNDERLINE[1]
             else:
                 result += token
+
         elif token == "`":
             in_code = not in_code
             if in_code:
@@ -336,6 +339,7 @@ def parse(input_source):
     else:
         stdin = input_source
 
+    last_line_empty_cache = None
     state = ParseState()
     try:
         while True:
@@ -366,6 +370,7 @@ def parse(input_source):
                     yield "\n"
                     continue
                 else:
+                    last_line_empty_cache = state.last_line_empty
                     state.last_line_empty = False
 
             # This is to reset our top-level list counter.
@@ -375,14 +380,15 @@ def parse(input_source):
                 state.in_list = False
 
 
-
+            # This needs to be first
             if not state.in_code: 
+
                 code_match = re.match(r"\s*```\s*([^\s]+|$)", line)
                 if code_match:
                     state.in_code = Code.Backtick
                     state.code_language = code_match.group(1) or 'Bash'
 
-                elif state.last_line_empty and not state.in_list:
+                elif last_line_empty_cache and not state.in_list:
                     code_match = re.match(r"^    ", line)
                     if code_match:
                         state.in_code = Code.Spaces
@@ -394,7 +400,7 @@ def parse(input_source):
                     state.code_first_line = True
                     yield CODEPAD[0]
 
-                    logging.debug(f"In code: ({code_match.group(1)})")
+                    logging.debug(f"In code: ({state.in_code})")
 
                     if state.in_code == Code.Backtick:
                         continue
@@ -402,83 +408,88 @@ def parse(input_source):
             # <code><pre>
             #
             if state.in_code:
-                if not state.code_first_line and (
-                        (state.in_code == Code.Backtick and     line.strip() == "```") or 
-                        (state.in_code == Code.Spaces   and not line.startswith('    '))
-                    ):     
-                    state.code_language = None
-                    state.code_indent = 0
-                    code_type = state.in_code 
-                    state.in_code = False
-                    yield CODEPAD[1]
+                try:
+                    if not state.code_first_line and (
+                            (state.in_code == Code.Backtick and     line.strip() == "```") or 
+                            (state.in_code == Code.Spaces   and not line.startswith('    '))
+                        ):     
+                        state.code_language = None
+                        state.code_indent = 0
+                        code_type = state.in_code 
+                        state.in_code = False
+                        yield CODEPAD[1]
 
-                    logging.debug(f"Not in code: {state.in_code}")
+                        logging.debug(f"Not in code: {state.in_code}")
 
-                    if code_type == Code.Backtick:
-                        continue
-                    # otherwise we don't want to consume
-
-                if state.code_first_line:
-                    state.code_first_line = False
-                    try:
-                        lexer = get_lexer_by_name(state.code_language)
-                        custom_style = get_style_by_name(STYLE)
-                    except pygments.util.ClassNotFound:
-                        lexer = get_lexer_by_name("Bash")
-                        custom_style = get_style_by_name("default")
-
-                    formatter = Terminal256Formatter(style=custom_style)
-                    for i, char in enumerate(line):
-                        if char == " ":
-                            state.code_indent += 1
+                        if code_type == Code.Backtick:
+                            continue
                         else:
-                            break
-                    line = line[state.code_indent :]
+                            # otherwise we don't want to consume
+                            # nor do we want to be here.
+                            raise 
 
-                elif line.startswith(" " * state.code_indent):
-                    line = line[state.code_indent :]
+                    if state.code_first_line:
+                        state.code_first_line = False
+                        try:
+                            lexer = get_lexer_by_name(state.code_language)
+                            custom_style = get_style_by_name(STYLE)
+                        except pygments.util.ClassNotFound:
+                            lexer = get_lexer_by_name("Bash")
+                            custom_style = get_style_by_name("default")
 
-                # By now we have the properly stripped code line
-                # in the line variable. Add it to the buffer.
-                indent, line_wrap = code_wrap(line)
-                state.code_buffer.append('')
+                        formatter = Terminal256Formatter(style=custom_style)
+                        for i, char in enumerate(line):
+                            if char == " ":
+                                state.code_indent += 1 
+                            else:
+                                break
+                        line = line[state.code_indent :]
 
-                for tline in line_wrap:
-                    # wrap-around is a bunch of tricks. We essentially format longer and longer portions of code. The problem is 
-                    # the length can change based on look-ahead context so we need to use our expected place (state.code_gen) and
-                    # then naively search back until our visible_lengths() match. This is not fast and there's certainly smarter
-                    # ways of doing it but this thing is way trickery than you think
-                    highlighted_code = highlight("\n".join(state.code_buffer) + tline, lexer, formatter)
+                    elif line.startswith(" " * state.code_indent):
+                        line = line[state.code_indent :]
 
+                    # By now we have the properly stripped code line
+                    # in the line variable. Add it to the buffer.
+                    indent, line_wrap = code_wrap(line)
+                    state.code_buffer.append('')
 
-                    # Since we are streaming we ignore the resets and newlines at the end
-                    if highlighted_code.endswith(FGRESET + "\n"):
-                        highlighted_code = highlighted_code[: -(1 + len(FGRESET))]
+                    for tline in line_wrap:
+                        # wrap-around is a bunch of tricks. We essentially format longer and longer portions of code. The problem is 
+                        # the length can change based on look-ahead context so we need to use our expected place (state.code_gen) and
+                        # then naively search back until our visible_lengths() match. This is not fast and there's certainly smarter
+                        # ways of doing it but this thing is way trickery than you think
+                        highlighted_code = highlight("\n".join(state.code_buffer) + tline, lexer, formatter)
 
-                    # turns out highlight will eat leading newlines on empty lines
-                    vislen = visible_length("\n".join(state.code_buffer).lstrip())
+                        # Since we are streaming we ignore the resets and newlines at the end
+                        if highlighted_code.endswith(FGRESET + "\n"):
+                            highlighted_code = highlighted_code[: -(1 + len(FGRESET))]
 
-                    delta = 0
-                    while visible_length(highlighted_code[:(state.code_gen-delta)]) > vislen:
-                        delta += 1
+                        # turns out highlight will eat leading newlines on empty lines
+                        vislen = visible_length("\n".join(state.code_buffer).lstrip())
 
-                    state.code_buffer[-1] += tline
+                        delta = 0
+                        while visible_length(highlighted_code[:(state.code_gen-delta)]) > vislen:
+                            delta += 1
 
-                    this_batch = highlighted_code[state.code_gen-delta :]
-                    if this_batch.startswith(FGRESET):
-                        this_batch = this_batch[len(FGRESET) :]
+                        state.code_buffer[-1] += tline
 
-                    logging.debug(f"{state.code_buffer} {bytes(this_batch, 'utf-8')}")
+                        this_batch = highlighted_code[state.code_gen-delta :]
+                        if this_batch.startswith(FGRESET):
+                            this_batch = this_batch[len(FGRESET) :]
 
-                    ## this is the crucial counter that will determine
-                    # the begninning of the next line
-                    state.code_gen = len(highlighted_code)
-                   
-                    code_line = ' ' * indent + this_batch.strip() 
-                    
-                    padding = FULLWIDTH - visible_length(code_line)
-                    yield f"{CODEBG}{code_line}{' ' * max(0, padding)}{BGRESET}\n"
-                continue
+                        logging.debug(f"{state.code_buffer} {bytes(this_batch, 'utf-8')}")
+
+                        ## this is the crucial counter that will determine
+                        # the begninning of the next line
+                        state.code_gen = len(highlighted_code)
+                       
+                        code_line = ' ' * indent + this_batch.strip() 
+                        
+                        padding = FULLWIDTH - visible_length(code_line)
+                        yield f"{CODEBG}{code_line}{' ' * max(0, padding)}{BGRESET}\n"
+                    continue
+                except:
+                    pass
 
           
             #
