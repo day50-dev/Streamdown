@@ -70,8 +70,10 @@ except Exception as e:
 # on multipliers
 DARK   = hsv2rgb(H, S * 1.50, V * 0.30)
 MID    = hsv2rgb(H, S       , V * 0.50)
-BRIGHT = hsv2rgb(H, S * 2.00, V       )
 SYMBOL = hsv2rgb(H, S       , V * 1.50) 
+HEAD   = hsv2rgb(H, S * 2.00, V * 1.50) 
+BRIGHT = hsv2rgb(H, S * 2.00, V * 1.90)
+
 STYLE  = "monokai"
 # And that is all.
 
@@ -99,7 +101,10 @@ UNDERLINE = ["\033[4m", "\033[24m"]
 ITALIC    = ["\033[3m", "\033[23m"]
 
 CODEBG = f"{BG}{DARK}"
-CODEPAD = f"{RESET}{CODEBG}{' ' * FULLWIDTH}{RESET}\n"
+CODEPAD = [
+        f"{RESET}{FG}{DARK}{'▄' * FULLWIDTH}{RESET}\n",
+        f"{RESET}{FG}{DARK}{'▀' * FULLWIDTH}{RESET}\n"
+]
 
 LINK= f"{FG}{SYMBOL}{UNDERLINE[0]}"
 
@@ -387,8 +392,7 @@ def parse(input_source):
                     state.code_buffer = []
                     state.code_gen = 0
                     state.code_first_line = True
-
-                    yield CODEPAD
+                    yield CODEPAD[0]
 
                     logging.debug(f"In code: ({code_match.group(1)})")
 
@@ -402,12 +406,13 @@ def parse(input_source):
                         (state.in_code == Code.Backtick and     line.strip() == "```") or 
                         (state.in_code == Code.Spaces   and not line.startswith('    '))
                     ):     
-                    logging.debug(f"Not in code: {state.in_code}")
                     state.code_language = None
                     state.code_indent = 0
-                    yield CODEPAD
                     code_type = state.in_code 
                     state.in_code = False
+                    yield CODEPAD[1]
+
+                    logging.debug(f"Not in code: {state.in_code}")
 
                     if code_type == Code.Backtick:
                         continue
@@ -576,15 +581,15 @@ def parse(input_source):
                     level = len(header_match.group(1))
                     text = header_match.group(2)
                     spaces_to_center = ((WIDTH - visible_length(text)) / 2)
-                    if level == 1:
+                    if level == 1:      # #
                         yield f"\n{INDENT_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n\n"  
-                    elif level == 2:
+                    elif level == 2:    # ##
                         yield f"\n{INDENT_SPACES}{BOLD[0]}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"  
-                    elif level == 3:
-                        yield f"{INDENT_SPACES}{FG}{SYMBOL}  {FG}{BRIGHT}{text}{RESET}\n\n" 
-                    elif level == 4:
+                    elif level == 3:    # ###
+                        yield f"\n{INDENT_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}\n" 
+                    elif level == 4:    # ####
                         yield f"{INDENT_SPACES}{FG}{SYMBOL}{text}{RESET}\n" 
-                    elif level == 5:
+                    elif level == 5:    # #####
                         yield f"{INDENT_SPACES}{text}{RESET}\n"  
                     else:  # level == 6
                         yield f"{INDENT_SPACES}{text}{RESET}\n"  
