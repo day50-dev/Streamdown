@@ -202,7 +202,7 @@ def code_wrap(text_in):
     # get the indentation of the first line
     indent = len(text_in) - len(text_in.lstrip())
     text = text_in.lstrip()
-    mywidth = FULLWIDTH
+    mywidth = FULLWIDTH - indent
 
     # We take special care to preserve empty lines
     if len(text) == 0:
@@ -215,9 +215,7 @@ def code_wrap(text_in):
     return (indent, res)
 
 def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_line_prefix=""):
-    """
-    Wraps text to the given width, preserving ANSI escape codes across lines.
-    """
+    # Wraps text to the given width, preserving ANSI escape codes across lines.
     words = line_format(text).split()
     lines = []
     current_line = ""
@@ -229,9 +227,7 @@ def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_
         if codes:
             current_style += "".join(codes)
 
-        if (
-            visible_length(current_line) + visible_length(word) + 1 <= width
-        ):  # +1 for space
+        if visible_length(current_line) + visible_length(word) + 1 <= width:  # +1 for space
             current_line += (" " if current_line else "") + word
         else:
             # Close previous line with reset and then re-apply current style
