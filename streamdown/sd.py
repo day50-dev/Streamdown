@@ -369,9 +369,10 @@ def parse(input_source):
 
             # This order is important because the 4 space version of the code
             # isn't a consumed formatting line.
-            code_match = re.match(r"^(    |\s*```)\s*([^\s]+|$)", line)
+            code_match = re.match(r"(^    |\s*```)\s*([^\s]+|$)", line)
+            logging.debug(code_match)
 
-            if not state.in_code and code_match and ((state.last_line_empty and code_match.group(1) == '    ' and not state.in_list) or code_match.group(1) == '```'):
+            if not state.in_code and code_match and ((state.last_line_empty and code_match.group(1) == '    ' and not state.in_list) or code_match.group(1).endswith('```')):
 
                 logging.debug("In code")
                 state.code_buffer = []
