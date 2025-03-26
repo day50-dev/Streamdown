@@ -130,6 +130,9 @@ class Code:
     Spaces = 'spaces'
     Backtick = 'backtick'
 
+class Feature:
+    CodeSpaces = False
+
 def extract_ansi_codes(text):
     """Extracts all ANSI escape codes from a string."""
     return re.findall(r"\033\[[0-9;]*[mK]", text)
@@ -388,7 +391,7 @@ def parse(input_source):
                     state.in_code = Code.Backtick
                     state.code_language = code_match.group(1) or 'Bash'
 
-                elif last_line_empty_cache and not state.in_list:
+                elif Feature.CodeSpaces and last_line_empty_cache and not state.in_list:
                     code_match = re.match(r"^    ", line)
                     if code_match:
                         state.in_code = Code.Spaces
@@ -411,7 +414,7 @@ def parse(input_source):
                 try:
                     if not state.code_first_line and (
                             (state.in_code == Code.Backtick and     line.strip() == "```") or 
-                            (state.in_code == Code.Spaces   and not line.startswith('    '))
+                            (Feature.CodeSpaces and state.in_code == Code.Spaces   and not line.startswith('    '))
                         ):     
                         state.code_language = None
                         state.code_indent = 0
@@ -644,13 +647,12 @@ def main():
             except FileNotFoundError:
                 logging.error(f"Error: File not found: {sys.argv[1]}")
         elif sys.stdin.isatty():
-            print(f"Base HSV: {H}, {S}, {V} Palette: ", end=" ")
+            print(f"SD_BASEHSV: {H}, {S}, {V}\nPalette: ", end=" ")
             for (a,b) in (("DARK", DARK), ("MID", MID), ("SYMBOL", SYMBOL), ("BRIGHT", BRIGHT)):
                 print(f"{FG}{b}{a}{RESET} {BG}{b}{a}{RESET}", end=" | ")
-            print("")
+            print("\n")
 
-            inp = """
-                 **A markdown renderer for modern terminals**
+            inp = """**A markdown renderer for modern terminals**
                  ##### Usage examples:
 
                  ``` bash
