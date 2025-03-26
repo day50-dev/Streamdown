@@ -17,6 +17,7 @@ from pygments.styles import get_style_by_name
 import math
 import os
 import logging
+import tempfile
 
 # the ranges here are 0-360, 0-1, 0-1
 def hsv2rgb(h, s, v):
@@ -103,6 +104,19 @@ CODEPAD = f"{RESET}{CODEBG}{' ' * FULLWIDTH}{RESET}\n"
 LINK= f"{FG}{SYMBOL}{UNDERLINE[0]}"
 
 ANSIESCAPE = r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
+
+DEBUG_FH = None
+def debug_write(text):
+    global DEBUG_FH
+    if SD_DEBUG:
+        if not DEBUG_FH:
+            DEBUG_FH = tempfile.NamedTemporaryFile(prefix="sd_debug", delete=False, encoding="utf-8", mode="w")
+        assert isinstance(text, str)
+        print(text, file=DEBUG_FH)
+        DEBUG_FH.flush()
+        
+SD_DEBUG = os.getenv("SD_DEBUG") or False
+
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
 visible_length = lambda x: len(visible(x)) 
@@ -331,6 +345,7 @@ def parse(input_source):
             # Process complete line
             line = "".join(state.buffer).rstrip("\n")
             state.reset_buffer()
+            debug_write(line)
 
             # --- Collapse Multiple Empty Lines if not in code blocks ---
             if not state.in_code:
@@ -449,8 +464,6 @@ def parse(input_source):
                     padding = FULLWIDTH - visible_length(code_line)
                     yield f"{CODEBG}{code_line}{' ' * max(0, padding)}{BGRESET}\n"
                 continue
-
-            
 
           
             #
