@@ -121,6 +121,9 @@ SD_DEBUG = os.getenv("SD_DEBUG") or False
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
 visible_length = lambda x: len(visible(x)) 
 
+class Code:
+    Spaces = 'spaces'
+    Backtick = 'backtick'
 
 def extract_ansi_codes(text):
     """Extracts all ANSI escape codes from a string."""
@@ -143,7 +146,7 @@ class TableState:
 
 class ParseState:
     def __init__(self):
-        # So this can either be False, "backtick" or "spaces"
+        # So this can either be False, Code.Backtick or Code.Spaces
         self.in_code = False
 
         self.table = TableState()
@@ -367,40 +370,46 @@ def parse(input_source):
                 state.in_list = False
 
 
-            # This order is important because the 4 space version of the code
-            # isn't a consumed formatting line.
-            code_match = re.match(r"(^    |\s*```)\s*([^\s]+|$)", line)
-            logging.debug(code_match)
 
-            if not state.in_code and code_match and ((state.last_line_empty and code_match.group(1) == '    ' and not state.in_list) or code_match.group(1).endswith('```')):
+            if not state.in_code: 
+                code_match = re.match(r"\s*```\s*([^\s]+|$)", line)
+                if code_match:
+                    state.in_code = Code.Backtick
+                    state.code_language = code_match.group(1) or 'Bash'
 
-                logging.debug("In code")
-                state.code_buffer = []
-                state.code_gen = 0
-                state.code_first_line = True
+                elif state.last_line_empty and not state.in_list:
+                    code_match = re.match(r"^    ", line)
+                    if code_match:
+                        state.in_code = Code.Spaces
+                        state.code_language = 'Bash'
 
-                yield CODEPAD
+                if state.in_code:
+                    state.code_buffer = []
+                    state.code_gen = 0
+                    state.code_first_line = True
 
-                # spaced version doesn't have language specification ability
-                state.in_code = 'spaces'
-                state.code_language = 'Bash'
+                    yield CODEPAD
 
-                if code_match.group(1) == '```':
-                    state.code_language = code_match.group(2) or 'Bash'
-                    state.in_code = 'backtick'
-                    continue
+                    logging.debug(f"In code: ({code_match.group(1)})")
+
+                    if state.in_code == Code.Backtick:
+                        continue
             #
             # <code><pre>
             #
             if state.in_code:
-                if not state.code_first_line and (line.strip() == "```" or (state.in_code == 'spaces' and not line.startswith('    '))):     
-                    logging.debug("Not in code")
+                if not state.code_first_line and (
+                        (state.in_code == Code.Backtick and     line.strip() == "```") or 
+                        (state.in_code == Code.Spaces   and not line.startswith('    '))
+                    ):     
+                    logging.debug(f"Not in code: {state.in_code}")
                     state.code_language = None
                     state.code_indent = 0
                     yield CODEPAD
                     code_type = state.in_code 
                     state.in_code = False
-                    if code_type == 'backtick':
+
+                    if code_type == Code.Backtick:
                         continue
                     # otherwise we don't want to consume
 
