@@ -131,7 +131,7 @@ class Code:
     Backtick = 'backtick'
 
 class Feature:
-    CodeSpaces = False
+    CodeSpaces = True
 
 def extract_ansi_codes(text):
     """Extracts all ANSI escape codes from a string."""
@@ -162,6 +162,10 @@ class ParseState:
         self.list_item_stack = []  # stack of (indent, type)
         self.first_line = True
         self.last_line_empty = False
+
+        # If the entire block is indented this will 
+        # tell us what that is
+        self.first_indent = None
 
         # These are part of a trick to get
         # streaming code blocks while preserving
@@ -382,7 +386,14 @@ def parse(input_source):
             else:
                 state.in_list = False
 
-
+            if state.first_indent == None:
+                state.first_indent = len(line) - len(line.lstrip())
+            if len(line) - len(line.lstrip()) >= state.first_indent:
+                line = line[state.first_indent:]
+            else:
+                logging.warn("Indentation decreased from first line.")
+                
+                
             # This needs to be first
             if not state.in_code: 
 
@@ -652,7 +663,8 @@ def main():
                 print(f"{FG}{b}{a}{RESET} {BG}{b}{a}{RESET}", end=" | ")
             print("\n")
 
-            inp = """**A markdown renderer for modern terminals**
+            inp = """
+                 **A markdown renderer for modern terminals**
                  ##### Usage examples:
 
                  ``` bash
