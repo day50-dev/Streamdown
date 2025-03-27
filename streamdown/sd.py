@@ -671,6 +671,7 @@ def main():
                  sd [filename]
                  cat README.md | sd
                  stdbuf -oL llm chat | sd 
+                 SD_BASEHSV=100,0.4,0.8 sd <(curl -s https://raw.githubusercontent.com/kristopolous/Streamdown/refs/heads/main/tests/fizzbuzz.md)
                  ```
 
                  If no filename is provided and no input is piped, this help message is displayed.
