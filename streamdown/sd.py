@@ -68,11 +68,11 @@ except Exception as e:
 
 # Then we have a few theme variations based
 # on multipliers
-DARK   = hsv2rgb(H, S * 1.50, V * 0.30)
-MID    = hsv2rgb(H, S       , V * 0.50)
-SYMBOL = hsv2rgb(H, S       , V * 1.50) 
-HEAD   = hsv2rgb(H, S * 2.00, V * 1.50) 
-BRIGHT = hsv2rgb(H, S * 2.00, V * 1.90)
+DARK   = hsv2rgb(H * 1, S * 1.50, V * 0.30)
+MID    = hsv2rgb(H * 1, S * 1.00, V * 0.50)
+SYMBOL = hsv2rgb(H * 1, S * 1.00, V * 1.50) 
+HEAD   = hsv2rgb(H * 1, S * 2.00, V * 1.50) 
+BRIGHT = hsv2rgb(H * 1, S * 2.00, V * 1.90)
 
 STYLE  = "monokai"
 # And that is all.
