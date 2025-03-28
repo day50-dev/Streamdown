@@ -29,16 +29,9 @@ The configuration file uses TOML format and currently supports the following sec
 
 **`[colors]`**
 
-This section defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived.
+This section defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived. Due to limitations in TOML, these all must be floats (have a decimal point).
 
-*   `H`: Hue, a value from 0 to 360 degrees on the color wheel (e.g., 0=Red, 120=Green, 240=Blue). Default: 320.
-*   `S`: Saturation, a value from 0.0 (grayscale) to 1.0 (full color). Default: 0.5.
-*   `V`: Value/Brightness, a value from 0.0 (black) to 1.0 (full brightness). Default: 0.5.
-
-**`[multipliers]`**
-
-This section controls the color palette variations derived from the base HSV color defined in `[colors]`. Each entry adjusts the Saturation (S) and Value/Brightness (V) of the base color.
-
+*   `HSV`: [ 0.0 - 360.0, 0.0 - 1.0, 0.0 - 1.0 ] 
 *   `DARK`: Multipliers for background elements, code blocks. (Default: S=1.50, V=0.30)
 *   `MID`: Multipliers for inline code backgrounds, table headers. (Default: S=1.00, V=0.50)
 *   `SYMBOL`: Multipliers for list bullets, horizontal rules, links. (Default: S=1.00, V=1.50)
