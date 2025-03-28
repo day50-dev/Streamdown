@@ -42,3 +42,9 @@ Do this
 
 Certainly room for improvement and I'll probably continue to make them
 
+## Install from source
+At least one of these should work, hopefully
+
+    $ pipx install -e .
+    $ pip install -e .
+    $ uv pip install -e . 
