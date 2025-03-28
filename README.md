@@ -42,8 +42,8 @@ Example:
 ```toml
 [colors]
 HSV = [240.0, 0.5, 0.5]
-DARK = { S = 1.2, V = 0.25 } # Make dark elements less saturated and darker
-SYMBOL = { S = 1.8, V = 1.8 } # Make symbols more vibrant
+DARK = { H = 1.0, S = 1.2, V = 0.25 } # Make dark elements less saturated and darker
+SYMBOL = { H = 1.0, S = 1.8, V = 1.8 } # Make symbols more vibrant
 ```
 
 **`[features]`**
