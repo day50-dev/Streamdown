@@ -17,7 +17,9 @@ from pygments.styles import get_style_by_name
 import math
 import os
 import logging
+import base64        
 import tempfile
+import io
 
 # the ranges here are 0-360, 0-1, 0-1
 def hsv2rgb(h, s, v):
@@ -132,6 +134,7 @@ class Code:
 
 class Feature:
     CodeSpaces = True
+    Clipboard = True
 
 def extract_ansi_codes(text):
     """Extracts all ANSI escape codes from a string."""
@@ -177,16 +180,6 @@ class ParseState:
         self.code_indent = 0
         self.ordered_list_numbers = []
         self.in_list = False
-
-    def isempty(self):
-        return self.in_code
-    
-    def debug(self):
-        """print out every variable in ParseState and TableState"""
-        for key, value in self.__dict__.items():
-            logging.debug(f"{key:20}: {value}")
-        for key, value in self.table.__dict__.items():
-            logging.debug(f"table.{key:20}: {value}")
 
     def reset_buffer(self):
         self.buffer = []
@@ -341,13 +334,14 @@ def line_format(line):
     return result
 
 def parse(input_source):
+    global state
     if isinstance(input_source, str):
         stdin = StringIO(input_source)
     else:
         stdin = input_source
 
     last_line_empty_cache = None
-    state = ParseState()
+    
     try:
         while True:
             char = stdin.read(1)
@@ -391,7 +385,7 @@ def parse(input_source):
             if len(line) - len(line.lstrip()) >= state.first_indent:
                 line = line[state.first_indent:]
             else:
-                logging.warn("Indentation decreased from first line.")
+                logging.warning("Indentation decreased from first line.")
                 
                 
             # This needs to be first
@@ -646,7 +640,9 @@ def parse(input_source):
         logging.error(f"Parser error: {str(e)}")
         raise
 
+state = ParseState()
 def main():
+    global state
     logging.basicConfig(
         stream=sys.stdout,
         level=os.getenv('LOGLEVEL') or logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -683,5 +679,15 @@ def main():
             sys.stdout.flush()
     except KeyboardInterrupt:
         pass
+
+    # We see if the Feature.Clipboard is set and then we emit state.code_buffer using OSC 52
+    if Feature.Clipboard and state.code_buffer:
+        code = "\n".join(state.code_buffer)
+        # code needs to be a base64 encoded string before emitting
+        code_bytes = code.encode('utf-8')
+        base64_bytes = base64.b64encode(code_bytes)
+        base64_string = base64_bytes.decode('utf-8')
+        print(f"\033]52;c;{base64_string}\a", end="", flush=True)
+
 if __name__ == "__main__":
     main()
