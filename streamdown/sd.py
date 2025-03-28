@@ -3,9 +3,12 @@
 # requires-python = ">=3.8"
 # dependencies = [
 #     "pygments",
+#     "appdirs",
+#     "toml",
 # ]
 # ///
 import sys
+import appdirs
 import re
 import shutil
 from io import StringIO
@@ -19,7 +22,46 @@ import os
 import logging
 import base64        
 import tempfile
-import io
+import toml
+from pathlib import Path
+
+default_toml = """
+
+[features]
+CodeSpaces = true
+Clipboard = true
+Logging = false
+
+[colors]
+HSV = [320.0, 0.5, 0.5]
+DARK =   { H = 1.00, S = 1.50, V = 0.30 }
+MID  =   { H = 1.00, S = 1.00, V = 0.50 }
+SYMBOL = { H = 1.00, S = 1.00, V = 1.50 }
+HEAD =   { H = 1.00, S = 2.00, V = 1.50 }
+BRIGHT = { H = 1.00, S = 2.00, V = 1.90 }
+STYLE = "monokai"
+
+"""
+
+def ensure_config_file():
+    """Ensure config.toml exists in XDG config directory, creating it with defaults if needed. Returns the content."""
+    config_dir = appdirs.user_config_dir("streamdown")
+    os.makedirs(config_dir, exist_ok=True)
+    config_path = Path(config_dir) / "config.toml"
+    if not config_path.exists():
+        config_path.write_text(default_toml)
+    return config_path.read_text()
+    
+config_toml_content = ensure_config_file()
+print(config_toml_content)
+config = toml.loads(config_toml_content)
+colors = config.get("colors", {})
+features = config.get("features", {})
+
+useCodeSpaces = features.get("CodeSpaces", True)
+useClipboard = features.get("Clipboard", True)
+useLogging = features.get("Logging", False)
+
 
 # the ranges here are 0-360, 0-1, 0-1
 def hsv2rgb(h, s, v):
@@ -48,12 +90,6 @@ def hsv2rgb(h, s, v):
         min(255,int((g + m) * 255)), 
         min(255,int((b + m) * 255))
     ]]) + "m"
-            
-# Coloring starts with a base HSV, which can be overridden
-# by the SD_COLORS environment variable.
-H = 320
-S = 0.5
-V = 0.5
 
 try:
     sd_colors = os.getenv("SD_BASEHSV")
@@ -66,19 +102,25 @@ try:
         if len(colors) > 2:
             V = float(colors[2])
 except Exception as e:
-    logging.warn(f"Error parsing SD_BASEHSV: {e}")
+    logging.warning(f"Error parsing SD_BASEHSV: {e}")
 
-# Then we have a few theme variations based
-# on multipliers
-DARK   = hsv2rgb(H * 1, S * 1.50, V * 0.30)
-MID    = hsv2rgb(H * 1, S * 1.00, V * 0.50)
-SYMBOL = hsv2rgb(H * 1, S * 1.00, V * 1.50) 
-HEAD   = hsv2rgb(H * 1, S * 2.00, V * 1.50) 
-BRIGHT = hsv2rgb(H * 1, S * 2.00, V * 1.90)
+def apply_multipliers(name, H, S, V):
+    m = colors.get(name)
+    return hsv2rgb(H * m['H'], S * m["S"], V * m["V"])
 
-STYLE  = "monokai"
-# And that is all.
+            
+H = colors.get("HSV")[0]
+S = colors.get("HSV")[1]
+V = colors.get("HSV")[2]
 
+DARK   = apply_multipliers("DARK", H, S, V)
+MID    = apply_multipliers("MID", H, S, V)
+SYMBOL = apply_multipliers("SYMBOL", H, S, V)
+HEAD   = apply_multipliers("HEAD", H, S, V)
+BRIGHT = apply_multipliers("BRIGHT", H, S, V)
+
+
+STYLE  = config.get("STYLE", "monokai")
 INDENT = 2
 INDENT_SPACES = " " * INDENT
 
@@ -115,31 +157,23 @@ ANSIESCAPE = r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
 DEBUG_FH = None
 def debug_write(text):
     global DEBUG_FH
-    if SD_DEBUG:
+    if useLogging:
         if not DEBUG_FH:
             DEBUG_FH = tempfile.NamedTemporaryFile(prefix="sd_debug", delete=False, encoding="utf-8", mode="w")
         assert isinstance(text, str)
         print(text, file=DEBUG_FH)
         DEBUG_FH.flush()
-        
-SD_DEBUG = os.getenv("SD_DEBUG") or False
-
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
 visible_length = lambda x: len(visible(x)) 
-
-class Code:
-    Spaces = 'spaces'
-    Backtick = 'backtick'
-
-class Feature:
-    CodeSpaces = True
-    Clipboard = True
 
 def extract_ansi_codes(text):
     """Extracts all ANSI escape codes from a string."""
     return re.findall(r"\033\[[0-9;]*[mK]", text)
 
+class Code:
+    Spaces = 'spaces'
+    Backtick = 'backtick'
 
 class TableState:
     def __init__(self):
@@ -396,7 +430,7 @@ def parse(input_source):
                     state.in_code = Code.Backtick
                     state.code_language = code_match.group(1) or 'Bash'
 
-                elif Feature.CodeSpaces and last_line_empty_cache and not state.in_list:
+                elif useCodeSpaces and last_line_empty_cache and not state.in_list:
                     code_match = re.match(r"^    ", line)
                     if code_match:
                         state.in_code = Code.Spaces
@@ -419,7 +453,7 @@ def parse(input_source):
                 try:
                     if not state.code_first_line and (
                             (state.in_code == Code.Backtick and     line.strip() == "```") or 
-                            (Feature.CodeSpaces and state.in_code == Code.Spaces   and not line.startswith('    '))
+                            (useCodeSpaces and state.in_code == Code.Spaces   and not line.startswith('    '))
                         ):     
                         state.code_language = None
                         state.code_indent = 0
@@ -680,8 +714,7 @@ def main():
     except KeyboardInterrupt:
         pass
 
-    # We see if the Feature.Clipboard is set and then we emit state.code_buffer using OSC 52
-    if Feature.Clipboard and state.code_buffer:
+    if useClipboard and state.code_buffer:
         code = "\n".join(state.code_buffer)
         # code needs to be a base64 encoded string before emitting
         code_bytes = code.encode('utf-8')

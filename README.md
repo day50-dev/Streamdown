@@ -22,18 +22,50 @@ This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [r
 #### Doesn't consume characters like _ and * as style when they are in `blocks like this` because `_they_can_be_varaiables_`
 ![dunder](https://github.com/user-attachments/assets/eb9ab001-3bc7-4e4b-978f-bc00f29c2a41)
 
-#### Palette is configurable
-It's HSV based and accepts the `SD_BASEHSV` environment variable where it is a comma separated HSV in the range: `[0-360, 0-1, 0-1]`
+#### Configuration
+Streamdown uses a configuration file located at `~/.config/streamdown/config.toml` (following the XDG Base Directory Specification). If this file does not exist upon first run, it will be created with default values.
 
-For instance:
+The configuration file uses TOML format and currently supports the following sections:
 
-    $ SD_BASEHSV=150 sd
+**`[colors]`**
 
-Yields a nice navy green.
+This section defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived.
 
-    $ SD_BASEHSV=240,0.8,0.8 sd
+*   `H`: Hue, a value from 0 to 360 degrees on the color wheel (e.g., 0=Red, 120=Green, 240=Blue). Default: 320.
+*   `S`: Saturation, a value from 0.0 (grayscale) to 1.0 (full color). Default: 0.5.
+*   `V`: Value/Brightness, a value from 0.0 (black) to 1.0 (full brightness). Default: 0.5.
 
-Is this fun neon blue. Choose your own adventure.
+**`[multipliers]`**
+
+This section controls the color palette variations derived from the base HSV color defined in `[colors]`. Each entry adjusts the Saturation (S) and Value/Brightness (V) of the base color.
+
+*   `DARK`: Multipliers for background elements, code blocks. (Default: S=1.50, V=0.30)
+*   `MID`: Multipliers for inline code backgrounds, table headers. (Default: S=1.00, V=0.50)
+*   `SYMBOL`: Multipliers for list bullets, horizontal rules, links. (Default: S=1.00, V=1.50)
+*   `HEAD`: Multipliers for level 3 headers. (Default: S=2.00, V=1.50)
+*   `BRIGHT`: Multipliers for level 2 headers. (Default: S=2.00, V=1.90)
+
+Example:
+```toml
+[colors]
+HSV = [240.0, 0.5, 0.5]
+DARK = { S = 1.2, V = 0.25 } # Make dark elements less saturated and darker
+SYMBOL = { S = 1.8, V = 1.8 } # Make symbols more vibrant
+```
+
+**`[features]`**
+
+This section controls optional features:
+
+*   `CodeSpaces` (boolean, default: `true`): Enables detection of code blocks indented with 4 spaces. Set to `false` to disable this detection method (triple-backtick blocks still work).
+*   `Clipboard` (boolean, default: `true`): Enables copying the last code block encountered to the system clipboard using OSC 52 escape sequences upon exit. Set to `false` to disable.
+
+Example:
+```toml
+[features]
+CodeSpaces = false
+Clipboard = false
+```
 
 ## Demo
 Do this
