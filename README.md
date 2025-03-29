@@ -46,6 +46,8 @@ DARK = { H = 1.0, S = 1.2, V = 0.25 } # Make dark elements less saturated and da
 SYMBOL = { H = 1.0, S = 1.8, V = 1.8 } # Make symbols more vibrant
 ```
 
+The [highlighting themes come via pygments](https://pygments.org/styles/).
+
 **`[features]`**
 
 This section controls optional features:
