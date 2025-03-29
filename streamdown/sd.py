@@ -53,7 +53,6 @@ def ensure_config_file():
     return config_path.read_text()
     
 config_toml_content = ensure_config_file()
-print(config_toml_content)
 config = toml.loads(config_toml_content)
 colors = config.get("colors", {})
 features = config.get("features", {})
