@@ -90,27 +90,23 @@ def hsv2rgb(h, s, v):
         min(255,int((b + m) * 255))
     ]]) + "m"
 
+H = colors.get("HSV")[0]
+S = colors.get("HSV")[1]
+V = colors.get("HSV")[2]
+
 try:
-    sd_colors = os.getenv("SD_BASEHSV")
-    if sd_colors:
-        colors = sd_colors.split(",")
-        if len(colors) > 0:
-            H = float(colors[0])
-        if len(colors) > 1:
-            S = float(colors[1])
-        if len(colors) > 2:
-            V = float(colors[2])
+    env_sd_colors = os.getenv("SD_BASEHSV")
+    if env_sd_colors:
+        env_colors = env_sd_colors.split(",")
+        if len(env_colors) > 0: H = float(env_colors[0])
+        if len(env_colors) > 1: S = float(env_colors[1])
+        if len(env_colors) > 2: V = float(env_colors[2])
 except Exception as e:
     logging.warning(f"Error parsing SD_BASEHSV: {e}")
 
 def apply_multipliers(name, H, S, V):
     m = colors.get(name)
     return hsv2rgb(H * m['H'], S * m["S"], V * m["V"])
-
-            
-H = colors.get("HSV")[0]
-S = colors.get("HSV")[1]
-V = colors.get("HSV")[2]
 
 DARK   = apply_multipliers("DARK", H, S, V)
 MID    = apply_multipliers("MID", H, S, V)
