@@ -26,7 +26,6 @@ import toml
 from pathlib import Path
 
 default_toml = """
-
 [features]
 CodeSpaces = true
 Clipboard = true
@@ -41,7 +40,6 @@ SYMBOL = { H = 1.00, S = 1.00, V = 1.50 }
 HEAD =   { H = 1.00, S = 2.00, V = 1.50 }
 BRIGHT = { H = 1.00, S = 2.00, V = 1.90 }
 STYLE = "monokai"
-
 """
 
 def ensure_config_file():
