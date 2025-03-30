@@ -58,12 +58,14 @@ This section controls optional features:
 
 *   `CodeSpaces` (boolean, default: `true`): Enables detection of code blocks indented with 4 spaces. Set to `false` to disable this detection method (triple-backtick blocks still work).
 *   `Clipboard` (boolean, default: `true`): Enables copying the last code block encountered to the system clipboard using OSC 52 escape sequences upon exit. Set to `false` to disable.
+*   `Indent` (integer, default: `2`): The left indent for the output. Setting this to a higher number (maybe 8 or so) can help with vertical inspection 
 
 Example:
 ```toml
 [features]
 CodeSpaces = false
 Clipboard = false
+Indent = 4
 ```
 
 ## Demo
