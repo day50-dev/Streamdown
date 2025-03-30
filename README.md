@@ -22,6 +22,10 @@ This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [r
 #### Doesn't consume characters like _ and * as style when they are in `blocks like this` because `_they_can_be_varaiables_`
 ![dunder](https://github.com/user-attachments/assets/eb9ab001-3bc7-4e4b-978f-bc00f29c2a41)
 
+#### Also, tables are carefully supported to hopefully not be too broken
+![table](https://github.com/user-attachments/assets/265509b1-d910-467a-ac39-f219c128e32d)
+
+
 #### Configuration
 Streamdown uses a configuration file located at `~/.config/streamdown/config.toml` (following the XDG Base Directory Specification). If this file does not exist upon first run, it will be created with default values.
 
