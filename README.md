@@ -71,7 +71,7 @@ Padding = 4
 ## Demo
 Do this
 
-    $ ./tester.sh tests/*md | steamdown/sd.py
+    $ ./tester.sh tests/*md | streamdown/sd.py
 
 Certainly room for improvement and I'll probably continue to make them
 
