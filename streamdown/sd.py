@@ -237,7 +237,7 @@ def format_table(table_rows):
         # Handle extremely narrow terminals gracefully
         max_col_width = 1
     else:
-        max_col_width = available_width // num_cols - 1
+        max_col_width = available_width // num_cols
 
     all_rows_raw = [headers_raw] + rows_raw
     wrapped_rows = []
@@ -292,7 +292,7 @@ def format_table(table_rows):
             # Correct indentation: This should be outside the c_idx loop
             joined_line = f"{BG}{bg_color}{extra}{FG}{SYMBOL}│{RESET}".join(line_segments)
             # Correct indentation and add missing characters
-            formatted.append(f" {joined_line}{RESET}")
+            formatted.append(f"{joined_line}{RESET}")
     return formatted
 
 def code_wrap(text_in):
@@ -605,7 +605,7 @@ def parse(input_source):
                 if state.table.in_body or state.table.in_header:
                     formatted = format_table(state.table.rows)
                     for l in formatted:
-                        yield f" {l}\n"
+                        yield f"{INDENT_SPACES}{l}\n"
                     state.table.reset()
 
                 #
@@ -709,7 +709,7 @@ def parse(input_source):
                 if state.table.rows:
                     formatted = format_table(state.table.rows)
                     for l in formatted:
-                        yield f"{l}\n"
+                        yield f"{INDENT_SPACES}{l}\n"
                     state.table.reset()
 
     except Exception as e:
