@@ -215,40 +215,85 @@ class ParseState:
 
 
 def format_table(table_rows):
-    """Formats markdown tables with unicode borders and alternating row colors"""
+    """Formats markdown tables with unicode borders, wrapping, and alternating row colors"""
     if not table_rows:
         return []
 
     # Extract headers and rows, skipping separator
-    headers = [cell.strip() for cell in table_rows[0]]
-    rows = [
+    headers_raw = [cell.strip() for cell in table_rows[0]]
+    rows_raw = [
         [cell.strip() for cell in row]
         for row in table_rows[1:]
         if not re.match(r"^[\s|:-]+$", "|".join(row))
     ]
 
-    # Calculate column widths
-    col_widths = [
-        max(len(str(item)) for item in col) + 2  # +2 for padding
-        for col in zip(headers, *rows)
-    ]
+    num_cols = len(headers_raw)
+    if num_cols == 0:
+        return []
+
+    # Calculate max width per column (integer division)
+    # Subtract num_cols + 1 for the vertical borders '│'
+    available_width = WIDTH - (num_cols + 1)
+    if available_width <= 0:
+        # Handle extremely narrow terminals gracefully
+        max_col_width = 1
+    else:
+        max_col_width = available_width // num_cols - 1
+
+    all_rows_raw = [headers_raw] + rows_raw
+    wrapped_rows = []
+    row_heights = []
+
+    # --- First Pass: Wrap text and calculate row heights ---
+    for r_idx, row_raw in enumerate(all_rows_raw):
+        wrapped_cells_in_row = []
+        max_height_in_row = 0
+        is_header = r_idx == 0
+
+        for cell_raw in row_raw:
+            # Apply bold to header text *before* wrapping
+            wrapped_cell_lines = wrap_text(cell_raw, width=max_col_width)
+
+            # Ensure at least one line, even for empty cells
+            if not wrapped_cell_lines:
+                wrapped_cell_lines = [""]
+
+            wrapped_cells_in_row.append(wrapped_cell_lines)
+            max_height_in_row = max(max_height_in_row, len(wrapped_cell_lines))
+
+        wrapped_rows.append(wrapped_cells_in_row)
+        row_heights.append(max_height_in_row)
 
     formatted = []
+    col_widths = [max_col_width] * num_cols # Use the calculated max width
+  
+    # --- Second Pass: Format and emit rows ---
+    for r_idx, (wrapped_cells_in_row, row_height) in enumerate(zip(wrapped_rows, row_heights)):
+        is_header = r_idx == 0
+        bg_color = MID if is_header else DARK
+        # Alternate row colors for data rows (using original logic's colors)
+        # if not is_header:
+        #     ansi_bg_color = 236 if (r_idx - 1) % 2 == 0 else 238
+        #     bg_color = f"\033[48;5;{ansi_bg_color}m" # Use 256 color codes if needed
 
-    # Header row
-    header_cells = [
-        f"{BOLD[0]} {header.ljust(width)} {BOLD[1]}"
-        for header, width in zip(headers, col_widths)
-    ]
-    header_line = "│".join(header_cells)
-    formatted.append(f" {BG}{MID}{header_line}{RESET}")
+        for line_idx in range(row_height):
+            extra = f"\033[4;58;2;{MID}" if not is_header and (line_idx == row_height - 1)  else ""
+            line_segments = []
+            for c_idx, wrapped_cell_lines in enumerate(wrapped_cells_in_row):
+                if line_idx < len(wrapped_cell_lines):
+                    segment = wrapped_cell_lines[line_idx]
+                else:
+                    segment = "" # Pad with empty string if cell is shorter
 
-    # Data rows
-    for i, row in enumerate(rows):
-        color = 236 if i % 2 == 0 else 238
-        row_cells = [f" {cell.ljust(width)} " for cell, width in zip(row, col_widths)]
-        row_line = "│".join(row_cells)
-        formatted.append(f" {BG}{DARK}{row_line}{RESET}")
+                # Padding logic is correctly indented here
+                padding_needed = col_widths[c_idx] - visible_length(segment)
+                padded_segment = segment + (" " * max(0, padding_needed))
+                line_segments.append(f"{BG}{bg_color}{extra} {padded_segment}")
+
+            # Correct indentation: This should be outside the c_idx loop
+            joined_line = f"{BG}{bg_color}{extra}{FG}{SYMBOL}│{RESET}".join(line_segments)
+            # Correct indentation and add missing characters
+            formatted.append(f" {joined_line}{RESET}")
     return formatted
 
 def code_wrap(text_in):
@@ -283,27 +328,30 @@ def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_
         if visible_length(current_line) + visible_length(word) + 1 <= width:  # +1 for space
             current_line += (" " if current_line else "") + word
         else:
-            # Close previous line with reset and then re-apply current style
-            if not lines:  # First line
-                lines.append(first_line_prefix + current_line + RESET)
-            else:
-                lines.append(subsequent_line_prefix + current_line + RESET)
+            # Word doesn't fit, finalize the previous line
+            prefix = first_line_prefix if not lines else subsequent_line_prefix
+            line_content = prefix + current_line
+            padding = width - visible_length(line_content)
+            lines.append(line_content + (' ' * max(0, padding)) + RESET)
 
-            # Reset current line and apply the preserved style
+            # Start new line
             current_line = (" " * indent) + current_style + word
 
+    # Add the last line
     if current_line:
-        if not lines:  # only one line
-            lines.append(first_line_prefix + current_line + RESET)
-        else:
-            lines.append(subsequent_line_prefix + current_line + RESET)
+        prefix = first_line_prefix if not lines else subsequent_line_prefix
+        line_content = prefix + current_line
+        padding = width - visible_length(line_content)
+        lines.append(line_content + (' ' * max(0, padding)) + RESET)
 
-    # Re-apply current style to the beginning of each line (except the first)
+    # Re-apply current style to the beginning of each subsequent line
     final_lines = []
     for i, line in enumerate(lines):
         if i == 0:
             final_lines.append(line)
         else:
+            # Prepend the accumulated style. Since padding/RESET are already added,
+            # this style applies to the *start* of the next logical text block.
             final_lines.append(current_style + line)
 
     return final_lines
@@ -316,7 +364,7 @@ def line_format(line):
     def process_links(match):
         description = match.group(1)
         url = match.group(2)
-        return f'\033]8;;{url}\033\\{LINK}{description}{RESET}\033]8;;\033\\'
+        return f'\033]8;;{url}\033\\{LINK}{description}{UNDERLINE[1]}\033]8;;\033\\'
     
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
     
@@ -536,7 +584,7 @@ def parse(input_source):
                 if not state.table.in_header and not state.table.in_body:
                     state.table.in_header = True
 
-                cells = [c.strip() for c in line.strip().strip("|").split("|")]
+                cells = [line_format(c.strip()) for c in line.strip().strip("|").split("|")]
 
                 if state.table.in_header:
                     if re.match(r"^[\s|:-]+$", line):
