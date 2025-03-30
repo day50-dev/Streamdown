@@ -31,6 +31,7 @@ default_toml = """
 CodeSpaces = true
 Clipboard = true
 Logging = false
+Indent = 2
 
 [colors]
 HSV = [320.0, 0.5, 0.5]
@@ -115,8 +116,8 @@ HEAD   = apply_multipliers("HEAD", H, S, V)
 BRIGHT = apply_multipliers("BRIGHT", H, S, V)
 
 
-STYLE  = config.get("STYLE", "monokai")
-INDENT = 2
+STYLE  = colors.get("STYLE", "monokai")
+INDENT = features.get("Indent", 2)
 INDENT_SPACES = " " * INDENT
 
 FG = "\033[38;2;"
