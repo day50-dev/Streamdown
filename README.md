@@ -26,7 +26,7 @@ This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [r
 ![table](https://github.com/user-attachments/assets/265509b1-d910-467a-ac39-f219c128e32d)
 
 
-#### Configuration
+## Configuration
 Streamdown uses a configuration file located at `~/.config/streamdown/config.toml` (following the XDG Base Directory Specification). If this file does not exist upon first run, it will be created with default values.
 
 The configuration file uses TOML format and currently supports the following sections:
