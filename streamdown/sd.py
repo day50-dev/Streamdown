@@ -20,7 +20,7 @@ from pygments.styles import get_style_by_name
 import math
 import os
 import logging
-import base64        
+import base64
 import tempfile
 import toml
 from pathlib import Path
@@ -30,7 +30,7 @@ default_toml = """
 CodeSpaces = true
 Clipboard = true
 Logging = false
-Indent = 2
+Padding = 2 
 
 [colors]
 HSV = [320.0, 0.5, 0.5]
@@ -50,7 +50,7 @@ def ensure_config_file():
     if not config_path.exists():
         config_path.write_text(default_toml)
     return config_path.read_text()
-    
+
 config_toml_content = ensure_config_file()
 config = toml.loads(config_toml_content)
 colors = config.get("colors", {})
@@ -84,8 +84,8 @@ def hsv2rgb(h, s, v):
     # scale this to 0-255 and return it in R;G;Bm format
 
     return ';'.join([str(x) for x in [
-        min(255,int((r + m) * 255)), 
-        min(255,int((g + m) * 255)), 
+        min(255,int((r + m) * 255)),
+        min(255,int((g + m) * 255)),
         min(255,int((b + m) * 255))
     ]]) + "m"
 
@@ -115,8 +115,8 @@ BRIGHT = apply_multipliers("BRIGHT", H, S, V)
 
 
 STYLE  = colors.get("STYLE", "monokai")
-INDENT = features.get("Indent", 2)
-INDENT_SPACES = " " * INDENT
+PADDING = features.get("Padding", 2) 
+PADDING_SPACES = " " * PADDING
 
 FG = "\033[38;2;"
 BG = "\033[48;2;"
@@ -132,7 +132,7 @@ def get_terminal_width():
         return 80
 
 FULLWIDTH = int(get_terminal_width())
-WIDTH = FULLWIDTH - 2 * INDENT
+WIDTH = FULLWIDTH - 2 * PADDING
 
 BOLD =      ["\033[1m", "\033[22m"]
 UNDERLINE = ["\033[4m", "\033[24m"]
@@ -159,7 +159,7 @@ def debug_write(text):
         DEBUG_FH.flush()
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
-visible_length = lambda x: len(visible(x)) 
+visible_length = lambda x: len(visible(x))
 
 def extract_ansi_codes(text):
     """Extracts all ANSI escape codes from a string."""
@@ -194,7 +194,7 @@ class ParseState:
         self.first_line = True
         self.last_line_empty = False
 
-        # If the entire block is indented this will 
+        # If the entire block is indented this will
         # tell us what that is
         self.first_indent = None
 
@@ -265,7 +265,7 @@ def format_table(table_rows):
 
     formatted = []
     col_widths = [max_col_width] * num_cols # Use the calculated max width
-  
+
     # --- Second Pass: Format and emit rows ---
     for r_idx, (wrapped_cells_in_row, row_height) in enumerate(zip(wrapped_rows, row_heights)):
         is_header = r_idx == 0
@@ -307,8 +307,8 @@ def code_wrap(text_in):
     res = [text[:mywidth]]
 
     for i in range(mywidth, len(text), mywidth):
-        res.append(text[i : i + mywidth]) 
-    
+        res.append(text[i : i + mywidth])
+
     return (indent, res)
 
 def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_line_prefix=""):
@@ -364,9 +364,9 @@ def line_format(line):
         description = match.group(1)
         url = match.group(2)
         return f'\033]8;;{url}\033\\{LINK}{description}{UNDERLINE[1]}\033]8;;\033\\'
-    
+
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
-    
+
     tokens = re.findall(r"(\*\*|\*|_|`|[^_*`]+)", line)
     in_bold = False
     in_italic = False
@@ -400,9 +400,9 @@ def line_format(line):
         elif token == "`":
             in_code = not in_code
             if in_code:
-                result += f"{BG}{MID}"  
+                result += f"{BG}{MID}"
             else:
-                result += RESET 
+                result += RESET
         else:
             result += token  # Always output text tokens
 
@@ -417,11 +417,11 @@ def parse(input_source):
         stdin = input_source
 
     last_line_empty_cache = None
-    
+
     try:
         while True:
             char = stdin.read(1)
-            if not char: 
+            if not char:
               if len(state.buffer):
                 char = "\n"
               else:
@@ -462,10 +462,10 @@ def parse(input_source):
                 line = line[state.first_indent:]
             else:
                 logging.warning("Indentation decreased from first line.")
-                
-                
+
+
             # This needs to be first
-            if not state.in_code: 
+            if not state.in_code:
 
                 code_match = re.match(r"\s*```\s*([^\s]+|$)", line)
                 if code_match:
@@ -494,12 +494,12 @@ def parse(input_source):
             if state.in_code:
                 try:
                     if not state.code_first_line and (
-                            (state.in_code == Code.Backtick and     line.strip() == "```") or 
+                            (state.in_code == Code.Backtick and     line.strip() == "```") or
                             (useCodeSpaces and state.in_code == Code.Spaces   and not line.startswith('    '))
-                        ):     
+                        ):
                         state.code_language = None
                         state.code_indent = 0
-                        code_type = state.in_code 
+                        code_type = state.in_code
                         state.in_code = False
                         yield CODEPAD[1]
 
@@ -510,7 +510,7 @@ def parse(input_source):
                         else:
                             # otherwise we don't want to consume
                             # nor do we want to be here.
-                            raise 
+                            raise
 
                     if state.code_first_line:
                         state.code_first_line = False
@@ -524,7 +524,7 @@ def parse(input_source):
                         formatter = Terminal256Formatter(style=custom_style)
                         for i, char in enumerate(line):
                             if char == " ":
-                                state.code_indent += 1 
+                                state.code_indent += 1
                             else:
                                 break
                         line = line[state.code_indent :]
@@ -538,7 +538,7 @@ def parse(input_source):
                     state.code_buffer.append('')
 
                     for tline in line_wrap:
-                        # wrap-around is a bunch of tricks. We essentially format longer and longer portions of code. The problem is 
+                        # wrap-around is a bunch of tricks. We essentially format longer and longer portions of code. The problem is
                         # the length can change based on look-ahead context so we need to use our expected place (state.code_gen) and
                         # then naively search back until our visible_lengths() match. This is not fast and there's certainly smarter
                         # ways of doing it but this thing is way trickery than you think
@@ -566,16 +566,16 @@ def parse(input_source):
                         ## this is the crucial counter that will determine
                         # the begninning of the next line
                         state.code_gen = len(highlighted_code)
-                       
-                        code_line = ' ' * indent + this_batch.strip() 
-                        
+
+                        code_line = ' ' * indent + this_batch.strip()
+
                         padding = FULLWIDTH - visible_length(code_line)
                         yield f"{CODEBG}{code_line}{' ' * max(0, padding)}{BGRESET}\n"
                     continue
                 except:
                     pass
 
-          
+
             #
             # <table>
             #
@@ -605,7 +605,7 @@ def parse(input_source):
                 if state.table.in_body or state.table.in_header:
                     formatted = format_table(state.table.rows)
                     for l in formatted:
-                        yield f"{INDENT_SPACES}{l}\n"
+                        yield f"{PADDING_SPACES}{l}\n"
                     state.table.reset()
 
                 #
@@ -664,10 +664,10 @@ def parse(input_source):
                         subsequent_line_prefix,
                     )
                     for wrapped_line in wrapped_lines:
-                        yield f"{INDENT_SPACES}{wrapped_line}\n"
+                        yield f"{PADDING_SPACES}{wrapped_line}\n"
                     continue
 
-                # 
+                #
                 # <h1> <h2> <h3>
                 # <h4> <h5> <h6>
                 #
@@ -677,25 +677,25 @@ def parse(input_source):
                     text = header_match.group(2)
                     spaces_to_center = ((WIDTH - visible_length(text)) / 2)
                     if level == 1:      # #
-                        yield f"\n{INDENT_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n\n"  
+                        yield f"\n{PADDING_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n\n"
                     elif level == 2:    # ##
-                        yield f"\n{INDENT_SPACES}{BOLD[0]}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"  
+                        yield f"\n{PADDING_SPACES}{BOLD[0]}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
                     elif level == 3:    # ###
-                        yield f"\n{INDENT_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}\n" 
+                        yield f"\n{PADDING_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}\n"
                     elif level == 4:    # ####
-                        yield f"{INDENT_SPACES}{FG}{SYMBOL}{text}{RESET}\n" 
+                        yield f"{PADDING_SPACES}{FG}{SYMBOL}{text}{RESET}\n"
                     elif level == 5:    # #####
-                        yield f"{INDENT_SPACES}{text}{RESET}\n"  
+                        yield f"{PADDING_SPACES}{text}{RESET}\n"
                     else:  # level == 6
-                        yield f"{INDENT_SPACES}{text}{RESET}\n"  
+                        yield f"{PADDING_SPACES}{text}{RESET}\n"
 
                 else:
                     #
                     # <hr>
                     #
                     if re.match(r"^[\s]*[-*_]{3,}[\s]*$", line):
-                        # print a horizontal rule using a unicode midline with a unicode fleur de lis in the middle
-                        yield f"{INDENT_SPACES}{FG}{SYMBOL}{'─' * WIDTH}{RESET}\n"
+                        # print a horizontal rule using a unicode midline 
+                        yield f"{PADDING_SPACES}{FG}{SYMBOL}{'─' * WIDTH}{RESET}\n"
                     else:
                         if len(line) == 0:
                             print("")
@@ -703,13 +703,13 @@ def parse(input_source):
                             # This is the basic unformatted text. We still want to word wrap it.
                             wrapped_lines = wrap_text(line)
                             for wrapped_line in wrapped_lines:
-                                yield f"{INDENT_SPACES}{wrapped_line}\n" 
+                                yield f"{PADDING_SPACES}{wrapped_line}\n"
 
                 # Process any remaining table data
                 if state.table.rows:
                     formatted = format_table(state.table.rows)
                     for l in formatted:
-                        yield f"{INDENT_SPACES}{l}\n"
+                        yield f"{PADDING_SPACES}{l}\n"
                     state.table.reset()
 
     except Exception as e:
@@ -742,7 +742,7 @@ def main():
                  ``` bash
                  sd [filename]
                  cat README.md | sd
-                 stdbuf -oL llm chat | sd 
+                 stdbuf -oL llm chat | sd
                  SD_BASEHSV=100,0.4,0.8 sd <(curl -s https://raw.githubusercontent.com/kristopolous/Streamdown/refs/heads/main/tests/fizzbuzz.md)
                  ```
 
