@@ -160,7 +160,7 @@ def debug_write(text):
         if not DEBUG_FH:
             DEBUG_FH = tempfile.NamedTemporaryFile(prefix="sd_debug", delete=False, encoding="utf-8", mode="w")
         assert isinstance(text, str)
-        print(text, file=DEBUG_FH, end="")
+        print(f"{text}", file=DEBUG_FH, end="")
         DEBUG_FH.flush()
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
@@ -427,7 +427,7 @@ def parse(stream):
     try:
         while True:
             if state.is_pty:
-                ready, _, _ = select.select([sys.stdin.fileno(), _master], [], [], 0.1)
+                ready, _, _ = select.select([sys.stdin.fileno(), _master], [], [], 0.7)
 
                 if _master in ready:  # Read from PTY
                     data = os.read(_master, 1024)
@@ -464,9 +464,6 @@ def parse(stream):
                     break
                 char = char.encode('utf-8')
 
-            #if not char:
-            #    char = b"\n"
-
             if char:
                 state.buffer += char.decode('utf-8')
 
@@ -474,8 +471,9 @@ def parse(stream):
 
             #print(f"({char}-{bytes(state.buffer, 'utf-8')})")
             state.should_newline = state.buffer.endswith('\n')
-            if not state.should_newline:
-                print("no newline")
+            #print(state.should_newline)
+            #if not state.should_newline:
+            #    print("no newline")
             process_buffer = False
 
             # Process complete line
@@ -529,7 +527,10 @@ def parse(stream):
                     state.code_buffer = []
                     state.code_gen = 0
                     state.code_first_line = True
-                    if usePrettyPad: yield CODEPAD[0]
+                    if usePrettyPad:
+                        yield CODEPAD[0]
+                    else:
+                        yield "\n"
 
                     logging.debug(f"In code: ({state.in_code})")
 
@@ -548,7 +549,10 @@ def parse(stream):
                         state.code_indent = 0
                         code_type = state.in_code
                         state.in_code = False
-                        if usePrettyPad: yield CODEPAD[1]
+                        if usePrettyPad:
+                            yield CODEPAD[1]
+                        else:
+                            yield f"{RESET}\n"
 
                         logging.debug(f"Not in code: {state.in_code}")
 
@@ -747,10 +751,13 @@ def parse(stream):
                             print("")
                         else:
                             # This is the basic unformatted text. We still want to word wrap it.
-                            wrapped_lines = wrap_text(line)
-                            print(f"({line})")
-                            for wrapped_line in wrapped_lines:
-                                yield f"{MARGIN_SPACES}{wrapped_line}"
+                            if len(line) < WIDTH:
+                                yield line_format(line)
+                            else:
+                                wrapped_lines = wrap_text(line)
+                                # print(f"({line})")
+                                for wrapped_line in wrapped_lines:
+                                    yield f"{MARGIN_SPACES}{wrapped_line}\n"
 
                 # Process any remaining table data
                 if state.table.rows:
@@ -806,6 +813,10 @@ def main():
             state.is_pty = True
 
         for chunk in parse(inp):
+            if not state.should_newline:
+                chunk = chunk.rstrip("\n")
+            elif not chunk.endswith("\n"):
+                chunk += "\n"
             #if state.should_newline:
             #    chunk += '\n'
             if state.is_pty:
@@ -820,7 +831,6 @@ def main():
         logging.warning(f"Exception thrown: {ex}")
 
 
-    """
     if useClipboard and state.code_buffer:
         code = "\n".join(state.code_buffer)
         # code needs to be a base64 encoded string before emitting
@@ -829,6 +839,5 @@ def main():
         base64_string = base64_bytes.decode('utf-8')
         print(f"\033]52;c;{base64_string}\a", end="", flush=True)
 
-    """
 if __name__ == "__main__":
     main()
