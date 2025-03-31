@@ -49,9 +49,9 @@ def ensure_config_file():
     config_path = Path(config_dir) / "config.toml"
     if not config_path.exists():
         config_path.write_text(default_toml)
-    return config_path.read_text()
+    return config_path, config_path.read_text()
 
-config_toml_content = ensure_config_file()
+config_toml_path, config_toml_content = ensure_config_file()
 config = toml.loads(config_toml_content)
 colors = config.get("colors", {})
 features = config.get("features", {})
@@ -129,7 +129,6 @@ def get_terminal_width():
     try:
         return shutil.get_terminal_size().columns
     except (AttributeError, OSError):
-        # Fallback to 80 columns
         return 80
 
 FULLWIDTH = int(get_terminal_width())
@@ -382,7 +381,7 @@ def line_format(line):
             if not in_code:
                 result += BOLD[0] if in_bold else BOLD[1]
             else:
-                result += token  # Output the delimiter inside code
+                result += token  
 
         elif token == "*" and (in_italic or not_text(last_token)):
             in_italic = not in_italic
@@ -405,7 +404,7 @@ def line_format(line):
             else:
                 result += RESET
         else:
-            result += token  # Always output text tokens
+            result += token  
 
         last_token = token
     return result
@@ -637,7 +636,6 @@ def parse(input_source):
                         state.list_item_stack.append((indent, list_type))
                         state.ordered_list_numbers.append(0)
                     if list_type == "number":
-                        # print(json.dumps([indent, state.ordered_list_numbers]))
                         state.ordered_list_numbers[-1] += 1
 
                     indent = len(state.list_item_stack) * 2
@@ -719,7 +717,7 @@ def parse(input_source):
 
 state = ParseState()
 def main():
-    global state
+    global state, useClipboard
     logging.basicConfig(
         stream=sys.stdout,
         level=os.getenv('LOGLEVEL') or logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -734,7 +732,10 @@ def main():
             print(f"SD_BASEHSV: {H}, {S}, {V}\nPalette: ", end=" ")
             for (a,b) in (("DARK", DARK), ("MID", MID), ("SYMBOL", SYMBOL), ("BRIGHT", BRIGHT)):
                 print(f"{FG}{b}{a}{RESET} {BG}{b}{a}{RESET}", end=" | ")
-            print("\n")
+            print(f"\nConfig: {config_toml_path}\n")
+
+            # This isn't what injecting into a clipboard is for
+            useClipboard = False
 
             inp = """
                  **A markdown renderer for modern terminals**
