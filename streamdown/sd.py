@@ -7,22 +7,25 @@
 #     "toml",
 # ]
 # ///
-import sys
 import appdirs
+import base64
+import logging
+import math
+import os
+import pty
 import re
+import select
 import shutil
+import sys
+import tempfile
+import termios
+import toml
 from io import StringIO
 import pygments.util
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import Terminal256Formatter
 from pygments.styles import get_style_by_name
-import math
-import os
-import logging
-import base64
-import tempfile
-import toml
 from pathlib import Path
 
 default_toml = """
@@ -140,8 +143,8 @@ ITALIC    = ["\033[3m", "\033[23m"]
 
 CODEBG = f"{BG}{DARK}"
 CODEPAD = [
-        f"{RESET}{FG}{DARK}{'▄' * FULLWIDTH}{RESET}\n",
-        f"{RESET}{FG}{DARK}{'▀' * FULLWIDTH}{RESET}"
+    f"{RESET}{FG}{DARK}{'▄' * FULLWIDTH}{RESET}\n",
+    f"{RESET}{FG}{DARK}{'▀' * FULLWIDTH}{RESET}"
 ]
 
 LINK = f"{FG}{SYMBOL}{UNDERLINE[0]}"
@@ -160,6 +163,7 @@ def debug_write(text):
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
 visible_length = lambda x: len(visible(x))
+_master, _slave = pty.openpty()  # Create a new pseudoterminal
 
 def extract_ansi_codes(text):
     """Extracts all ANSI escape codes from a string."""
@@ -189,10 +193,12 @@ class ParseState:
         self.in_code = False
 
         self.table = TableState()
-        self.buffer = []
+        self.buffer = ''
         self.list_item_stack = []  # stack of (indent, type)
         self.first_line = True
         self.last_line_empty = False
+        self.is_pipe = False
+        self.is_pty = False
 
         # If the entire block is indented this will
         # tell us what that is
@@ -210,7 +216,7 @@ class ParseState:
         self.in_list = False
 
     def reset_buffer(self):
-        self.buffer = []
+        self.buffer = ''
 
 
 def format_table(table_rows):
@@ -412,27 +418,40 @@ def line_format(line):
 def parse(input_source):
     global state
     if isinstance(input_source, str):
-        stdin = StringIO(input_source)
+        stream = StringIO(input_source)
     else:
-        stdin = input_source
+        stream = input_source
 
     last_line_empty_cache = None
 
     try:
         while True:
-            char = stdin.read(1)
+            if state.is_pty:
+                ready, _, _ = select.select([sys.stdin.fileno(), _master], [], [])
+
+                if sys.stdin.fileno() in ready:  # Read from stdin
+                    char = os.read(sys.stdin.fileno(), 1)
+                if _master in ready:  # Read from PTY
+                    data = os.read(_master, 1024)
+                    print('here')
+                    if not data:
+                        break
+                    os.write(sys.stdout.fileno(), data)  # Write to stdout
+            else:
+                char = stream.read(1)
+
             if not char:
-              if len(state.buffer):
-                char = "\n"
-              else:
-                break
+                if len(state.buffer):
+                    char = b"\n"
+                else:
+                    break
 
-            state.buffer.append(char)
+            state.buffer += char.decode('utf-8')
 
-            if char != "\n": continue
+            if char != b'\n': continue
 
             # Process complete line
-            line = "".join(state.buffer).rstrip("\n")
+            line = state.buffer.rstrip("\n")
             state.reset_buffer()
             debug_write(line)
 
@@ -712,12 +731,15 @@ def parse(input_source):
                     state.table.reset()
 
     except Exception as e:
+        import traceback
         logging.error(f"Parser error: {str(e)}")
+        traceback.print_exc()
         raise
 
 state = ParseState()
 def main():
     global state, useClipboard
+    original_settings = None
     logging.basicConfig(
         stream=sys.stdout,
         level=os.getenv('LOGLEVEL') or logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -751,12 +773,19 @@ def main():
                  If no filename is provided and no input is piped, this help message is displayed.
 
                  """
+        else:
+            # this is a more sophisticated thing that we'll do in the main loop
+            state.is_pty = True
 
         for chunk in parse(inp):
+            os.write(_slave, bytes(chunk, 'utf-8'))  # Write to PTY
             sys.stdout.write(chunk)
             sys.stdout.flush()
     except KeyboardInterrupt:
         pass
+    except Exception as ex:
+        logging.warning(f"Exception thrown: {ex}")
+
 
     if useClipboard and state.code_buffer:
         code = "\n".join(state.code_buffer)
