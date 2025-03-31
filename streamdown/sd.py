@@ -30,7 +30,8 @@ default_toml = """
 CodeSpaces = true
 Clipboard = true
 Logging = false
-Padding = 2 
+Margin = 2 
+PrettyPad = false
 
 [colors]
 HSV = [320.0, 0.5, 0.5]
@@ -43,7 +44,6 @@ STYLE = "monokai"
 """
 
 def ensure_config_file():
-    """Ensure config.toml exists in XDG config directory, creating it with defaults if needed. Returns the content."""
     config_dir = appdirs.user_config_dir("streamdown")
     os.makedirs(config_dir, exist_ok=True)
     config_path = Path(config_dir) / "config.toml"
@@ -59,9 +59,10 @@ features = config.get("features", {})
 useCodeSpaces = features.get("CodeSpaces", True)
 useClipboard = features.get("Clipboard", True)
 useLogging = features.get("Logging", False)
+usePrettyPad = features.get("PrettyPad", False)
 
 
-# the ranges here are 0-360, 0-1, 0-1
+# the ranges here are (float) [0-360, 0-1, 0-1]
 def hsv2rgb(h, s, v):
     s = min(1, s)
     v = min(1, v)
@@ -115,8 +116,8 @@ BRIGHT = apply_multipliers("BRIGHT", H, S, V)
 
 
 STYLE  = colors.get("STYLE", "monokai")
-PADDING = features.get("Padding", 2) 
-PADDING_SPACES = " " * PADDING
+MARGIN = features.get("Margin", 2) 
+MARGIN_SPACES = " " * MARGIN
 
 FG = "\033[38;2;"
 BG = "\033[48;2;"
@@ -132,7 +133,7 @@ def get_terminal_width():
         return 80
 
 FULLWIDTH = int(get_terminal_width())
-WIDTH = FULLWIDTH - 2 * PADDING
+WIDTH = FULLWIDTH - 2 * MARGIN
 
 BOLD =      ["\033[1m", "\033[22m"]
 UNDERLINE = ["\033[4m", "\033[24m"]
@@ -284,10 +285,10 @@ def format_table(table_rows):
                 else:
                     segment = "" # Pad with empty string if cell is shorter
 
-                # Padding logic is correctly indented here
-                padding_needed = col_widths[c_idx] - visible_length(segment)
-                padded_segment = segment + (" " * max(0, padding_needed))
-                line_segments.append(f"{BG}{bg_color}{extra} {padded_segment}")
+                # Margin logic is correctly indented here
+                margin_needed = col_widths[c_idx] - visible_length(segment)
+                margin_segment = segment + (" " * max(0, margin_needed))
+                line_segments.append(f"{BG}{bg_color}{extra} {margin_segment}")
 
             # Correct indentation: This should be outside the c_idx loop
             joined_line = f"{BG}{bg_color}{extra}{FG}{SYMBOL}│{RESET}".join(line_segments)
@@ -330,8 +331,8 @@ def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_
             # Word doesn't fit, finalize the previous line
             prefix = first_line_prefix if not lines else subsequent_line_prefix
             line_content = prefix + current_line
-            padding = width - visible_length(line_content)
-            lines.append(line_content + (' ' * max(0, padding)) + RESET)
+            margin = width - visible_length(line_content)
+            lines.append(line_content + (' ' * max(0, margin)) + RESET)
 
             # Start new line
             current_line = (" " * indent) + current_style + word
@@ -340,8 +341,8 @@ def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_
     if current_line:
         prefix = first_line_prefix if not lines else subsequent_line_prefix
         line_content = prefix + current_line
-        padding = width - visible_length(line_content)
-        lines.append(line_content + (' ' * max(0, padding)) + RESET)
+        margin = width - visible_length(line_content)
+        lines.append(line_content + (' ' * max(0, margin)) + RESET)
 
     # Re-apply current style to the beginning of each subsequent line
     final_lines = []
@@ -349,7 +350,7 @@ def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_
         if i == 0:
             final_lines.append(line)
         else:
-            # Prepend the accumulated style. Since padding/RESET are already added,
+            # Prepend the accumulated style. Since margin/RESET are already added,
             # this style applies to the *start* of the next logical text block.
             final_lines.append(current_style + line)
 
@@ -482,7 +483,7 @@ def parse(input_source):
                     state.code_buffer = []
                     state.code_gen = 0
                     state.code_first_line = True
-                    yield CODEPAD[0]
+                    if usePrettyPad: yield CODEPAD[0]
 
                     logging.debug(f"In code: ({state.in_code})")
 
@@ -501,7 +502,7 @@ def parse(input_source):
                         state.code_indent = 0
                         code_type = state.in_code
                         state.in_code = False
-                        yield CODEPAD[1]
+                        if usePrettyPad: yield CODEPAD[1]
 
                         logging.debug(f"Not in code: {state.in_code}")
 
@@ -569,8 +570,8 @@ def parse(input_source):
 
                         code_line = ' ' * indent + this_batch.strip()
 
-                        padding = FULLWIDTH - visible_length(code_line)
-                        yield f"{CODEBG}{code_line}{' ' * max(0, padding)}{BGRESET}\n"
+                        margin = FULLWIDTH - visible_length(code_line)
+                        yield f"{CODEBG}{code_line}{' ' * max(0, margin)}{BGRESET}\n"
                     continue
                 except:
                     pass
@@ -605,7 +606,7 @@ def parse(input_source):
                 if state.table.in_body or state.table.in_header:
                     formatted = format_table(state.table.rows)
                     for l in formatted:
-                        yield f"{PADDING_SPACES}{l}\n"
+                        yield f"{MARGIN_SPACES}{l}\n"
                     state.table.reset()
 
                 #
@@ -664,7 +665,7 @@ def parse(input_source):
                         subsequent_line_prefix,
                     )
                     for wrapped_line in wrapped_lines:
-                        yield f"{PADDING_SPACES}{wrapped_line}\n"
+                        yield f"{MARGIN_SPACES}{wrapped_line}\n"
                     continue
 
                 #
@@ -677,17 +678,17 @@ def parse(input_source):
                     text = header_match.group(2)
                     spaces_to_center = ((WIDTH - visible_length(text)) / 2)
                     if level == 1:      # #
-                        yield f"\n{PADDING_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n\n"
+                        yield f"\n{MARGIN_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n\n"
                     elif level == 2:    # ##
-                        yield f"\n{PADDING_SPACES}{BOLD[0]}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
+                        yield f"\n{MARGIN_SPACES}{BOLD[0]}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
                     elif level == 3:    # ###
-                        yield f"\n{PADDING_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}\n"
+                        yield f"\n{MARGIN_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}\n"
                     elif level == 4:    # ####
-                        yield f"{PADDING_SPACES}{FG}{SYMBOL}{text}{RESET}\n"
+                        yield f"{MARGIN_SPACES}{FG}{SYMBOL}{text}{RESET}\n"
                     elif level == 5:    # #####
-                        yield f"{PADDING_SPACES}{text}{RESET}\n"
+                        yield f"{MARGIN_SPACES}{text}{RESET}\n"
                     else:  # level == 6
-                        yield f"{PADDING_SPACES}{text}{RESET}\n"
+                        yield f"{MARGIN_SPACES}{text}{RESET}\n"
 
                 else:
                     #
@@ -695,7 +696,7 @@ def parse(input_source):
                     #
                     if re.match(r"^[\s]*[-*_]{3,}[\s]*$", line):
                         # print a horizontal rule using a unicode midline 
-                        yield f"{PADDING_SPACES}{FG}{SYMBOL}{'─' * WIDTH}{RESET}\n"
+                        yield f"{MARGIN_SPACES}{FG}{SYMBOL}{'─' * WIDTH}{RESET}\n"
                     else:
                         if len(line) == 0:
                             print("")
@@ -703,13 +704,13 @@ def parse(input_source):
                             # This is the basic unformatted text. We still want to word wrap it.
                             wrapped_lines = wrap_text(line)
                             for wrapped_line in wrapped_lines:
-                                yield f"{PADDING_SPACES}{wrapped_line}\n"
+                                yield f"{MARGIN_SPACES}{wrapped_line}\n"
 
                 # Process any remaining table data
                 if state.table.rows:
                     formatted = format_table(state.table.rows)
                     for l in formatted:
-                        yield f"{PADDING_SPACES}{l}\n"
+                        yield f"{MARGIN_SPACES}{l}\n"
                     state.table.reset()
 
     except Exception as e:

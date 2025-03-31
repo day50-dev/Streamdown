@@ -58,14 +58,15 @@ This section controls optional features:
 
 *   `CodeSpaces` (boolean, default: `true`): Enables detection of code blocks indented with 4 spaces. Set to `false` to disable this detection method (triple-backtick blocks still work).
 *   `Clipboard` (boolean, default: `true`): Enables copying the last code block encountered to the system clipboard using OSC 52 escape sequences upon exit. Set to `false` to disable.
-*   `Padding` (integer, default: `2`): The left and right indent for the output. 
+*   `Margin` (integer, default: `2`): The left and right indent for the output. 
+*   `PrettyPad` (boolean, default: `false`): Uses a unicode vertical pad trick to add a half height background to code blocks. This makes copy/paste have artifacts. See [#2](https://github.com/kristopolous/Streamdown/issues/2). I like it on. But that's just me
 
 Example:
 ```toml
 [features]
 CodeSpaces = false
 Clipboard = false
-Padding = 4
+Margin = 4
 ```
 
 ## Demo
