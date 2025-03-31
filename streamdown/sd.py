@@ -27,6 +27,8 @@ from pygments.lexers import get_lexer_by_name
 from pygments.formatters import Terminal256Formatter
 from pygments.styles import get_style_by_name
 from pathlib import Path
+import pdb
+#pdb.set_trace()
 
 default_toml = """
 [features]
@@ -458,9 +460,10 @@ def parse(stream):
                         process_buffer = True
 
             else:
-                char = stream.read(1).encode('utf-8')
-                if char == b'':
+                char = stream.read(1)
+                if len(char) == 0:
                     break
+                char = char.encode('utf-8')
 
             if not char:
                 char = b"\n"
@@ -763,7 +766,6 @@ def parse(stream):
 state = ParseState()
 def main():
     global state, useClipboard
-    original_settings = None
     logging.basicConfig(
         stream=sys.stdout,
         level=os.getenv('LOGLEVEL') or logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -804,14 +806,19 @@ def main():
         for chunk in parse(inp):
             if not state.should_newline:
                 chunk = chunk.rstrip("")
-            os.write(_slave, bytes(chunk, 'utf-8'))  # Write to PTY
+            if state.is_pty:
+                os.write(_slave, bytes(chunk, 'utf-8'))  # Write to PTY
+            else:
+                sys.stdout.write(chunk)
             sys.stdout.flush()
+
     except KeyboardInterrupt:
         pass
     except Exception as ex:
         logging.warning(f"Exception thrown: {ex}")
 
 
+    """
     if useClipboard and state.code_buffer:
         code = "\n".join(state.code_buffer)
         # code needs to be a base64 encoded string before emitting
@@ -820,5 +827,6 @@ def main():
         base64_string = base64_bytes.decode('utf-8')
         print(f"\033]52;c;{base64_string}\a", end="", flush=True)
 
+    """
 if __name__ == "__main__":
     main()
