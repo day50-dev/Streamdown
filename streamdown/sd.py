@@ -203,6 +203,7 @@ class ParseState:
         # If the entire block is indented this will
         # tell us what that is
         self.first_indent = None
+        self.should_newline = False
 
         # These are part of a trick to get
         # streaming code blocks while preserving
@@ -415,40 +416,63 @@ def line_format(line):
         last_token = token
     return result
 
-def parse(input_source):
+def parse(stream):
     global state
-    if isinstance(input_source, str):
-        stream = StringIO(input_source)
-    else:
-        stream = input_source
-
     last_line_empty_cache = None
+    binchar = None
+    char = None
+    process_buffer = False
 
     try:
         while True:
             if state.is_pty:
-                ready, _, _ = select.select([sys.stdin.fileno(), _master], [], [])
+                ready, _, _ = select.select([sys.stdin.fileno(), _master], [], [], 0.1)
 
-                if sys.stdin.fileno() in ready:  # Read from stdin
-                    char = os.read(sys.stdin.fileno(), 1)
                 if _master in ready:  # Read from PTY
                     data = os.read(_master, 1024)
-                    print('here')
                     if not data:
                         break
                     os.write(sys.stdout.fileno(), data)  # Write to stdout
-            else:
-                char = stream.read(1)
 
-            if not char:
-                if len(state.buffer):
-                    char = b"\n"
+                if sys.stdin.fileno() in ready:  # Read from stdin
+                    if not binchar:
+                        binchar = b''
+                    binchar += os.read(sys.stdin.fileno(), 1)
+
+                    if binchar == b'':
+                        break
+
+                    try:
+                        binchar.decode('utf-8')
+                    except:
+                        continue
+
+                    char = binchar
+                    binchar = b''
+
                 else:
+                    # here I want to say there's nothing more we can add
+                    # right this second and we should process the line
+                    char = b''
+                    if len(state.buffer):
+                        process_buffer = True
+
+            else:
+                char = stream.read(1).encode('utf-8')
+                if char == b'':
                     break
 
-            state.buffer += char.decode('utf-8')
+            if not char:
+                char = b"\n"
 
-            if char != b'\n': continue
+            if char:
+                state.buffer += char.decode('utf-8')
+
+            if char != b'\n' and not process_buffer : continue
+
+            #print(f"({char}-{bytes(state.buffer, 'utf-8')})")
+            state.should_newline = state.buffer.endswith('\n')
+            process_buffer = False
 
             # Process complete line
             line = state.buffer.rstrip("\n")
@@ -759,7 +783,7 @@ def main():
             # This isn't what injecting into a clipboard is for
             useClipboard = False
 
-            inp = """
+            inp = StringIO("""
                  **A markdown renderer for modern terminals**
                  ##### Usage examples:
 
@@ -772,14 +796,15 @@ def main():
 
                  If no filename is provided and no input is piped, this help message is displayed.
 
-                 """
+                 """)
         else:
             # this is a more sophisticated thing that we'll do in the main loop
             state.is_pty = True
 
         for chunk in parse(inp):
+            if not state.should_newline:
+                chunk = chunk.rstrip("")
             os.write(_slave, bytes(chunk, 'utf-8'))  # Write to PTY
-            sys.stdout.write(chunk)
             sys.stdout.flush()
     except KeyboardInterrupt:
         pass
