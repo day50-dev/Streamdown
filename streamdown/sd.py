@@ -160,7 +160,7 @@ def debug_write(text):
         if not DEBUG_FH:
             DEBUG_FH = tempfile.NamedTemporaryFile(prefix="sd_debug", delete=False, encoding="utf-8", mode="w")
         assert isinstance(text, str)
-        print(text, file=DEBUG_FH)
+        print(text, file=DEBUG_FH, end="")
         DEBUG_FH.flush()
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
@@ -421,7 +421,6 @@ def line_format(line):
 def parse(stream):
     global state
     last_line_empty_cache = None
-    binchar = None
     char = None
     process_buffer = False
 
@@ -436,37 +435,37 @@ def parse(stream):
                         break
                     os.write(sys.stdout.fileno(), data)  # Write to stdout
 
+                char = b''
                 if sys.stdin.fileno() in ready:  # Read from stdin
-                    if not binchar:
-                        binchar = b''
-                    binchar += os.read(sys.stdin.fileno(), 1)
+                    while True:
+                        char += os.read(sys.stdin.fileno(), 1)
 
-                    if binchar == b'':
+                        # If this doesn't work then we are on a multi-byte
+                        # and should be read in many of them
+                        try:
+                            char.decode('utf-8')
+                            break
+                        except:
+                            continue
+
+                    # This means end of input
+                    if char == b'':
                         break
-
-                    try:
-                        binchar.decode('utf-8')
-                    except:
-                        continue
-
-                    char = binchar
-                    binchar = b''
 
                 else:
                     # here I want to say there's nothing more we can add
                     # right this second and we should process the line
-                    char = b''
                     if len(state.buffer):
                         process_buffer = True
 
             else:
                 char = stream.read(1)
-                if len(char) == 0:
+                if len(char) == 1:
                     break
                 char = char.encode('utf-8')
 
-            if not char:
-                char = b"\n"
+            #if not char:
+            #    char = b"\n"
 
             if char:
                 state.buffer += char.decode('utf-8')
@@ -475,10 +474,12 @@ def parse(stream):
 
             #print(f"({char}-{bytes(state.buffer, 'utf-8')})")
             state.should_newline = state.buffer.endswith('\n')
+            if not state.should_newline:
+                print("no newline")
             process_buffer = False
 
             # Process complete line
-            line = state.buffer.rstrip("\n")
+            line = state.buffer#.rstrip("\n")
             state.reset_buffer()
             debug_write(line)
 
@@ -490,7 +491,7 @@ def parse(stream):
                     continue  # Skip processing this line
                 elif is_empty:
                     state.last_line_empty = True
-                    yield "\n"
+                    yield ""
                     continue
                 else:
                     last_line_empty_cache = state.last_line_empty
@@ -616,7 +617,7 @@ def parse(stream):
                         code_line = ' ' * indent + this_batch.strip()
 
                         margin = FULLWIDTH - visible_length(code_line)
-                        yield f"{CODEBG}{code_line}{' ' * max(0, margin)}{BGRESET}\n"
+                        yield f"{CODEBG}{code_line}{' ' * max(0, margin)}{BGRESET}"
                     continue
                 except:
                     pass
@@ -645,13 +646,13 @@ def parse(stream):
                     state.table.rows.append(cells)
 
                 if not state.table.intable():
-                    yield f"{line}\n"
+                    yield f"{line}"
                 continue
             else:
                 if state.table.in_body or state.table.in_header:
                     formatted = format_table(state.table.rows)
                     for l in formatted:
-                        yield f"{MARGIN_SPACES}{l}\n"
+                        yield f"{MARGIN_SPACES}{l}"
                     state.table.reset()
 
                 #
@@ -722,17 +723,17 @@ def parse(stream):
                     text = header_match.group(2)
                     spaces_to_center = ((WIDTH - visible_length(text)) / 2)
                     if level == 1:      # #
-                        yield f"\n{MARGIN_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n\n"
+                        yield f"\n{MARGIN_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
                     elif level == 2:    # ##
                         yield f"\n{MARGIN_SPACES}{BOLD[0]}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
                     elif level == 3:    # ###
-                        yield f"\n{MARGIN_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}\n"
+                        yield f"\n{MARGIN_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}"
                     elif level == 4:    # ####
-                        yield f"{MARGIN_SPACES}{FG}{SYMBOL}{text}{RESET}\n"
+                        yield f"{MARGIN_SPACES}{FG}{SYMBOL}{text}{RESET}"
                     elif level == 5:    # #####
-                        yield f"{MARGIN_SPACES}{text}{RESET}\n"
+                        yield f"{MARGIN_SPACES}{text}{RESET}"
                     else:  # level == 6
-                        yield f"{MARGIN_SPACES}{text}{RESET}\n"
+                        yield f"{MARGIN_SPACES}{text}{RESET}"
 
                 else:
                     #
@@ -740,21 +741,22 @@ def parse(stream):
                     #
                     if re.match(r"^[\s]*[-*_]{3,}[\s]*$", line):
                         # print a horizontal rule using a unicode midline 
-                        yield f"{MARGIN_SPACES}{FG}{SYMBOL}{'─' * WIDTH}{RESET}\n"
+                        yield f"{MARGIN_SPACES}{FG}{SYMBOL}{'─' * WIDTH}{RESET}"
                     else:
                         if len(line) == 0:
                             print("")
                         else:
                             # This is the basic unformatted text. We still want to word wrap it.
                             wrapped_lines = wrap_text(line)
+                            print(f"({line})")
                             for wrapped_line in wrapped_lines:
-                                yield f"{MARGIN_SPACES}{wrapped_line}\n"
+                                yield f"{MARGIN_SPACES}{wrapped_line}"
 
                 # Process any remaining table data
                 if state.table.rows:
                     formatted = format_table(state.table.rows)
                     for l in formatted:
-                        yield f"{MARGIN_SPACES}{l}\n"
+                        yield f"{MARGIN_SPACES}{l}"
                     state.table.reset()
 
     except Exception as e:
@@ -804,8 +806,8 @@ def main():
             state.is_pty = True
 
         for chunk in parse(inp):
-            if not state.should_newline:
-                chunk = chunk.rstrip("")
+            #if state.should_newline:
+            #    chunk += '\n'
             if state.is_pty:
                 os.write(_slave, bytes(chunk, 'utf-8'))  # Write to PTY
             else:
