@@ -227,6 +227,11 @@ class ParseState:
         self.in_list = False
         self.bg = BGRESET    
 
+        self.in_bold = False
+        self.in_italic = False
+        self.in_underline = False
+        self.in_code = False
+
     def reset_buffer(self):
         self.buffer = ''
 
@@ -387,38 +392,34 @@ def line_format(line):
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
 
     tokens = re.findall(r"(\*\*|\*|_|`|[^_*`]+)", line)
-    in_bold = False
-    in_italic = False
-    in_underline = False
-    in_code = False
     result = ""
     last_token = None
 
     for token in tokens:
-        if token == "**" and (in_bold or not_text(last_token)):
-            in_bold = not in_bold
-            if not in_code:
-                result += BOLD[0] if in_bold else BOLD[1]
+        if token == "**" and (state.in_bold or not_text(last_token)):
+            state.in_bold = not state.in_bold
+            if not state.in_code:
+                result += BOLD[0] if state.in_bold else BOLD[1]
             else:
                 result += token  
 
-        elif token == "*" and (in_italic or not_text(last_token)):
-            in_italic = not in_italic
-            if not in_code:
-                result += ITALIC[0] if in_italic else ITALIC[1]
+        elif token == "*" and (state.in_italic or not_text(last_token)):
+            state.in_italic = not state.in_italic
+            if not state.in_code:
+                result += ITALIC[0] if state.in_italic else ITALIC[1]
             else:
                 result += token
 
-        elif token == "_" and (in_underline or not_text(last_token)):
-            in_underline = not in_underline
-            if not in_code:
-                result += UNDERLINE[0] if in_underline else UNDERLINE[1]
+        elif token == "_" and (state.in_underline or not_text(last_token)):
+            state.in_underline = not state.in_underline
+            if not state.in_code:
+                result += UNDERLINE[0] if state.in_underline else UNDERLINE[1]
             else:
                 result += token
 
         elif token == "`":
-            in_code = not in_code
-            if in_code:
+            state.in_code = not state.in_code
+            if state.in_code:
                 result += f'{BG}{MID}'
             else:
                 result += state.bg
@@ -436,7 +437,7 @@ def parse(stream):
     try:
         while True:
             if state.is_pty:
-                ready, _, _ = select.select([sys.stdin.fileno(), _master], [], [], 0.25)
+                ready, _, _ = select.select([sys.stdin.fileno(), _master], [], [], 0.5)
 
                 if _master in ready:  # Read from PTY
                     data = os.read(_master, 1024)
