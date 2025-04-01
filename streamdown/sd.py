@@ -210,11 +210,12 @@ class ParseState:
         # These are part of a trick to get
         # streaming code blocks while preserving
         # multiline parsing.
-        self.code_buffer = []
+        self.code_buffer = ""
         self.code_gen = 0
         self.code_language = None
         self.code_first_line = False
         self.code_indent = 0
+        self.code_line = ''
         self.ordered_list_numbers = []
         self.in_list = False
 
@@ -427,7 +428,7 @@ def parse(stream):
     try:
         while True:
             if state.is_pty:
-                ready, _, _ = select.select([sys.stdin.fileno(), _master], [], [], 0.7)
+                ready, _, _ = select.select([sys.stdin.fileno(), _master], [], [], 0.25)
 
                 if _master in ready:  # Read from PTY
                     data = os.read(_master, 1024)
@@ -524,7 +525,7 @@ def parse(stream):
                         state.code_language = 'Bash'
 
                 if state.in_code:
-                    state.code_buffer = []
+                    state.code_buffer = ""
                     state.code_gen = 0
                     state.code_first_line = True
                     if usePrettyPad:
@@ -549,6 +550,7 @@ def parse(stream):
                         state.code_indent = 0
                         code_type = state.in_code
                         state.in_code = False
+                       
                         if usePrettyPad:
                             yield CODEPAD[1]
                         else:
@@ -585,28 +587,38 @@ def parse(stream):
 
                     # By now we have the properly stripped code line
                     # in the line variable. Add it to the buffer.
+                    
+                    state.code_line += line
+                    if state.code_line.endswith('\n'):
+                        line = state.code_line
+                        state.code_line = ''
+                    else:
+                        continue
+
                     indent, line_wrap = code_wrap(line)
-                    state.code_buffer.append('')
+                    #state.code_buffer.append('')
+                    #print(state.code_buffer)
+                    #print(line.endswith('\n'), line_wrap)
 
                     for tline in line_wrap:
                         # wrap-around is a bunch of tricks. We essentially format longer and longer portions of code. The problem is
                         # the length can change based on look-ahead context so we need to use our expected place (state.code_gen) and
                         # then naively search back until our visible_lengths() match. This is not fast and there's certainly smarter
                         # ways of doing it but this thing is way trickery than you think
-                        highlighted_code = highlight("\n".join(state.code_buffer) + tline, lexer, formatter)
-
+                        highlighted_code = highlight(state.code_buffer + tline, lexer, formatter)
+        
                         # Since we are streaming we ignore the resets and newlines at the end
                         if highlighted_code.endswith(FGRESET + "\n"):
                             highlighted_code = highlighted_code[: -(1 + len(FGRESET))]
 
                         # turns out highlight will eat leading newlines on empty lines
-                        vislen = visible_length("\n".join(state.code_buffer).lstrip())
+                        vislen = visible_length(state.code_buffer.lstrip())
 
                         delta = 0
                         while visible_length(highlighted_code[:(state.code_gen-delta)]) > vislen:
                             delta += 1
 
-                        state.code_buffer[-1] += tline
+                        state.code_buffer += tline
 
                         this_batch = highlighted_code[state.code_gen-delta :]
                         if this_batch.startswith(FGRESET):
@@ -619,11 +631,13 @@ def parse(stream):
                         state.code_gen = len(highlighted_code)
 
                         code_line = ' ' * indent + this_batch.strip()
+                        #print(f"--{code_line}--")
 
                         margin = FULLWIDTH - visible_length(code_line)
-                        yield f"{CODEBG}{code_line}{' ' * max(0, margin)}{BGRESET}"
+                        yield f"{CODEBG}{code_line}{' ' * max(0, margin)}{BGRESET}"  
                     continue
-                except:
+                except Exception as ex:
+                    logging.warning(f"Code parsing error: {ex}")
                     pass
 
 
@@ -832,7 +846,7 @@ def main():
 
 
     if useClipboard and state.code_buffer:
-        code = "\n".join(state.code_buffer)
+        code = state.code_buffer
         # code needs to be a base64 encoded string before emitting
         code_bytes = code.encode('utf-8')
         base64_bytes = base64.b64encode(code_bytes)
