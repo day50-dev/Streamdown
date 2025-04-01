@@ -60,6 +60,7 @@ This section controls optional features:
 *   `Clipboard` (boolean, default: `true`): Enables copying the last code block encountered to the system clipboard using OSC 52 escape sequences upon exit. Set to `false` to disable.
 *   `Margin` (integer, default: `2`): The left and right indent for the output. 
 *   `PrettyPad` (boolean, default: `false`): Uses a unicode vertical pad trick to add a half height background to code blocks. This makes copy/paste have artifacts. See [#2](https://github.com/kristopolous/Streamdown/issues/2). I like it on. But that's just me
+*   `Timeout` (float, default: `0.5`): This is a workaround to the [buffer parsing bugs](https://github.com/kristopolous/Streamdown/issues/4). By increasing the select timeout, the parser loop only gets triggerd on newline which means that having to resume from things like a code block, inside a list, inside a table, between buffers, without breaking formatting doesn't need to be done. It's a problem I'm working on (2025-04-01) and there will be bugs. Set this value to something like 3.0 and you'll avoid it with a pretty minor tradeoff.
 
 Example:
 ```toml
@@ -67,6 +68,7 @@ Example:
 CodeSpaces = false
 Clipboard = false
 Margin = 4
+Timeout = 3.0
 ```
 
 ## Demo

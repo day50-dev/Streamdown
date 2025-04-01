@@ -37,6 +37,7 @@ Clipboard = true
 Logging = false
 Margin = 2 
 PrettyPad = false
+Timeout = 0.5
 
 [colors]
 HSV = [320.0, 0.5, 0.5]
@@ -65,6 +66,7 @@ useCodeSpaces = features.get("CodeSpaces", True)
 useClipboard = features.get("Clipboard", True)
 useLogging = features.get("Logging", False)
 usePrettyPad = features.get("PrettyPad", False)
+Timeout = features.get("Timeout", 0.5)
 
 # TODO
 # we should have a "wait_for_newline" with a global handler of
@@ -435,7 +437,7 @@ def parse(stream):
     try:
         while True:
             if state.is_pty:
-                ready, _, _ = select.select([sys.stdin.fileno(), _master], [], [], 0.5)
+                ready, _, _ = select.select([sys.stdin.fileno(), _master], [], [], Timeout)
 
                 if _master in ready:  # Read from PTY
                     data = os.read(_master, 1024)
