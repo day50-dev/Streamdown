@@ -19,7 +19,7 @@ import shutil
 import sys
 import tempfile
 import toml
-from functools import partial
+import traceback
 from io import StringIO
 import pygments.util
 from pygments import highlight
@@ -175,6 +175,9 @@ def extract_ansi_codes(text):
     """Extracts all ANSI escape codes from a string."""
     return re.findall(r"\033\[[0-9;]*[mK]", text)
 
+class Goto(Exception):
+    pass
+
 class Code:
     Spaces = 'spaces'
     Backtick = 'backtick'
@@ -229,7 +232,6 @@ class ParseState:
 
 
 def format_table(table_rows):
-    global state
     if not table_rows:
         return []
 
@@ -267,8 +269,7 @@ def format_table(table_rows):
 
         for cell_raw in row_raw:
             # Apply bold to header text *before* wrapping
-            print(bytes(state.bg,'utf-8'))
-            wrapped_cell_lines = wrap_text(cell_raw, width=max_col_width)
+            wrapped_cell_lines = wrap_text(line_format(cell_raw), width=max_col_width)
 
             # Ensure at least one line, even for empty cells
             if not wrapped_cell_lines:
@@ -374,7 +375,6 @@ def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_
     return final_lines
 
 def line_format(line):
-    global state
     def not_text(token):
         return not token or len(token.rstrip()) != len(token)
 
@@ -421,7 +421,6 @@ def line_format(line):
             if in_code:
                 result += f'{BG}{MID}'
             else:
-                print(bytes(state.bg, 'utf-8'))
                 result += state.bg
         else:
             result += token  
@@ -430,7 +429,6 @@ def line_format(line):
     return result
 
 def parse(stream):
-    global state
     last_line_empty_cache = None
     char = None
     process_buffer = False
@@ -573,9 +571,10 @@ def parse(stream):
                         if code_type == Code.Backtick:
                             continue
                         else:
+
                             # otherwise we don't want to consume
                             # nor do we want to be here.
-                            raise
+                            raise Goto()
 
                     if state.code_first_line:
                         state.code_first_line = False
@@ -648,8 +647,12 @@ def parse(stream):
                         margin = FULLWIDTH - visible_length(code_line)
                         yield f"{CODEBG}{code_line}{' ' * max(0, margin)}{BGRESET}"  
                     continue
+                except Goto as ex:
+                    pass
+                
                 except Exception as ex:
                     logging.warning(f"Code parsing error: {ex}")
+                    traceback.print_exc()
                     pass
 
 
@@ -660,7 +663,7 @@ def parse(stream):
                 if not state.table.in_header and not state.table.in_body:
                     state.table.in_header = True
 
-                cells = [line_format(c.strip()) for c in line.strip().strip("|").split("|")]
+                cells = [c.strip() for c in line.strip().strip("|").split("|")]
 
                 if state.table.in_header:
                     if re.match(r"^[\s|:-]+$", line):
@@ -788,14 +791,13 @@ def parse(stream):
                     state.table.reset()
 
     except Exception as e:
-        import traceback
         logging.error(f"Parser error: {str(e)}")
         traceback.print_exc()
         raise
 
 state = ParseState()
 def main():
-    global state, useClipboard
+    global useClipboard
     logging.basicConfig(
         stream=sys.stdout,
         level=os.getenv('LOGLEVEL') or logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
