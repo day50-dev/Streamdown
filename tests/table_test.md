@@ -5,7 +5,7 @@
 | **Awesome**        | Tiling          | GPLv2       | Lua script        | Highly configurable, dynamic tiling, widget-based, Lua scripting for customization, rich ecosystem.  Can be complex to learn.           | High           | [https://awesomewm.org/](https://awesomewm.org/) |
 | **Xmonad**         | Tiling          | BSD 3-Clause| Haskell           | Written in Haskell. Dynamic tiling, extremely configurable, mathematically inspired layout algorithms. Steep learning curve.        | Very High      | [https://xmonad.org/](https://xmonad.org/)      |
 | **dwm**            | Tiling          | MIT         | C code            | Minimalist, dynamic tiling, extremely lightweight, fast. Configuration requires recompiling the code. Very challenging to customize.  | High          | [https://dwm.suckless.org/](https://dwm.suckless.org/) |
-| **bspwm**          | Tiling          | GPLv2       | Text file         | Binary space partitioning tiling, allows for complex layouts, highly customizable. Requires a separate panel/bar (e.g., polybar).      | Medium         | [https://bspwm.org/](https://bspwm.org/)        |
+| **bspwm**          | `Tiling`          | GPLv2       | Text file         | Binary space partitioning tiling, allows for complex layouts, highly customizable. Requires a separate panel/bar (e.g., polybar).      | Medium         | [https://bspwm.org/](https://bspwm.org/)        |
 | **Openbox**        | Stacking        | GPLv2       | Text file         | Lightweight, highly configurable stacking manager.  Good for those transitioning from traditional desktop environments.               | Low-Medium     | [https://openbox.org/](https://openbox.org/)    |
 | **Fluxbox**        | Stacking        | GPLv2       | Text file         | Derived from Blackbox, lightweight, configurable, focuses on speed and low resource usage.                                         | Low-Medium     | [https://fluxbox.org/](https://fluxbox.org/)    |
 | **Window Maker**   | Stacking        | MIT         | Text file         | Inspired by NeXTSTEP, Dock-like application menu, configurable, and lightweight.                                                        | Low-Medium     | [https://www.windowmaker.org/](https://www.windowmaker.org/) |
@@ -17,3 +17,5 @@
 | **Hyprland**       | Wayland Compositor/WM | MIT         | Text file         | A dynamic tiling Wayland compositor. Highly configurable, focused on performance, and supports animations and complex effects.    | Medium-High    | [https://hyprland.org/](https://hyprland.org/) |
 
 that's it
+
+blah blah

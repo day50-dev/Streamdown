@@ -66,6 +66,10 @@ useClipboard = features.get("Clipboard", True)
 useLogging = features.get("Logging", False)
 usePrettyPad = features.get("PrettyPad", False)
 
+# TODO
+# we should have a "wait_for_newline" with a global handler of
+# an accumulating line
+
 
 # the ranges here are (float) [0-360, 0-1, 0-1]
 def hsv2rgb(h, s, v):
@@ -218,7 +222,7 @@ class ParseState:
         self.code_line = ''
         self.ordered_list_numbers = []
         self.in_list = False
-        self.bg = RESET    
+        self.bg = BGRESET    
 
     def reset_buffer(self):
         self.buffer = ''
@@ -253,6 +257,7 @@ def format_table(table_rows):
     all_rows_raw = [headers_raw] + rows_raw
     wrapped_rows = []
     row_heights = []
+    state.bg = f"{BG}{DARK}"
 
     # --- First Pass: Wrap text and calculate row heights ---
     for r_idx, row_raw in enumerate(all_rows_raw):
@@ -262,6 +267,7 @@ def format_table(table_rows):
 
         for cell_raw in row_raw:
             # Apply bold to header text *before* wrapping
+            print(bytes(state.bg,'utf-8'))
             wrapped_cell_lines = wrap_text(cell_raw, width=max_col_width)
 
             # Ensure at least one line, even for empty cells
@@ -304,6 +310,7 @@ def format_table(table_rows):
             joined_line = f"{BG}{bg_color}{extra}{FG}{SYMBOL}│{RESET}".join(line_segments)
             # Correct indentation and add missing characters
             formatted.append(f"{joined_line}{RESET}")
+    state.bg = BGRESET
     return formatted
 
 def code_wrap(text_in):
@@ -366,7 +373,7 @@ def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_
 
     return final_lines
 
-def line_format(line, BG_RESTORE=RESET):
+def line_format(line):
     global state
     def not_text(token):
         return not token or len(token.rstrip()) != len(token)
@@ -414,7 +421,8 @@ def line_format(line, BG_RESTORE=RESET):
             if in_code:
                 result += f'{BG}{MID}'
             else:
-                result += BG_RESTORE
+                print(bytes(state.bg, 'utf-8'))
+                result += state.bg
         else:
             result += token  
 
@@ -463,7 +471,7 @@ def parse(stream):
 
             else:
                 char = stream.read(1)
-                if len(char) == 1:
+                if len(char) == 0:
                     break
                 char = char.encode('utf-8')
 
@@ -530,6 +538,7 @@ def parse(stream):
                     state.code_buffer = ""
                     state.code_gen = 0
                     state.code_first_line = True
+                    state.bg = f"{BG}{DARK}"
                     if usePrettyPad:
                         yield CODEPAD[0]
                     else:
@@ -552,7 +561,8 @@ def parse(stream):
                         state.code_indent = 0
                         code_type = state.in_code
                         state.in_code = False
-                       
+                        state.bg = BGRESET
+
                         if usePrettyPad:
                             yield CODEPAD[1]
                         else:
@@ -712,20 +722,15 @@ def parse(stream):
                     if list_type == "number":
                         list_number = int(max(state.ordered_list_numbers[-1], float(list_item_match.group(2))))
                         bullet = f"{list_number}"
-                        first_line_prefix = (
-                            " " * (indent - len(bullet))
-                            + f"{FG}{SYMBOL}{bullet}{RESET}"
-                            + " "
-                        )
+                        first_line_prefix = f"{(' ' * (indent - len(bullet)))}{FG}{SYMBOL}{bullet}{RESET} "
                         subsequent_line_prefix = " " * (indent-1)
                     else:
-                        first_line_prefix = ( " " * (indent - 1) + f"{FG}{SYMBOL}•{RESET}" + " ")
+                        first_line_prefix = " " * (indent - 1) + f"{FG}{SYMBOL}•{RESET}" + " "
                         subsequent_line_prefix = " " * (indent-1)
 
                     wrapped_lines = wrap_text(
                         content,
-                        wrap_width,
-                        2,
+                        wrap_width, 2,
                         first_line_prefix,
                         subsequent_line_prefix,
                     )
