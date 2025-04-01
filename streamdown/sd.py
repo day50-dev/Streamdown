@@ -18,8 +18,8 @@ import select
 import shutil
 import sys
 import tempfile
-import termios
 import toml
+from functools import partial
 from io import StringIO
 import pygments.util
 from pygments import highlight
@@ -218,13 +218,14 @@ class ParseState:
         self.code_line = ''
         self.ordered_list_numbers = []
         self.in_list = False
+        self.bg = RESET    
 
     def reset_buffer(self):
         self.buffer = ''
 
 
 def format_table(table_rows):
-    """Formats markdown tables with unicode borders, wrapping, and alternating row colors"""
+    global state
     if not table_rows:
         return []
 
@@ -365,7 +366,8 @@ def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_
 
     return final_lines
 
-def line_format(line):
+def line_format(line, BG_RESTORE=RESET):
+    global state
     def not_text(token):
         return not token or len(token.rstrip()) != len(token)
 
@@ -410,9 +412,9 @@ def line_format(line):
         elif token == "`":
             in_code = not in_code
             if in_code:
-                result += f"{BG}{MID}"
+                result += f'{BG}{MID}'
             else:
-                result += RESET
+                result += BG_RESTORE
         else:
             result += token  
 
