@@ -169,11 +169,9 @@ def debug_write(text):
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
 visible_length = lambda x: len(visible(x))
-_master, _slave = pty.openpty()  # Create a new pseudoterminal
+extract_ansi_codes = lambda text: re.findall(r"\033\[[0-9;]*[mK]", text)
 
-def extract_ansi_codes(text):
-    """Extracts all ANSI escape codes from a string."""
-    return re.findall(r"\033\[[0-9;]*[mK]", text)
+_master, _slave = pty.openpty()  # Create a new pseudoterminal
 
 class Goto(Exception):
     pass
