@@ -18,7 +18,6 @@ import select
 import shutil
 import sys
 import tempfile
-import termios
 import toml
 import traceback
 from io import StringIO
@@ -127,7 +126,6 @@ UNDERLINE = ["\033[4m", "\033[24m"]
 ITALIC    = ["\033[3m", "\033[23m"]
 
 CODEBG = f"{BG}{DARK}"
-
 LINK = f"{FG}{SYMBOL}{UNDERLINE[0]}"
 
 ANSIESCAPE = r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
@@ -179,6 +177,7 @@ class ParseState:
         self.last_line_empty = False
         self.is_pipe = False
         self.is_pty = False
+
         self.maybe_prompt = False
 
         self.CodeSpaces = features.get("CodeSpaces", True)
@@ -219,14 +218,7 @@ class ParseState:
         self.exit = 0
 
     def current(self):
-        state = {
-                # 'list': self.in_list,
-                'code': self.in_code,
-                'bold': self.in_bold,
-                'italic': self.in_italic,
-                'underline': self.in_underline
-                }
-
+        state = { 'code': self.in_code, 'bold': self.in_bold, 'italic': self.in_italic, 'underline': self.in_underline }
         state['none'] = all(item is False for item in state.values())
         return state
 
@@ -245,6 +237,9 @@ def format_table(rowList):
 
     num_cols = len(rowList)
     if num_cols == 0: return []
+    formatted = []
+    row_height = 0
+    wrapped_cellList = []
 
     # Calculate max width per column (integer division)
     # Subtract num_cols + 1 for the vertical borders '│'
@@ -258,8 +253,6 @@ def format_table(rowList):
     state.bg = f"{BG}{DARK}"
 
     # --- First Pass: Wrap text and calculate row heights ---
-    row_height = 0
-    wrapped_cellList = []
     for row in rowList:
         wrapped_cell = wrap_text(line_format(row), width=col_width)
 
@@ -269,9 +262,6 @@ def format_table(rowList):
 
         wrapped_cellList.append(wrapped_cell)
         row_height = max(row_height, len(wrapped_cell))
-
-
-    formatted = []
 
     # --- Second Pass: Format and emit rows ---
     bg_color = MID if state.in_table == Code.Header else DARK
@@ -295,6 +285,7 @@ def format_table(rowList):
         joined_line = f"{BG}{bg_color}{extra}{FG}{SYMBOL}│{RESET}".join(line_segments)
         # Correct indentation and add missing characters
         formatted.append(f"{joined_line}{RESET}")
+
     state.bg = BGRESET
     return formatted
 
@@ -650,19 +641,16 @@ def parse(stream):
                 if not state.in_table:
                     state.in_table = Code.Header
 
-                    # This should come at line 2
                 elif state.in_table == Code.Header:
                     # we ignore the separator, this is just a check
                     if not re.match(r"^[\s|:-]+$", line):
                         logging.warning(f"Table definition row 2 was NOT a separator. Instead it was:\n({line})")
 
                     # Let's assume everything worked out I guess.
-                    # We set our header to false and basically say
-                    # we are expecting the body
+                    # We set our header to false and basically say we are expecting the body
                     state.in_table = Code.Body 
                     # And then ignore this row since we ignore the separator
                     continue
-
 
                 formatted = format_table(cells)
                 for l in formatted:
