@@ -754,14 +754,15 @@ def parse(stream):
                     first_line_prefix = " " * (indent - 1) + f"{FG}{SYMBOL}•{RESET}" + " "
                     subsequent_line_prefix = " " * (indent-1)
 
-                wrapped_lines = wrap_text(
-                    content,
+                line = line_format(line) 
+                wrapped_lineList = wrap_text(
+                    line,
                     wrap_width, 2,
                     first_line_prefix,
                     subsequent_line_prefix,
                     buffer = False
                 )
-                for wrapped_line in wrapped_lines:
+                for wrapped_line in wrapped_lineList:
                     yield f"{state.space_left()}{wrapped_line}\n"
                 continue
             #
