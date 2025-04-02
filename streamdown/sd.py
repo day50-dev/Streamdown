@@ -18,6 +18,7 @@ import select
 import shutil
 import sys
 import tempfile
+import termios
 import toml
 import traceback
 from io import StringIO
@@ -27,8 +28,6 @@ from pygments.lexers import get_lexer_by_name
 from pygments.formatters import Terminal256Formatter
 from pygments.styles import get_style_by_name
 from pathlib import Path
-import pdb
-#pdb.set_trace()
 
 default_toml = """
 [features]
@@ -62,16 +61,9 @@ config = toml.loads(config_toml_content)
 colors = config.get("colors", {})
 features = config.get("features", {})
 
-useCodeSpaces = features.get("CodeSpaces", True)
-useClipboard = features.get("Clipboard", True)
-useLogging = features.get("Logging", False)
-usePrettyPad = features.get("PrettyPad", False)
-Timeout = features.get("Timeout", 0.5)
-
 # TODO
 # we should have a "wait_for_newline" with a global handler of
 # an accumulating line
-
 
 # the ranges here are (float) [0-360, 0-1, 0-1]
 def hsv2rgb(h, s, v):
@@ -125,7 +117,6 @@ SYMBOL = apply_multipliers("SYMBOL", H, S, V)
 HEAD   = apply_multipliers("HEAD", H, S, V)
 BRIGHT = apply_multipliers("BRIGHT", H, S, V)
 
-
 STYLE  = colors.get("STYLE", "monokai")
 MARGIN = features.get("Margin", 2) 
 MARGIN_SPACES = " " * MARGIN
@@ -136,33 +127,22 @@ RESET = "\033[0m"
 FGRESET = "\033[39m"
 BGRESET = "\033[49m"
 
-def get_terminal_width():
-    try:
-        return shutil.get_terminal_size().columns
-    except (AttributeError, OSError):
-        return 80
-
-FULLWIDTH = int(get_terminal_width())
-WIDTH = FULLWIDTH - 2 * MARGIN
-
 BOLD =      ["\033[1m", "\033[22m"]
 UNDERLINE = ["\033[4m", "\033[24m"]
 ITALIC    = ["\033[3m", "\033[23m"]
 
 CODEBG = f"{BG}{DARK}"
-CODEPAD = [
-    f"{RESET}{FG}{DARK}{'▄' * FULLWIDTH}{RESET}\n",
-    f"{RESET}{FG}{DARK}{'▀' * FULLWIDTH}{RESET}"
-]
+
 
 LINK = f"{FG}{SYMBOL}{UNDERLINE[0]}"
 
 ANSIESCAPE = r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
+KEYCODE_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 DEBUG_FH = None
 def debug_write(text):
     global DEBUG_FH
-    if useLogging:
+    if state.Logging:
         if not DEBUG_FH:
             DEBUG_FH = tempfile.NamedTemporaryFile(prefix="sd_debug", delete=False, encoding="utf-8", mode="w")
         assert isinstance(text, str)
@@ -175,12 +155,27 @@ extract_ansi_codes = lambda text: re.findall(r"\033\[[0-9;]*[mK]", text)
 
 _master, _slave = pty.openpty()  # Create a new pseudoterminal
 
+def get_terminal_width():
+    try:
+        return shutil.get_terminal_size().columns
+    except (AttributeError, OSError):
+        return 80
+
+FULLWIDTH = int(get_terminal_width())
+WIDTH = FULLWIDTH - 2 * MARGIN
+CODEPAD = [
+    f"{RESET}{FG}{DARK}{'▄' * FULLWIDTH}{RESET}\n",
+    f"{RESET}{FG}{DARK}{'▀' * FULLWIDTH}{RESET}"
+]
+
 class Goto(Exception):
     pass
 
 class Code:
     Spaces = 'spaces'
     Backtick = 'backtick'
+    Header = 'header'
+    Body = 'body'
 
 class TableState:
     def __init__(self):
@@ -198,21 +193,25 @@ class TableState:
 
 class ParseState:
     def __init__(self):
-        # So this can either be False, Code.Backtick or Code.Spaces
-        self.in_code = False
 
         self.table = TableState()
         self.buffer = ''
-        self.list_item_stack = []  # stack of (indent, type)
         self.first_line = True
         self.last_line_empty = False
         self.is_pipe = False
         self.is_pty = False
+        self.maybe_prompt = False
+
+        self.CodeSpaces = features.get("CodeSpaces", True)
+        self.Clipboard = features.get("Clipboard", True)
+        self.Logging = features.get("Logging", False)
+        self.PrettyPad = features.get("PrettyPad", False)
+        self.Timeout = features.get("Timeout", 0.5)
 
         # If the entire block is indented this will
         # tell us what that is
         self.first_indent = None
-        self.should_newline = False
+        self.has_newline = False
 
         # These are part of a trick to get
         # streaming code blocks while preserving
@@ -223,22 +222,46 @@ class ParseState:
         self.code_first_line = False
         self.code_indent = 0
         self.code_line = ''
-        self.ordered_list_numbers = []
-        self.in_list = False
-        self.bg = BGRESET    
 
+        self.ordered_list_numbers = []
+        self.list_item_stack = []  # stack of (indent, type)
+
+        self.bg = BGRESET    
+        self.current_line = ''
+
+        # So this can either be False, Code.Backtick or Code.Spaces
+        self.in_list = False
+        self.in_code = False
         self.in_bold = False
         self.in_italic = False
         self.in_underline = False
-        self.in_code = False
+
+        self.exit = 0
+
+    def current(self):
+        state = {
+                'list': self.in_list,
+                'code': self.in_code,
+                'bold': self.in_bold,
+                'italic': self.in_italic,
+                'underline': self.in_underline
+                }
+
+        state['none'] = not all(item is False for item in state.values())
+        return state
+
+    def space_left(self):
+        if len(self.current_line) == 0:
+            return MARGIN_SPACES
+        return ""
 
     def reset_buffer(self):
         self.buffer = ''
 
+state = ParseState()
 
 def format_table(table_rows):
-    if not table_rows:
-        return []
+    if not table_rows: return []
 
     # Extract headers and rows, skipping separator
     headers_raw = [cell.strip() for cell in table_rows[0]]
@@ -249,8 +272,7 @@ def format_table(table_rows):
     ]
 
     num_cols = len(headers_raw)
-    if num_cols == 0:
-        return []
+    if num_cols == 0: return []
 
     # Calculate max width per column (integer division)
     # Subtract num_cols + 1 for the vertical borders '│'
@@ -293,11 +315,7 @@ def format_table(table_rows):
     for r_idx, (wrapped_cells_in_row, row_height) in enumerate(zip(wrapped_rows, row_heights)):
         is_header = r_idx == 0
         bg_color = MID if is_header else DARK
-        # Alternate row colors for data rows (using original logic's colors)
-        # if not is_header:
-        #     ansi_bg_color = 236 if (r_idx - 1) % 2 == 0 else 238
-        #     bg_color = f"\033[48;5;{ansi_bg_color}m" # Use 256 color codes if needed
-
+   
         for line_idx in range(row_height):
             extra = f"\033[4;58;2;{MID}" if not is_header and (line_idx == row_height - 1)  else ""
             line_segments = []
@@ -335,13 +353,16 @@ def code_wrap(text_in):
 
     return (indent, res)
 
-def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_line_prefix=""):
+def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_line_prefix="", buffer=True):
     # Wraps text to the given width, preserving ANSI escape codes across lines.
     words = line_format(text).split()
     lines = []
     current_line = ""
     current_style = ""
 
+    if not buffer and visible_length(text) < WIDTH:
+        return [text]
+    
     for i, word in enumerate(words):
         # Accumulate ANSI codes within the current word
         codes = extract_ansi_codes(word)
@@ -390,32 +411,31 @@ def line_format(line):
         return f'\033]8;;{url}\033\\{LINK}{description}{UNDERLINE[1]}\033]8;;\033\\'
 
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
-
-    tokens = re.findall(r"(\*\*|\*|_|`|[^_*`]+)", line)
+    tokenList = re.findall(r"(\*\*|\*|_|`|[^_*`]+)", line)
     result = ""
     last_token = None
 
-    for token in tokens:
+    for token in tokenList:
         if token == "**" and (state.in_bold or not_text(last_token)):
             state.in_bold = not state.in_bold
-            if not state.in_code:
-                result += BOLD[0] if state.in_bold else BOLD[1]
+            if state.in_code:
+                result += token
             else:
-                result += token  
+                result += BOLD[0] if state.in_bold else BOLD[1]
 
         elif token == "*" and (state.in_italic or not_text(last_token)):
             state.in_italic = not state.in_italic
-            if not state.in_code:
-                result += ITALIC[0] if state.in_italic else ITALIC[1]
-            else:
+            if state.in_code:
                 result += token
+            else:
+                result += ITALIC[0] if state.in_italic else ITALIC[1]
 
         elif token == "_" and (state.in_underline or not_text(last_token)):
             state.in_underline = not state.in_underline
-            if not state.in_code:
-                result += UNDERLINE[0] if state.in_underline else UNDERLINE[1]
-            else:
+            if state.in_code:
                 result += token
+            else:
+                result += UNDERLINE[0] if state.in_underline else UNDERLINE[1]
 
         elif token == "`":
             state.in_code = not state.in_code
@@ -429,6 +449,7 @@ def line_format(line):
         last_token = token
     return result
 
+# new strategy. We are going to call things need_newline and some thing not.
 def parse(stream):
     last_line_empty_cache = None
     char = None
@@ -437,18 +458,18 @@ def parse(stream):
     try:
         while True:
             if state.is_pty:
-                ready, _, _ = select.select([sys.stdin.fileno(), _master], [], [], Timeout)
+                ready, _, _ = select.select([stream.fileno(), _master], [], [], state.Timeout)
 
                 if _master in ready:  # Read from PTY
                     data = os.read(_master, 1024)
-                    if not data:
-                        break
-                    os.write(sys.stdout.fileno(), data)  # Write to stdout
+                    if not data: break
+                    clean_data = KEYCODE_RE.sub('', data.decode('utf-8'))
+                    os.write(sys.stdout.fileno(), clean_data.encode())  # Write to stdout
 
                 char = b''
-                if sys.stdin.fileno() in ready:  # Read from stdin
+                if stream.fileno() in ready:  # Read from stdin
                     while True:
-                        char += os.read(sys.stdin.fileno(), 1)
+                        char += os.read(stream.fileno(), 1)
 
                         # If this doesn't work then we are on a multi-byte
                         # and should be read in many of them
@@ -459,8 +480,7 @@ def parse(stream):
                             continue
 
                     # This means end of input
-                    if char == b'':
-                        break
+                    if char == b'': break
 
                 else:
                     # here I want to say there's nothing more we can add
@@ -470,8 +490,7 @@ def parse(stream):
 
             else:
                 char = stream.read(1)
-                if len(char) == 0:
-                    break
+                if len(char) == 0: break
                 char = char.encode('utf-8')
 
             if char:
@@ -480,16 +499,27 @@ def parse(stream):
             if char != b'\n' and not process_buffer : continue
 
             #print(f"({char}-{bytes(state.buffer, 'utf-8')})")
-            state.should_newline = state.buffer.endswith('\n')
-            #print(state.should_newline)
-            #if not state.should_newline:
-            #    print("no newline")
+            state.has_newline = state.buffer.endswith('\n')
             process_buffer = False
 
+            state.maybe_prompt = not state.has_newline and state.current()['none'] and re.match('^.*>', line)
+
+            # let's wait for a newline
+            if state.maybe_prompt:
+                print(state.buffer)
+                state.reset_buffer()
+                continue
+
+            if not state.has_newline:
+                continue
+
             # Process complete line
-            line = state.buffer#.rstrip("\n")
+            line = state.buffer
             state.reset_buffer()
             debug_write(line)
+
+
+            
 
             # --- Collapse Multiple Empty Lines if not in code blocks ---
             if not state.in_code:
@@ -519,15 +549,17 @@ def parse(stream):
                 logging.warning("Indentation decreased from first line.")
 
 
+            #
+            # <code><pre>
+            #
             # This needs to be first
             if not state.in_code:
-
                 code_match = re.match(r"\s*```\s*([^\s]+|$)", line)
                 if code_match:
                     state.in_code = Code.Backtick
                     state.code_language = code_match.group(1) or 'Bash'
 
-                elif useCodeSpaces and last_line_empty_cache and not state.in_list:
+                elif state.CodeSpaces and last_line_empty_cache and not state.in_list:
                     code_match = re.match(r"^    ", line)
                     if code_match:
                         state.in_code = Code.Spaces
@@ -538,7 +570,7 @@ def parse(stream):
                     state.code_gen = 0
                     state.code_first_line = True
                     state.bg = f"{BG}{DARK}"
-                    if usePrettyPad:
+                    if state.PrettyPad:
                         yield CODEPAD[0]
                     else:
                         yield "\n"
@@ -547,14 +579,12 @@ def parse(stream):
 
                     if state.in_code == Code.Backtick:
                         continue
-            #
-            # <code><pre>
-            #
+
             if state.in_code:
                 try:
                     if not state.code_first_line and (
                             (state.in_code == Code.Backtick and     line.strip() == "```") or
-                            (useCodeSpaces and state.in_code == Code.Spaces   and not line.startswith('    '))
+                            (state.CodeSpaces and state.in_code == Code.Spaces   and not line.startswith('    '))
                         ):
                         state.code_language = None
                         state.code_indent = 0
@@ -562,7 +592,7 @@ def parse(stream):
                         state.in_code = False
                         state.bg = BGRESET
 
-                        if usePrettyPad:
+                        if state.PrettyPad:
                             yield CODEPAD[1]
                         else:
                             yield f"{RESET}\n"
@@ -572,7 +602,6 @@ def parse(stream):
                         if code_type == Code.Backtick:
                             continue
                         else:
-
                             # otherwise we don't want to consume
                             # nor do we want to be here.
                             raise Goto()
@@ -608,10 +637,7 @@ def parse(stream):
                         continue
 
                     indent, line_wrap = code_wrap(line)
-                    #state.code_buffer.append('')
-                    #print(state.code_buffer)
-                    #print(line.endswith('\n'), line_wrap)
-
+      
                     for tline in line_wrap:
                         # wrap-around is a bunch of tricks. We essentially format longer and longer portions of code. The problem is
                         # the length can change based on look-ahead context so we need to use our expected place (state.code_gen) and
@@ -656,7 +682,6 @@ def parse(stream):
                     traceback.print_exc()
                     pass
 
-
             #
             # <table>
             #
@@ -679,128 +704,114 @@ def parse(stream):
                 elif state.table.in_body:
                     state.table.rows.append(cells)
 
-                if not state.table.intable():
-                    yield f"{line}"
-                continue
-            else:
-                if state.table.in_body or state.table.in_header:
-                    formatted = format_table(state.table.rows)
-                    for l in formatted:
-                        yield f"{MARGIN_SPACES}{l}"
-                    state.table.reset()
-
-                #
-                # <li> <ul> <ol>
-                #
-                list_item_match = re.match(r"^(\s*)([*\-]|\d+\.)\s+(.*)", line)
-                if list_item_match:
-                    state.in_list = True
-                    indent = len(list_item_match.group(1))
-                    list_type = (
-                        "number" if list_item_match.group(2)[0].isdigit() else "bullet"
-                    )
-                    content = list_item_match.group(3)
-
-                    # Handle stack
-                    while (
-                        state.list_item_stack and state.list_item_stack[-1][0] > indent
-                    ):
-                        state.list_item_stack.pop()  # Remove deeper nested items
-                        if state.ordered_list_numbers:
-                            state.ordered_list_numbers.pop()
-                    if state.list_item_stack and state.list_item_stack[-1][0] < indent:
-                        # new nested list
-                        state.list_item_stack.append((indent, list_type))
-                        state.ordered_list_numbers.append(0)
-                    elif not state.list_item_stack:
-                        # first list
-                        state.list_item_stack.append((indent, list_type))
-                        state.ordered_list_numbers.append(0)
-                    if list_type == "number":
-                        state.ordered_list_numbers[-1] += 1
-
-                    indent = len(state.list_item_stack) * 2
-
-                    wrap_width = WIDTH - indent - 4
-
-                    if list_type == "number":
-                        list_number = int(max(state.ordered_list_numbers[-1], float(list_item_match.group(2))))
-                        bullet = f"{list_number}"
-                        first_line_prefix = f"{(' ' * (indent - len(bullet)))}{FG}{SYMBOL}{bullet}{RESET} "
-                        subsequent_line_prefix = " " * (indent-1)
-                    else:
-                        first_line_prefix = " " * (indent - 1) + f"{FG}{SYMBOL}•{RESET}" + " "
-                        subsequent_line_prefix = " " * (indent-1)
-
-                    wrapped_lines = wrap_text(
-                        content,
-                        wrap_width, 2,
-                        first_line_prefix,
-                        subsequent_line_prefix,
-                    )
-                    for wrapped_line in wrapped_lines:
-                        yield f"{MARGIN_SPACES}{wrapped_line}\n"
+                if state.table.intable():
                     continue
+            
+            if state.table.in_body or state.table.in_header:
+                formatted = format_table(state.table.rows)
+                for l in formatted:
+                    yield f"{MARGIN_SPACES}{l}"
+                state.table.reset()
 
-                #
-                # <h1> <h2> <h3>
-                # <h4> <h5> <h6>
-                #
-                header_match = re.match(r"^\s*(#{1,6})\s+(.*)", line)
-                if header_match:
-                    level = len(header_match.group(1))
-                    text = header_match.group(2)
-                    spaces_to_center = ((WIDTH - visible_length(text)) / 2)
-                    if level == 1:      # #
-                        yield f"\n{MARGIN_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
-                    elif level == 2:    # ##
-                        yield f"\n{MARGIN_SPACES}{BOLD[0]}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
-                    elif level == 3:    # ###
-                        yield f"\n{MARGIN_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}"
-                    elif level == 4:    # ####
-                        yield f"{MARGIN_SPACES}{FG}{SYMBOL}{text}{RESET}"
-                    elif level == 5:    # #####
-                        yield f"{MARGIN_SPACES}{text}{RESET}"
-                    else:  # level == 6
-                        yield f"{MARGIN_SPACES}{text}{RESET}"
+                continue
 
+            #
+            # <li> <ul> <ol>
+            #
+            list_item_match = re.match(r"^(\s*)([*\-]|\d+\.)\s+(.*)", line)
+            if list_item_match:
+                state.in_list = True
+                indent = len(list_item_match.group(1))
+                list_type = "number" if list_item_match.group(2)[0].isdigit() else "bullet"
+                content = list_item_match.group(3)
+
+                # Handle stack
+                while state.list_item_stack and state.list_item_stack[-1][0] > indent:
+                    state.list_item_stack.pop()  # Remove deeper nested items
+                    if state.ordered_list_numbers:
+                        state.ordered_list_numbers.pop()
+                if state.list_item_stack and state.list_item_stack[-1][0] < indent:
+                    # new nested list
+                    state.list_item_stack.append((indent, list_type))
+                    state.ordered_list_numbers.append(0)
+                elif not state.list_item_stack:
+                    # first list
+                    state.list_item_stack.append((indent, list_type))
+                    state.ordered_list_numbers.append(0)
+                if list_type == "number":
+                    state.ordered_list_numbers[-1] += 1
+
+                indent = len(state.list_item_stack) * 2
+
+                wrap_width = WIDTH - indent - 4
+
+                if list_type == "number":
+                    list_number = int(max(state.ordered_list_numbers[-1], float(list_item_match.group(2))))
+                    bullet = f"{list_number}"
+                    first_line_prefix = f"{(' ' * (indent - len(bullet)))}{FG}{SYMBOL}{bullet}{RESET} "
+                    subsequent_line_prefix = " " * (indent-1)
                 else:
-                    #
-                    # <hr>
-                    #
-                    if re.match(r"^[\s]*[-*_]{3,}[\s]*$", line):
-                        # print a horizontal rule using a unicode midline 
-                        yield f"{MARGIN_SPACES}{FG}{SYMBOL}{'─' * WIDTH}{RESET}"
-                    else:
-                        if len(line) == 0:
-                            print("")
-                        else:
-                            # This is the basic unformatted text. We still want to word wrap it.
-                            if len(line) < WIDTH:
-                                yield line_format(line)
-                            else:
-                                wrapped_lines = wrap_text(line)
-                                # print(f"({line})")
-                                for wrapped_line in wrapped_lines:
-                                    yield f"{MARGIN_SPACES}{wrapped_line}\n"
+                    first_line_prefix = " " * (indent - 1) + f"{FG}{SYMBOL}•{RESET}" + " "
+                    subsequent_line_prefix = " " * (indent-1)
 
-                # Process any remaining table data
-                if state.table.rows:
-                    formatted = format_table(state.table.rows)
-                    for l in formatted:
-                        yield f"{MARGIN_SPACES}{l}"
-                    state.table.reset()
+                wrapped_lines = wrap_text(
+                    content,
+                    wrap_width, 2,
+                    first_line_prefix,
+                    subsequent_line_prefix,
+                    buffer = False
+                )
+                for wrapped_line in wrapped_lines:
+                    yield f"{state.space_left()}{wrapped_line}\n"
+                continue
+            #
+            # <hr>
+            #
+            if re.match(r"^[\s]*[-*_]{3,}[\s]*$", line):
+                # print a horizontal rule using a unicode midline 
+                yield f"{MARGIN_SPACES}{FG}{SYMBOL}{'─' * WIDTH}{RESET}"
+                continue
+
+            #
+            # <h1> <h2> <h3>
+            # <h4> <h5> <h6>
+            #
+            header_match = re.match(r"^\s*(#{1,6})\s+(.*)", line)
+            if header_match:
+                level = len(header_match.group(1))
+                text = header_match.group(2)
+                spaces_to_center = ((WIDTH - visible_length(text)) / 2)
+                if level == 1:      # #
+                    yield f"\n{MARGIN_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
+                elif level == 2:    # ##
+                    yield f"\n{MARGIN_SPACES}{BOLD[0]}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
+                elif level == 3:    # ###
+                    yield f"\n{MARGIN_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}"
+                elif level == 4:    # ####
+                    yield f"{MARGIN_SPACES}{FG}{SYMBOL}{text}{RESET}"
+                elif level == 5:    # #####
+                    yield f"{MARGIN_SPACES}{text}{RESET}"
+                else:  # level == 6
+                    yield f"{MARGIN_SPACES}{text}{RESET}"
+                continue
+
+            if len(line) == 0: print("")
+            if len(line) < WIDTH:
+                # we want to prevent word wrap
+                yield f"{state.space_left()}{line_format(line)}"
+            else:
+                wrapped_lines = wrap_text(line)
+                # print(f"({line})")
+                for wrapped_line in wrapped_lines:
+                    yield f"{state.space_left()}{wrapped_line}\n"
 
     except Exception as e:
         logging.error(f"Parser error: {str(e)}")
         traceback.print_exc()
         raise
 
-state = ParseState()
 def main():
-    global useClipboard
-    logging.basicConfig(
-        stream=sys.stdout,
+    logging.basicConfig(stream=sys.stdout,
         level=os.getenv('LOGLEVEL') or logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     try:
         inp = sys.stdin
@@ -816,7 +827,7 @@ def main():
             print(f"\nConfig: {config_toml_path}\n")
 
             # This isn't what injecting into a clipboard is for
-            useClipboard = False
+            state.Clipboard = False
 
             inp = StringIO("""
                  **A markdown renderer for modern terminals**
@@ -835,27 +846,33 @@ def main():
         else:
             # this is a more sophisticated thing that we'll do in the main loop
             state.is_pty = True
+            os.set_blocking(inp.fileno(), False) 
 
         for chunk in parse(inp):
-            if not state.should_newline:
+            if not state.has_newline:
                 chunk = chunk.rstrip("\n")
             elif not chunk.endswith("\n"):
                 chunk += "\n"
-            #if state.should_newline:
-            #    chunk += '\n'
+
+            if chunk.endswith("\n"):
+                state.current_line = ''
+            else:
+                state.current_line += chunk
+                
             if state.is_pty:
-                os.write(_slave, bytes(chunk, 'utf-8'))  # Write to PTY
+                print(chunk, end="", flush=True)
+                #os.write(_slave, bytes(chunk, 'utf-8'))  # Write to PTY
             else:
                 sys.stdout.write(chunk)
             sys.stdout.flush()
 
     except KeyboardInterrupt:
-        pass
+        state.exit = 130
+        
     except Exception as ex:
         logging.warning(f"Exception thrown: {ex}")
 
-
-    if useClipboard and state.code_buffer:
+    if state.Clipboard and state.code_buffer:
         code = state.code_buffer
         # code needs to be a base64 encoded string before emitting
         code_bytes = code.encode('utf-8')
@@ -863,5 +880,6 @@ def main():
         base64_string = base64_bytes.decode('utf-8')
         print(f"\033]52;c;{base64_string}\a", end="", flush=True)
 
+    sys.exit(state.exit)
 if __name__ == "__main__":
     main()
