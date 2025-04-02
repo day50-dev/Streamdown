@@ -61,10 +61,6 @@ config = toml.loads(config_toml_content)
 colors = config.get("colors", {})
 features = config.get("features", {})
 
-# TODO
-# we should have a "wait_for_newline" with a global handler of
-# an accumulating line
-
 # the ranges here are (float) [0-360, 0-1, 0-1]
 def hsv2rgb(h, s, v):
     s = min(1, s)
@@ -85,7 +81,6 @@ def hsv2rgb(h, s, v):
         r, g, b = x, 0, c
     else:
         r, g, b = c, 0, x
-    # scale this to 0-255 and return it in R;G;Bm format
 
     return ';'.join([str(x) for x in [
         min(255,int((r + m) * 255)),
@@ -132,7 +127,6 @@ UNDERLINE = ["\033[4m", "\033[24m"]
 ITALIC    = ["\033[3m", "\033[23m"]
 
 CODEBG = f"{BG}{DARK}"
-
 
 LINK = f"{FG}{SYMBOL}{UNDERLINE[0]}"
 
@@ -326,9 +320,6 @@ def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_
     lines = []
     current_line = ""
     current_style = ""
-
-    #if not buffer and visible_length(text) < WIDTH:
-    #    return [text]
     
     for i, word in enumerate(words):
         # Accumulate ANSI codes within the current word
@@ -466,12 +457,10 @@ def parse(stream):
             debug_write(char.decode('utf-8'))
             if char != b'\n' and not process_buffer : continue
 
-            #print(f"({char}-{bytes(state.buffer, 'utf-8')})")
             state.has_newline = state.buffer.endswith('\n')
             process_buffer = False
 
             state.maybe_prompt = not state.has_newline and state.current()['none'] and re.match('^.*>', state.buffer)
-            #print(state.has_newline, state.current(), re.match('^.*>', state.buffer))
 
             # let's wait for a newline
             if state.maybe_prompt:
@@ -485,7 +474,6 @@ def parse(stream):
             # Process complete line
             line = state.buffer
             state.reset_buffer()
-            
 
             # --- Collapse Multiple Empty Lines if not in code blocks ---
             if not state.in_code:
@@ -602,7 +590,6 @@ def parse(stream):
 
                     # By now we have the properly stripped code line
                     # in the line variable. Add it to the buffer.
-                    
                     state.code_line += line
                     if state.code_line.endswith('\n'):
                         line = state.code_line
@@ -773,7 +760,6 @@ def parse(stream):
                 yield f"{state.space_left()}{line_format(line)}"
             else:
                 wrapped_lines = wrap_text(line)
-                # print(f"({line})")
                 for wrapped_line in wrapped_lines:
                     yield f"{state.space_left()}{wrapped_line}\n"
 
@@ -833,10 +819,8 @@ def main():
                 
             if state.is_pty:
                 print(chunk, end="", flush=True)
-                #os.write(_slave, bytes(chunk, 'utf-8'))  # Write to PTY
             else:
                 sys.stdout.write(chunk)
-            sys.stdout.flush()
 
     except KeyboardInterrupt:
         state.exit = 130
