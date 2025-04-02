@@ -374,33 +374,29 @@ def line_format(line):
     last_token = None
 
     for token in tokenList:
-        if token == "**" and (state.in_bold or not_text(last_token)):
-            state.in_bold = not state.in_bold
-            if state.in_code:
-                result += token
-            else:
-                result += BOLD[0] if state.in_bold else BOLD[1]
-
-        elif token == "*" and (state.in_italic or not_text(last_token)):
-            state.in_italic = not state.in_italic
-            if state.in_code:
-                result += token
-            else:
-                result += ITALIC[0] if state.in_italic else ITALIC[1]
-
-        elif token == "_" and (state.in_underline or not_text(last_token)):
-            state.in_underline = not state.in_underline
-            if state.in_code:
-                result += token
-            else:
-                result += UNDERLINE[0] if state.in_underline else UNDERLINE[1]
-
-        elif token == "`":
+        if token == "`":
             state.in_code = not state.in_code
             if state.in_code:
                 result += f'{BG}{MID}'
             else:
                 result += state.bg
+
+        # This is important here because we ignore formatting
+        # inside of our code block.
+        elif state.in_code:
+            result += token
+
+        elif token == "**" and (state.in_bold or not_text(last_token)):
+            state.in_bold = not state.in_bold
+            result += BOLD[0] if state.in_bold else BOLD[1]
+
+        elif token == "*" and (state.in_italic or not_text(last_token)):
+            state.in_italic = not state.in_italic
+            result += ITALIC[0] if state.in_italic else ITALIC[1]
+
+        elif token == "_" and (state.in_underline or not_text(last_token)):
+            state.in_underline = not state.in_underline
+            result += UNDERLINE[0] if state.in_underline else UNDERLINE[1]
         else:
             result += token  
 
