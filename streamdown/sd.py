@@ -171,13 +171,12 @@ class Code:
 
 class ParseState:
     def __init__(self):
-
         self.buffer = ''
+        self.current_line = ''
         self.first_line = True
         self.last_line_empty = False
         self.is_pipe = False
         self.is_pty = False
-
         self.maybe_prompt = False
 
         self.CodeSpaces = features.get("CodeSpaces", True)
@@ -190,6 +189,7 @@ class ParseState:
         # tell us what that is
         self.first_indent = None
         self.has_newline = False
+        self.bg = BGRESET    
 
         # These are part of a trick to get
         # streaming code blocks while preserving
@@ -204,15 +204,12 @@ class ParseState:
         self.ordered_list_numbers = []
         self.list_item_stack = []  # stack of (indent, type)
 
-        self.bg = BGRESET    
-        self.current_line = ''
-
         # So this can either be False, Code.Backtick or Code.Spaces
         self.in_list = False
         self.in_code = False
         self.in_bold = False
         self.in_italic = False
-        self.in_table = False
+        self.in_table = False # (Code.[Header|Body] | False)
         self.in_underline = False
 
         self.exit = 0
@@ -223,12 +220,7 @@ class ParseState:
         return state
 
     def space_left(self):
-        if len(self.current_line) == 0:
-            return MARGIN_SPACES
-        return ""
-
-    def reset_buffer(self):
-        self.buffer = ''
+        return MARGIN_SPACES if len(self.current_line) == 0 else ""
 
 state = ParseState()
 
@@ -452,7 +444,7 @@ def parse(stream):
             # let's wait for a newline
             if state.maybe_prompt:
                 yield state.buffer
-                state.reset_buffer()
+                state.buffer = ''
                 continue
 
             if not state.has_newline:
@@ -460,7 +452,7 @@ def parse(stream):
 
             # Process complete line
             line = state.buffer
-            state.reset_buffer()
+            state.buffer = ''
 
             # --- Collapse Multiple Empty Lines if not in code blocks ---
             if not state.in_code:
