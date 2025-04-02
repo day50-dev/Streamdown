@@ -177,24 +177,9 @@ class Code:
     Header = 'header'
     Body = 'body'
 
-class TableState:
-    def __init__(self):
-        self.rows = []
-        self.in_header = False
-        self.in_separator = False
-        self.in_body = False
-
-    def reset(self):
-        self.__init__()
-
-    def intable(self):
-        return self.in_header or self.in_separator or self.in_body
-
-
 class ParseState:
     def __init__(self):
 
-        self.table = TableState()
         self.buffer = ''
         self.first_line = True
         self.last_line_empty = False
@@ -234,20 +219,21 @@ class ParseState:
         self.in_code = False
         self.in_bold = False
         self.in_italic = False
+        self.in_table = False
         self.in_underline = False
 
         self.exit = 0
 
     def current(self):
         state = {
-                'list': self.in_list,
+                # 'list': self.in_list,
                 'code': self.in_code,
                 'bold': self.in_bold,
                 'italic': self.in_italic,
                 'underline': self.in_underline
                 }
 
-        state['none'] = not all(item is False for item in state.values())
+        state['none'] = all(item is False for item in state.values())
         return state
 
     def space_left(self):
@@ -260,18 +246,10 @@ class ParseState:
 
 state = ParseState()
 
-def format_table(table_rows):
-    if not table_rows: return []
+def format_table(rowList):
+    if not rowList: return []
 
-    # Extract headers and rows, skipping separator
-    headers_raw = [cell.strip() for cell in table_rows[0]]
-    rows_raw = [
-        [cell.strip() for cell in row]
-        for row in table_rows[1:]
-        if not re.match(r"^[\s|:-]+$", "|".join(row))
-    ]
-
-    num_cols = len(headers_raw)
+    num_cols = len(rowList)
     if num_cols == 0: return []
 
     # Calculate max width per column (integer division)
@@ -279,61 +257,50 @@ def format_table(table_rows):
     available_width = WIDTH - (num_cols + 1)
     if available_width <= 0:
         # Handle extremely narrow terminals gracefully
-        max_col_width = 1
+        col_width = 1
     else:
-        max_col_width = available_width // num_cols
+        col_width = available_width // num_cols
 
-    all_rows_raw = [headers_raw] + rows_raw
-    wrapped_rows = []
-    row_heights = []
     state.bg = f"{BG}{DARK}"
 
     # --- First Pass: Wrap text and calculate row heights ---
-    for r_idx, row_raw in enumerate(all_rows_raw):
-        wrapped_cells_in_row = []
-        max_height_in_row = 0
-        is_header = r_idx == 0
+    row_height = 0
+    wrapped_cellList = []
+    for row in rowList:
+        wrapped_cell = wrap_text(line_format(row), width=col_width)
 
-        for cell_raw in row_raw:
-            # Apply bold to header text *before* wrapping
-            wrapped_cell_lines = wrap_text(line_format(cell_raw), width=max_col_width)
+        # Ensure at least one line, even for empty cells
+        if not wrapped_cell:
+            wrapped_cell = [""]
 
-            # Ensure at least one line, even for empty cells
-            if not wrapped_cell_lines:
-                wrapped_cell_lines = [""]
+        wrapped_cellList.append(wrapped_cell)
+        row_height = max(row_height, len(wrapped_cell))
 
-            wrapped_cells_in_row.append(wrapped_cell_lines)
-            max_height_in_row = max(max_height_in_row, len(wrapped_cell_lines))
-
-        wrapped_rows.append(wrapped_cells_in_row)
-        row_heights.append(max_height_in_row)
 
     formatted = []
-    col_widths = [max_col_width] * num_cols # Use the calculated max width
 
     # --- Second Pass: Format and emit rows ---
-    for r_idx, (wrapped_cells_in_row, row_height) in enumerate(zip(wrapped_rows, row_heights)):
-        is_header = r_idx == 0
-        bg_color = MID if is_header else DARK
-   
-        for line_idx in range(row_height):
-            extra = f"\033[4;58;2;{MID}" if not is_header and (line_idx == row_height - 1)  else ""
-            line_segments = []
-            for c_idx, wrapped_cell_lines in enumerate(wrapped_cells_in_row):
-                if line_idx < len(wrapped_cell_lines):
-                    segment = wrapped_cell_lines[line_idx]
-                else:
-                    segment = "" # Pad with empty string if cell is shorter
+    bg_color = MID if state.in_table == Code.Header else DARK
+    for ix in range(row_height):
+        # This is the fancy row separator
+        extra = f"\033[4;58;2;{MID}" if not state.in_table == Code.Header and (ix == row_height - 1) else ""
+        line_segments = []
 
-                # Margin logic is correctly indented here
-                margin_needed = col_widths[c_idx] - visible_length(segment)
-                margin_segment = segment + (" " * max(0, margin_needed))
-                line_segments.append(f"{BG}{bg_color}{extra} {margin_segment}")
+        # Now we want to snatch this row index from all our cells
+        for cell in wrapped_cellList:
+            segment = ''
+            if ix < len(cell):
+                segment = cell[ix]
 
-            # Correct indentation: This should be outside the c_idx loop
-            joined_line = f"{BG}{bg_color}{extra}{FG}{SYMBOL}│{RESET}".join(line_segments)
-            # Correct indentation and add missing characters
-            formatted.append(f"{joined_line}{RESET}")
+            # Margin logic is correctly indented here
+            margin_needed = col_width - visible_length(segment)
+            margin_segment = segment + (" " * max(0, margin_needed))
+            line_segments.append(f"{BG}{bg_color}{extra} {margin_segment}")
+
+        # Correct indentation: This should be outside the c_idx loop
+        joined_line = f"{BG}{bg_color}{extra}{FG}{SYMBOL}│{RESET}".join(line_segments)
+        # Correct indentation and add missing characters
+        formatted.append(f"{joined_line}{RESET}")
     state.bg = BGRESET
     return formatted
 
@@ -360,8 +327,8 @@ def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_
     current_line = ""
     current_style = ""
 
-    if not buffer and visible_length(text) < WIDTH:
-        return [text]
+    #if not buffer and visible_length(text) < WIDTH:
+    #    return [text]
     
     for i, word in enumerate(words):
         # Accumulate ANSI codes within the current word
@@ -496,17 +463,19 @@ def parse(stream):
             if char:
                 state.buffer += char.decode('utf-8')
 
+            debug_write(char.decode('utf-8'))
             if char != b'\n' and not process_buffer : continue
 
             #print(f"({char}-{bytes(state.buffer, 'utf-8')})")
             state.has_newline = state.buffer.endswith('\n')
             process_buffer = False
 
-            state.maybe_prompt = not state.has_newline and state.current()['none'] and re.match('^.*>', line)
+            state.maybe_prompt = not state.has_newline and state.current()['none'] and re.match('^.*>', state.buffer)
+            #print(state.has_newline, state.current(), re.match('^.*>', state.buffer))
 
             # let's wait for a newline
             if state.maybe_prompt:
-                print(state.buffer)
+                yield state.buffer
                 state.reset_buffer()
                 continue
 
@@ -516,9 +485,6 @@ def parse(stream):
             # Process complete line
             line = state.buffer
             state.reset_buffer()
-            debug_write(line)
-
-
             
 
             # --- Collapse Multiple Empty Lines if not in code blocks ---
@@ -535,7 +501,8 @@ def parse(stream):
                     last_line_empty_cache = state.last_line_empty
                     state.last_line_empty = False
 
-            # This is to reset our top-level list counter.
+            # This is to reset our top-level line-based systems
+            # \n buffer
             if not state.in_list and len(state.ordered_list_numbers) > 0:
                 state.ordered_list_numbers[0] = 0
             else:
@@ -548,6 +515,13 @@ def parse(stream):
             else:
                 logging.warning("Indentation decreased from first line.")
 
+
+            # Indent guaranteed
+
+            # in order to stream tables and keep track of the headers we need to know whether
+            # we are in table or not table otherwise > 1 tables won't have a stylized header
+            if state.in_table and not state.in_code and not re.match(r"^\s*\|.+\|\s*$", line):
+                state.in_table = False
 
             #
             # <code><pre>
@@ -686,32 +660,30 @@ def parse(stream):
             # <table>
             #
             if re.match(r"^\s*\|.+\|\s*$", line) and not state.in_code:
-                if not state.table.in_header and not state.table.in_body:
-                    state.table.in_header = True
-
                 cells = [c.strip() for c in line.strip().strip("|").split("|")]
 
-                if state.table.in_header:
-                    if re.match(r"^[\s|:-]+$", line):
-                        state.table.in_header = False
-                        state.table.in_separator = True
-                    else:
-                        state.table.rows.append(cells)
-                elif state.table.in_separator:
-                    state.table.in_separator = False
-                    state.table.in_body = True
-                    state.table.rows.append(cells)
-                elif state.table.in_body:
-                    state.table.rows.append(cells)
+                # This guarantees we are at the first line
+                # \n buffer
+                if not state.in_table:
+                    state.in_table = Code.Header
 
-                if state.table.intable():
+                    # This should come at line 2
+                elif state.in_table == Code.Header:
+                    # we ignore the separator, this is just a check
+                    if not re.match(r"^[\s|:-]+$", line):
+                        logging.warning(f"Table definition row 2 was NOT a separator. Instead it was:\n({line})")
+
+                    # Let's assume everything worked out I guess.
+                    # We set our header to false and basically say
+                    # we are expecting the body
+                    state.in_table = Code.Body 
+                    # And then ignore this row since we ignore the separator
                     continue
-            
-            if state.table.in_body or state.table.in_header:
-                formatted = format_table(state.table.rows)
+
+
+                formatted = format_table(cells)
                 for l in formatted:
                     yield f"{MARGIN_SPACES}{l}"
-                state.table.reset()
 
                 continue
 
@@ -754,9 +726,8 @@ def parse(stream):
                     first_line_prefix = " " * (indent - 1) + f"{FG}{SYMBOL}•{RESET}" + " "
                     subsequent_line_prefix = " " * (indent-1)
 
-                line = line_format(line) 
                 wrapped_lineList = wrap_text(
-                    line,
+                    content,
                     wrap_width, 2,
                     first_line_prefix,
                     subsequent_line_prefix,
