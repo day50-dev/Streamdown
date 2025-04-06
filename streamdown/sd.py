@@ -714,7 +714,7 @@ def parse(stream):
             header_match = re.match(r"^\s*(#{1,6})\s+(.*)", line)
             if header_match:
                 level = len(header_match.group(1))
-                text = header_match.group(2)
+                text = line_format(header_match.group(2))
                 spaces_to_center = ((WIDTH - visible_length(text)) / 2)
                 if level == 1:      # #
                     yield f"\n{MARGIN_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
