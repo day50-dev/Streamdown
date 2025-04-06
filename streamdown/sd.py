@@ -35,6 +35,7 @@ Clipboard = true
 Logging = false
 Margin = 2 
 PrettyPad = false
+PeekForward = true
 Timeout = 0.5
 
 [colors]
@@ -121,7 +122,7 @@ RESET = "\033[0m"
 FGRESET = "\033[39m"
 BGRESET = "\033[49m"
 
-BOLD =      ["\033[1m", "\033[22m"]
+BOLD      = ["\033[1m", "\033[22m"]
 UNDERLINE = ["\033[4m", "\033[24m"]
 ITALIC    = ["\033[3m", "\033[23m"]
 
@@ -168,22 +169,23 @@ class Code:
     Backtick = 'backtick'
     Header = 'header'
     Body = 'body'
-
+    
 class ParseState:
     def __init__(self):
         self.buffer = ''
         self.current_line = ''
         self.first_line = True
         self.last_line_empty = False
-        self.is_pipe = False
         self.is_pty = False
         self.maybe_prompt = False
+        self.peek_buffer = []
 
         self.CodeSpaces = features.get("CodeSpaces", True)
         self.Clipboard = features.get("Clipboard", True)
         self.Logging = features.get("Logging", False)
         self.PrettyPad = features.get("PrettyPad", False)
         self.Timeout = features.get("Timeout", 0.5)
+        self.PeekForward = features.get("PeekForward", True)
 
         # If the entire block is indented this will
         # tell us what that is
@@ -280,6 +282,45 @@ def format_table(rowList):
 
     state.bg = BGRESET
     return formatted
+
+def emit_normal(line = None):  
+    # We are doing the "PeekForward" method maybe
+    if state.PeekForward:
+        if line:
+            state.peek_buffer.append(line)
+
+            if len(state.peek_buffer) == 1:
+                return
+            
+        elif len(state.peek_buffer) > 0:
+            line = state.peek_buffer.pop(0)
+
+    if len(line) == 0: yield ""
+    if len(line) < WIDTH:
+        # we want to prevent word wrap
+        yield f"{state.space_left()}{line_format(line)}"
+    else:
+        wrapped_lines = wrap_text(line)
+        for wrapped_line in wrapped_lines:
+            yield f"{state.space_left()}{wrapped_line}\n"
+
+def emit_h(level, text):
+    
+    text = line_format(text)
+    spaces_to_center = ((WIDTH - visible_length(text)) / 2)
+    if level == 1:      # #
+        return f"\n{MARGIN_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
+    elif level == 2:    # ##
+        return f"\n{MARGIN_SPACES}{BOLD[0]}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
+    elif level == 3:    # ###
+        return f"\n{MARGIN_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}"
+    elif level == 4:    # ####
+        return f"{MARGIN_SPACES}{FG}{SYMBOL}{text}{RESET}"
+    elif level == 5:    # #####
+        return f"{MARGIN_SPACES}{text}{RESET}"
+    else:  # level == 6
+        return f"{MARGIN_SPACES}{text}{RESET}"
+
 
 def code_wrap(text_in):
     # get the indentation of the first line
@@ -497,12 +538,16 @@ def parse(stream):
             if not state.in_code:
                 code_match = re.match(r"\s*```\s*([^\s]+|$)", line)
                 if code_match:
+                    # flush peek buffer before entering state
+                    yield from emit_normal()
                     state.in_code = Code.Backtick
                     state.code_language = code_match.group(1) or 'Bash'
 
                 elif state.CodeSpaces and last_line_empty_cache and not state.in_list:
                     code_match = re.match(r"^    ", line)
                     if code_match:
+                        # flush peek buffer before entering state
+                        yield from emit_normal()
                         state.in_code = Code.Spaces
                         state.code_language = 'Bash'
 
@@ -631,6 +676,8 @@ def parse(stream):
                 # This guarantees we are at the first line
                 # \n buffer
                 if not state.in_table:
+                    # flush peek buffer before entering state
+                    yield from emit_normal()
                     state.in_table = Code.Header
 
                 elif state.in_table == Code.Header:
@@ -655,7 +702,10 @@ def parse(stream):
             #
             list_item_match = re.match(r"^(\s*)([*\-]|\d+\.)\s+(.*)", line)
             if list_item_match:
+                # flush peek buffer before entering state
+                yield from emit_normal()
                 state.in_list = True
+
                 indent = len(list_item_match.group(1))
                 list_type = "number" if list_item_match.group(2)[0].isdigit() else "bullet"
                 content = list_item_match.group(3)
@@ -700,44 +750,32 @@ def parse(stream):
                     yield f"{state.space_left()}{wrapped_line}\n"
                 continue
             #
-            # <hr>
-            #
-            if re.match(r"^[\s]*[-*_]{3,}[\s]*$", line):
-                # print a horizontal rule using a unicode midline 
-                yield f"{MARGIN_SPACES}{FG}{SYMBOL}{'─' * WIDTH}{RESET}"
-                continue
-
-            #
             # <h1> <h2> <h3>
             # <h4> <h5> <h6>
-            #
+            # 
+            # Some text
+            # ---------
+            # This is valid h1 syntax
             header_match = re.match(r"^\s*(#{1,6})\s+(.*)", line)
             if header_match:
                 level = len(header_match.group(1))
-                text = line_format(header_match.group(2))
-                spaces_to_center = ((WIDTH - visible_length(text)) / 2)
-                if level == 1:      # #
-                    yield f"\n{MARGIN_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
-                elif level == 2:    # ##
-                    yield f"\n{MARGIN_SPACES}{BOLD[0]}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
-                elif level == 3:    # ###
-                    yield f"\n{MARGIN_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}"
-                elif level == 4:    # ####
-                    yield f"{MARGIN_SPACES}{FG}{SYMBOL}{text}{RESET}"
-                elif level == 5:    # #####
-                    yield f"{MARGIN_SPACES}{text}{RESET}"
-                else:  # level == 6
-                    yield f"{MARGIN_SPACES}{text}{RESET}"
+                yield emit_h(level, header_match.group(2))
                 continue
 
-            if len(line) == 0: print("")
-            if len(line) < WIDTH:
-                # we want to prevent word wrap
-                yield f"{state.space_left()}{line_format(line)}"
-            else:
-                wrapped_lines = wrap_text(line)
-                for wrapped_line in wrapped_lines:
-                    yield f"{state.space_left()}{wrapped_line}\n"
+            #
+            # <hr>
+            #
+            hr_match = re.match(r"^[\s]*([-=_]){3,}[\s]*$", line)
+            if hr_match:
+                if state.last_line_empty:
+                    # print a horizontal rule using a unicode midline 
+                    yield f"{MARGIN_SPACES}{FG}{SYMBOL}{'─' * WIDTH}{RESET}"
+                elif state.PeekForward:
+                    level = 1 if '-' in hr_match.groups(1) else 2
+                    yield emit_h(level, state.peek_buffer.pop(0).strip("\n"))
+                continue
+
+            yield from emit_normal(line)
 
     except Exception as e:
         logging.error(f"Parser error: {str(e)}")
