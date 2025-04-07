@@ -22,6 +22,7 @@ import toml
 import traceback
 from io import StringIO
 import pygments.util
+from argparse import ArgumentParser
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import Terminal256Formatter
@@ -35,8 +36,8 @@ Clipboard = true
 Logging = false
 Margin = 2 
 PrettyPad = false
-PeekForward = true
 Timeout = 0.5
+Width = 0
 
 [colors]
 HSV = [320.0, 0.5, 0.5]
@@ -132,34 +133,24 @@ LINK = f"{FG}{SYMBOL}{UNDERLINE[0]}"
 ANSIESCAPE = r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
 KEYCODE_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
-DEBUG_FH = None
-def debug_write(text):
-    global DEBUG_FH
-    if state.Logging:
-        if not DEBUG_FH:
-            DEBUG_FH = tempfile.NamedTemporaryFile(prefix="sd_debug", delete=False, encoding="utf-8", mode="w")
-        assert isinstance(text, str)
-        print(f"{text}", file=DEBUG_FH, end="")
-        DEBUG_FH.flush()
-
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
 visible_length = lambda x: len(visible(x))
 extract_ansi_codes = lambda text: re.findall(r"\033\[[0-9;]*[mK]", text)
 
 _master, _slave = pty.openpty()  # Create a new pseudoterminal
 
-def get_terminal_width():
-    try:
-        return shutil.get_terminal_size().columns
-    except (AttributeError, OSError):
-        return 80
-
-FULLWIDTH = int(get_terminal_width())
-WIDTH = FULLWIDTH - 2 * MARGIN
-CODEPAD = [
-    f"{RESET}{FG}{DARK}{'▄' * FULLWIDTH}{RESET}\n",
-    f"{RESET}{FG}{DARK}{'▀' * FULLWIDTH}{RESET}"
-]
+DEBUG_FH = None
+def debug_write(text):
+    global DEBUG_FH
+    if state.Logging:
+        if not DEBUG_FH:
+            tmp_root_dir = tempfile.gettempdir()
+            tmp_dir = os.path.join(tmp_root_dir, "sd")
+            os.makedirs(tmp_dir, exist_ok=True)
+            DEBUG_FH = tempfile.NamedTemporaryFile(dir=tmp_dir, prefix="sd_debug", delete=False, encoding="utf-8", mode="w")
+        assert isinstance(text, str)
+        print(f"{text}", file=DEBUG_FH, end="")
+        DEBUG_FH.flush()
 
 class Goto(Exception):
     pass
@@ -178,14 +169,13 @@ class ParseState:
         self.last_line_empty = False
         self.is_pty = False
         self.maybe_prompt = False
-        self.peek_buffer = []
+        self.emit_flag = None
 
         self.CodeSpaces = features.get("CodeSpaces", True)
         self.Clipboard = features.get("Clipboard", True)
         self.Logging = features.get("Logging", False)
         self.PrettyPad = features.get("PrettyPad", False)
         self.Timeout = features.get("Timeout", 0.5)
-        self.PeekForward = features.get("PeekForward", True)
 
         # If the entire block is indented this will
         # tell us what that is
@@ -215,6 +205,7 @@ class ParseState:
         self.in_underline = False
 
         self.exit = 0
+        self.where_from = None
 
     def current(self):
         state = { 'code': self.in_code, 'bold': self.in_bold, 'italic': self.in_italic, 'underline': self.in_underline }
@@ -237,7 +228,7 @@ def format_table(rowList):
 
     # Calculate max width per column (integer division)
     # Subtract num_cols + 1 for the vertical borders '│'
-    available_width = WIDTH - (num_cols + 1)
+    available_width = state.Width - (num_cols + 1)
     if available_width <= 0:
         # Handle extremely narrow terminals gracefully
         col_width = 1
@@ -283,31 +274,9 @@ def format_table(rowList):
     state.bg = BGRESET
     return formatted
 
-def emit_normal(line = None):  
-    # We are doing the "PeekForward" method maybe
-    if state.PeekForward:
-        if line:
-            state.peek_buffer.append(line)
-
-            if len(state.peek_buffer) == 1:
-                return
-            
-        elif len(state.peek_buffer) > 0:
-            line = state.peek_buffer.pop(0)
-
-    if len(line) == 0: yield ""
-    if len(line) < WIDTH:
-        # we want to prevent word wrap
-        yield f"{state.space_left()}{line_format(line)}"
-    else:
-        wrapped_lines = wrap_text(line)
-        for wrapped_line in wrapped_lines:
-            yield f"{state.space_left()}{wrapped_line}\n"
-
 def emit_h(level, text):
-    
     text = line_format(text)
-    spaces_to_center = ((WIDTH - visible_length(text)) / 2)
+    spaces_to_center = ((state.Width - visible_length(text)) / 2)
     if level == 1:      # #
         return f"\n{MARGIN_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
     elif level == 2:    # ##
@@ -321,12 +290,11 @@ def emit_h(level, text):
     else:  # level == 6
         return f"{MARGIN_SPACES}{text}{RESET}"
 
-
 def code_wrap(text_in):
     # get the indentation of the first line
     indent = len(text_in) - len(text_in.lstrip())
     text = text_in.lstrip()
-    mywidth = FULLWIDTH - indent
+    mywidth = state.FullWidth - indent
 
     # We take special care to preserve empty lines
     if len(text) == 0:
@@ -338,7 +306,9 @@ def code_wrap(text_in):
 
     return (indent, res)
 
-def wrap_text(text, width = WIDTH, indent = 0, first_line_prefix="", subsequent_line_prefix="", buffer=True):
+def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_line_prefix="", buffer=True):
+    if width == -1:
+        width = state.Width
     # Wraps text to the given width, preserving ANSI escape codes across lines.
     words = line_format(text).split()
     lines = []
@@ -494,7 +464,6 @@ def parse(stream):
             # Process complete line
             line = state.buffer
             state.buffer = ''
-
             # --- Collapse Multiple Empty Lines if not in code blocks ---
             if not state.in_code:
                 is_empty = line.strip() == ""
@@ -538,16 +507,12 @@ def parse(stream):
             if not state.in_code:
                 code_match = re.match(r"\s*```\s*([^\s]+|$)", line)
                 if code_match:
-                    # flush peek buffer before entering state
-                    yield from emit_normal()
                     state.in_code = Code.Backtick
                     state.code_language = code_match.group(1) or 'Bash'
 
                 elif state.CodeSpaces and last_line_empty_cache and not state.in_list:
                     code_match = re.match(r"^    ", line)
                     if code_match:
-                        # flush peek buffer before entering state
-                        yield from emit_normal()
                         state.in_code = Code.Spaces
                         state.code_language = 'Bash'
 
@@ -556,8 +521,9 @@ def parse(stream):
                     state.code_gen = 0
                     state.code_first_line = True
                     state.bg = f"{BG}{DARK}"
+                    state.where_from = "code pad"
                     if state.PrettyPad:
-                        yield CODEPAD[0]
+                        yield state.CODEPAD[0]
                     else:
                         yield "\n"
 
@@ -578,8 +544,9 @@ def parse(stream):
                         state.in_code = False
                         state.bg = BGRESET
 
+                        state.where_from = "code pad"
                         if state.PrettyPad:
-                            yield CODEPAD[1]
+                            yield state.CODEPAD[1]
                         else:
                             yield f"{RESET}\n"
 
@@ -622,7 +589,8 @@ def parse(stream):
                         continue
 
                     indent, line_wrap = code_wrap(line)
-      
+                    
+                    state.where_from = "in code"
                     for tline in line_wrap:
                         # wrap-around is a bunch of tricks. We essentially format longer and longer portions of code. The problem is
                         # the length can change based on look-ahead context so we need to use our expected place (state.code_gen) and
@@ -656,7 +624,7 @@ def parse(stream):
                         code_line = ' ' * indent + this_batch.strip()
                         #print(f"--{code_line}--")
 
-                        margin = FULLWIDTH - visible_length(code_line)
+                        margin = state.FullWidth - visible_length(code_line)
                         yield f"{CODEBG}{code_line}{' ' * max(0, margin)}{BGRESET}"  
                     continue
                 except Goto as ex:
@@ -676,8 +644,6 @@ def parse(stream):
                 # This guarantees we are at the first line
                 # \n buffer
                 if not state.in_table:
-                    # flush peek buffer before entering state
-                    yield from emit_normal()
                     state.in_table = Code.Header
 
                 elif state.in_table == Code.Header:
@@ -702,8 +668,6 @@ def parse(stream):
             #
             list_item_match = re.match(r"^(\s*)([*\-]|\d+\.)\s+(.*)", line)
             if list_item_match:
-                # flush peek buffer before entering state
-                yield from emit_normal()
                 state.in_list = True
 
                 indent = len(list_item_match.group(1))
@@ -728,7 +692,7 @@ def parse(stream):
 
                 indent = len(state.list_item_stack) * 2
 
-                wrap_width = WIDTH - indent - 4
+                wrap_width = state.Width - indent - 4
 
                 if list_type == "number":
                     list_number = int(max(state.ordered_list_numbers[-1], float(list_item_match.group(2))))
@@ -769,29 +733,66 @@ def parse(stream):
             if hr_match:
                 if state.last_line_empty:
                     # print a horizontal rule using a unicode midline 
-                    yield f"{MARGIN_SPACES}{FG}{SYMBOL}{'─' * WIDTH}{RESET}"
-                elif state.PeekForward:
-                    level = 1 if '-' in hr_match.groups(1) else 2
-                    yield emit_h(level, state.peek_buffer.pop(0).strip("\n"))
+                    yield f"{MARGIN_SPACES}{FG}{SYMBOL}{'─' * state.Width}{RESET}"
+                else:
+                    # We tell the next level up that the beginning of the buffer should be a flag.
+                    # Underneath this condition it will no longer yield
+                    self.emit_flag = 1 if '-' in hr_match.groups(1) else 2
+                    yield ""
                 continue
 
-            yield from emit_normal(line)
+            state.where_from = "emit_normal"
+            if len(line) == 0: yield ""
+            if len(line) < state.Width:
+                # we want to prevent word wrap
+                yield f"{state.space_left()}{line_format(line)}"
+            else:
+                wrapped_lines = wrap_text(line)
+                for wrapped_line in wrapped_lines:
+                    yield f"{state.space_left()}{wrapped_line}\n"
 
     except Exception as e:
         logging.error(f"Parser error: {str(e)}")
         traceback.print_exc()
         raise
 
+def get_terminal_width():
+    try:
+        return shutil.get_terminal_size().columns
+    except (AttributeError, OSError):
+        return 80
+
 def main():
+    parser = ArgumentParser(description="Streamdown - A markdown renderer for modern terminals")
+    parser.add_argument("filename", nargs="?", help="Input file to process")
+    parser.add_argument("-l", "--loglevel", default="INFO", help="Set the logging level")
+    parser.add_argument("-w", "--width", default="0", help="Set the width")
+    parser.add_argument("-e", "--exec", help="Wrap a program for more 'proper' i/o handling")
+    args = parser.parse_args()
+    
+    state.FullWidth = int(args.width)
+    if not state.FullWidth:
+        state.FullWidth = features.get("Width") or 0
+    if not state.FullWidth:
+        state.FullWidth = int(get_terminal_width())
+    
+    state.Width = state.FullWidth - 2 * MARGIN
+    state.CODEPAD = [
+        f"{RESET}{FG}{DARK}{'▄' * state.FullWidth}{RESET}\n",
+        f"{RESET}{FG}{DARK}{'▀' * state.FullWidth}{RESET}"
+    ]
+
     logging.basicConfig(stream=sys.stdout,
-        level=os.getenv('LOGLEVEL') or logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        level=os.getenv('LOGLEVEL') or getattr(logging, args.loglevel.upper()), format='%(asctime)s - %(levelname)s - %(message)s')
+
     try:
         inp = sys.stdin
-        if len(sys.argv) > 1:
+        if args.filename:
             try:
-                inp = open(sys.argv[1], "r")
+                inp = open(args.filename, "r")
             except FileNotFoundError:
-                logging.error(f"Error: File not found: {sys.argv[1]}")
+                logging.error(f"Error: File not found: {args.filename}")
+ 
         elif sys.stdin.isatty():
             print(f"SD_BASEHSV: {H}, {S}, {V}\nPalette: ", end=" ")
             for (a,b) in (("DARK", DARK), ("MID", MID), ("SYMBOL", SYMBOL), ("BRIGHT", BRIGHT)):
@@ -820,7 +821,15 @@ def main():
             state.is_pty = True
             os.set_blocking(inp.fileno(), False) 
 
+        buffer = []
         for chunk in parse(inp):
+            # we allow a "peek forward" for content which may need extra formatting
+            if state.emit_flag:
+                buffer[0] = emit_h(state.emit_flag, buffer[0])
+                state.emit_flag = None
+                # and we abandon the yield
+                continue
+
             if not state.has_newline:
                 chunk = chunk.rstrip("\n")
             elif not chunk.endswith("\n"):
@@ -831,10 +840,22 @@ def main():
             else:
                 state.current_line += chunk
                 
+            buffer.append(chunk)
+            if len(buffer) == 1:
+                continue
+
+            chunk = buffer.pop(0)
             if state.is_pty:
                 print(chunk, end="", flush=True)
             else:
                 sys.stdout.write(chunk)
+
+        chunk = buffer.pop(0)
+        if state.is_pty:
+            print(chunk, end="", flush=True)
+        else:
+            sys.stdout.write(chunk)
+
 
     except KeyboardInterrupt:
         state.exit = 130
@@ -851,5 +872,6 @@ def main():
         print(f"\033]52;c;{base64_string}\a", end="", flush=True)
 
     sys.exit(state.exit)
+
 if __name__ == "__main__":
     main()
