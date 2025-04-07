@@ -830,6 +830,7 @@ def main():
             if state.emit_flag:
                 if state.emit_flag == Code.Flush:
                     flush = True
+                    state.emit_flag = None
                 else:
                     buffer[0] = emit_h(state.emit_flag, buffer[0])
                     state.emit_flag = None
