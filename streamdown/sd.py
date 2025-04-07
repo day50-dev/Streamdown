@@ -283,7 +283,7 @@ def emit_h(level, text):
     elif level == 2:    # ##
         return f"\n{MARGIN_SPACES}{BOLD[0]}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
     elif level == 3:    # ###
-        return f"\n{MARGIN_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}"
+        return f"{MARGIN_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}"
     elif level == 4:    # ####
         return f"{MARGIN_SPACES}{FG}{SYMBOL}{text}{RESET}"
     elif level == 5:    # #####
@@ -733,7 +733,7 @@ def parse(stream):
             #
             hr_match = re.match(r"^[\s]*([-=_]){3,}[\s]*$", line)
             if hr_match:
-                if state.last_line_empty:
+                if state.last_line_empty or last_line_empty_cache:
                     # print a horizontal rule using a unicode midline 
                     yield f"{MARGIN_SPACES}{FG}{SYMBOL}{'─' * state.Width}{RESET}"
                 else:
@@ -864,11 +864,12 @@ def main():
             else:
                 sys.stdout.write(chunk)
 
-        chunk = buffer.pop(0)
-        if state.is_pty:
-            print(chunk, end="", flush=True)
-        else:
-            sys.stdout.write(chunk)
+        if len(buffer):
+            chunk = buffer.pop(0)
+            if state.is_pty:
+                print(chunk, end="", flush=True)
+            else:
+                sys.stdout.write(chunk)
 
 
     except KeyboardInterrupt:
