@@ -160,7 +160,8 @@ class Code:
     Backtick = 'backtick'
     Header = 'header'
     Body = 'body'
-    
+    Flush = 'flush'
+
 class ParseState:
     def __init__(self):
         self.buffer = ''
@@ -454,6 +455,7 @@ def parse(stream):
 
             # let's wait for a newline
             if state.maybe_prompt:
+                state.emit_flag = Code.Flush
                 yield state.buffer
                 state.buffer = ''
                 continue
@@ -737,7 +739,7 @@ def parse(stream):
                 else:
                     # We tell the next level up that the beginning of the buffer should be a flag.
                     # Underneath this condition it will no longer yield
-                    self.emit_flag = 1 if '-' in hr_match.groups(1) else 2
+                    state.emit_flag = 1 if '-' in hr_match.groups(1) else 2
                     yield ""
                 continue
 
@@ -822,13 +824,17 @@ def main():
             os.set_blocking(inp.fileno(), False) 
 
         buffer = []
+        flush = False
         for chunk in parse(inp):
             # we allow a "peek forward" for content which may need extra formatting
             if state.emit_flag:
-                buffer[0] = emit_h(state.emit_flag, buffer[0])
-                state.emit_flag = None
-                # and we abandon the yield
-                continue
+                if state.emit_flag == Code.Flush:
+                    flush = True
+                else:
+                    buffer[0] = emit_h(state.emit_flag, buffer[0])
+                    state.emit_flag = None
+                    # and we abandon the yield
+                    continue
 
             if not state.has_newline:
                 chunk = chunk.rstrip("\n")
@@ -841,10 +847,17 @@ def main():
                 state.current_line += chunk
                 
             buffer.append(chunk)
-            if len(buffer) == 1:
+            if flush:
+                chunk = "\n".join(buffer)
+                buffer = []
+                flush = False
+
+            elif len(buffer) == 1:
                 continue
 
-            chunk = buffer.pop(0)
+            else:
+                chunk = buffer.pop(0)
+
             if state.is_pty:
                 print(chunk, end="", flush=True)
             else:
