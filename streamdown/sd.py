@@ -687,21 +687,14 @@ def parse(stream):
 
                 wrap_width = state.Width - indent - 4
 
+                bullet = '•'
                 if list_type == "number":
                     list_number = int(max(state.ordered_list_numbers[-1], float(list_item_match.group(2))))
                     bullet = f"{list_number}"
-                    first_line_prefix = f"{(' ' * (indent - len(bullet)))}{FG}{SYMBOL}{bullet}{RESET} "
-                    subsequent_line_prefix = " " * (indent-1)
-                else:
-                    first_line_prefix = " " * (indent - 1) + f"{FG}{SYMBOL}•{RESET}" + " "
-                    subsequent_line_prefix = " " * (indent-1)
-
-                wrapped_lineList = wrap_text(
-                    content,
-                    wrap_width, 2,
-                    first_line_prefix,
-                    subsequent_line_prefix,
-                    buffer = False
+                
+                wrapped_lineList = wrap_text(content, wrap_width, 2, buffer = False,
+                    first_line_prefix      = f"{(' ' * (indent - len(bullet)))}{FG}{SYMBOL}{bullet}{RESET} ",
+                    subsequent_line_prefix = " " * (indent - 1)
                 )
                 for wrapped_line in wrapped_lineList:
                     yield f"{state.space_left()}{wrapped_line}\n"
