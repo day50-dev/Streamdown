@@ -5,6 +5,7 @@
 #     "pygments",
 #     "appdirs",
 #     "toml",
+#     "colorsys"
 # ]
 # ///
 import appdirs
@@ -20,6 +21,7 @@ import sys
 import tempfile
 import toml
 import traceback
+import colorsys
 from io import StringIO
 import pygments.util
 from argparse import ArgumentParser
@@ -62,33 +64,6 @@ config = toml.loads(config_toml_content)
 colors = config.get("colors", {})
 features = config.get("features", {})
 
-# the ranges here are (float) [0-360, 0-1, 0-1]
-def hsv2rgb(h, s, v):
-    s = min(1, s)
-    v = min(1, v)
-    h = h % 360
-    c = v * s
-    x = c * (1 - abs((h / 60) % 2 - 1))
-    m = v - c
-    if h < 60:
-        r, g, b = c, x, 0
-    elif h < 120:
-        r, g, b = x, c, 0
-    elif h < 180:
-        r, g, b = 0, c, x
-    elif h < 240:
-        r, g, b = 0, x, c
-    elif h < 300:
-        r, g, b = x, 0, c
-    else:
-        r, g, b = c, 0, x
-
-    return ';'.join([str(x) for x in [
-        min(255,int((r + m) * 255)),
-        min(255,int((g + m) * 255)),
-        min(255,int((b + m) * 255))
-    ]]) + "m"
-
 H = colors.get("HSV")[0]
 S = colors.get("HSV")[1]
 V = colors.get("HSV")[2]
@@ -105,7 +80,8 @@ except Exception as e:
 
 def apply_multipliers(name, H, S, V):
     m = colors.get(name)
-    return hsv2rgb(H * m['H'], S * m["S"], V * m["V"])
+    r, g, b = colorsys.hsv_to_rgb(H * m['H'], S * m["S"], V * m["V"])
+    return ';'.join([str(int(x * 256)) for x in [r, g, b]) + "m"
 
 DARK   = apply_multipliers("DARK", H, S, V)
 MID    = apply_multipliers("MID", H, S, V)
