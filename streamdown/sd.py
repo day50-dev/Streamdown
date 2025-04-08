@@ -750,7 +750,7 @@ def get_terminal_width():
 
 def main():
     parser = ArgumentParser(description="Streamdown - A markdown renderer for modern terminals")
-    parser.add_argument("filename", nargs="?", help="Input file to process")
+    parser.add_argument("filename", nargs="?", help="Input file to process (also takes stdin)")
     parser.add_argument("-l", "--loglevel", default="INFO", help="Set the logging level")
     parser.add_argument("-w", "--width", default="0", help="Set the width")
     parser.add_argument("-e", "--exec", help="Wrap a program for more 'proper' i/o handling")
@@ -778,26 +778,8 @@ def main():
                 logging.error(f"Error: File not found: {args.filename}")
  
         elif sys.stdin.isatty():
-            print(f"SD_BASEHSV: {H}, {S}, {V}\nPalette: ", end=" ")
-            for (a,b) in (("DARK", DARK), ("MID", MID), ("SYMBOL", SYMBOL), ("BRIGHT", BRIGHT)):
-                print(f"{FG}{b}{a}{RESET} {BG}{b}{a}{RESET}", end=" | ")
-            print(f"\nConfig: {config_toml_path}\n")
-
-            # This isn't what injecting into a clipboard is for
-            state.Clipboard = False
-
-            inp = StringIO("""
-                 **A markdown renderer for modern terminals**
-                 ##### Usage examples:
-
-                 ```bash
-                 sd [filename]
-                 cat README.md | sd
-                 stdbuf -oL llm chat | sd
-                 SD_BASEHSV=0.5,0.4,0.8 sd <(curl -s https://raw.githubusercontent.com/kristopolous/Streamdown/refs/heads/main/tests/fizzbuzz.md)
-                 ```
-
-                 If no filename is provided and no input is piped, this help message is displayed.\n\n""")
+            parser.print_help()
+            sys.exit()
         else:
             # this is a more sophisticated thing that we'll do in the main loop
             state.is_pty = True
