@@ -28,7 +28,6 @@ from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import Terminal256Formatter
 from pygments.styles import get_style_by_name
-from pathlib import Path
 
 default_toml = """
 [features]
@@ -42,24 +41,26 @@ Width = 0
 
 [colors]
 HSV =    [0.8, 0.5, 0.5]
-DARK =   { H = 1.00, S = 1.50, V = 0.30 }
+DARK =   { H = 1.00, S = 1.50, V = 0.25 }
 MID  =   { H = 1.00, S = 1.00, V = 0.50 }
 SYMBOL = { H = 1.00, S = 1.00, V = 1.50 }
 HEAD =   { H = 1.00, S = 2.00, V = 1.50 }
-BRIGHT = { H = 1.00, S = 2.00, V = 1.90 }
-STYLE = "monokai"
+GREY =   { H = 1.00, S = 0.12, V = 1.25 }
+BRIGHT = { H = 1.00, S = 2.00, V = 2.00 }
+STYLE =  "monokai"
 """
 
 def ensure_config_file():
     config_dir = appdirs.user_config_dir("streamdown")
     os.makedirs(config_dir, exist_ok=True)
-    config_path = Path(config_dir) / "config.toml"
-    if not config_path.exists():
-        config_path.write_text(default_toml)
-    return config_path, config_path.read_text()
+    config_path = os.path.join(config_dir, "config.toml")
+    if not os.path.exists(config_path):
+        open(config_path, 'w').write(default_toml)
+    return config_path, open(config_path).read()
 
 config_toml_path, config_toml_content = ensure_config_file()
 config = toml.loads(config_toml_content)
+config_default = toml.loads(default_toml)
 colors = config.get("colors", {})
 features = config.get("features", {})
 H, S, V = colors.get("HSV")
@@ -75,18 +76,19 @@ except Exception as e:
     logging.warning(f"Error parsing SD_BASEHSV: {e}")
 
 def apply_multipliers(name, H, S, V):
-    m = colors.get(name)
-    r, g, b = colorsys.hsv_to_rgb(min(1.0, H * m['H']), min(1.0, S * m["S"]), min(1.0, V * m["V"]))
+    m = colors.get(name, config_default.get('colors').get(name))
+    r, g, b = colorsys.hsv_to_rgb(min(1.0, H * m["H"]), min(1.0, S * m["S"]), min(1.0, V * m["V"]))
     return ';'.join([str(int(x * 256)) for x in [r, g, b]]) + "m"
 
 DARK   = apply_multipliers("DARK", H, S, V)
 MID    = apply_multipliers("MID", H, S, V)
 SYMBOL = apply_multipliers("SYMBOL", H, S, V)
 HEAD   = apply_multipliers("HEAD", H, S, V)
+GREY   = apply_multipliers("GREY", H, S, V)
 BRIGHT = apply_multipliers("BRIGHT", H, S, V)
 
-STYLE  = colors.get("STYLE", "monokai")
-MARGIN = features.get("Margin", 2) 
+STYLE  = colors.get("STYLE", config_default.get('colors').get("STYLE"))
+MARGIN = features.get("Margin", config_default.get('features').get("Margin"))
 MARGIN_SPACES = " " * MARGIN
 
 FG = "\033[38;2;"
@@ -94,6 +96,7 @@ BG = "\033[48;2;"
 RESET = "\033[0m"
 FGRESET = "\033[39m"
 BGRESET = "\033[49m"
+BQUOTE = f"{FG}{GREY} \u258E "
 
 BOLD      = ["\033[1m", "\033[22m"]
 UNDERLINE = ["\033[4m", "\033[24m"]
@@ -111,18 +114,14 @@ extract_ansi_codes = lambda text: re.findall(r"\033\[[0-9;]*[mK]", text)
 
 _master, _slave = pty.openpty()  # Create a new pseudoterminal
 
-DEBUG_FH = None
 def debug_write(text):
-    global DEBUG_FH
     if state.Logging:
-        if not DEBUG_FH:
-            tmp_root_dir = tempfile.gettempdir()
-            tmp_dir = os.path.join(tmp_root_dir, "sd")
+        if state.Logging == True:
+            tmp_dir = os.path.join(tempfile.gettempdir(), "sd")
             os.makedirs(tmp_dir, exist_ok=True)
-            DEBUG_FH = tempfile.NamedTemporaryFile(dir=tmp_dir, prefix="sd_debug", delete=False, encoding="utf-8", mode="w")
-        assert isinstance(text, str)
-        print(f"{text}", file=DEBUG_FH, end="")
-        DEBUG_FH.flush()
+            state.Logging = tempfile.NamedTemporaryFile(dir=tmp_dir, prefix="dbg", delete=False, encoding="utf-8", mode="w")
+        print(f"{text}", file=state.Logging, end="")
+        state.Logging.flush()
 
 class Goto(Exception):
     pass
@@ -177,6 +176,7 @@ class ParseState:
         self.in_italic = False
         self.in_table = False # (Code.[Header|Body] | False)
         self.in_underline = False
+        self.in_blockquote = False
 
         self.exit = 0
         self.where_from = None
@@ -187,7 +187,7 @@ class ParseState:
         return state
 
     def space_left(self):
-        return MARGIN_SPACES if len(self.current_line) == 0 else ""
+        return (MARGIN_SPACES if len(self.current_line) == 0 else "") + (BQUOTE if self.in_blockquote else "")
 
 state = ParseState()
 
@@ -288,6 +288,7 @@ def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
     lines = []
     current_line = ""
     current_style = ""
+    width -= len(state.space_left())
     
     for i, word in enumerate(words):
         # Accumulate ANSI codes within the current word
@@ -456,7 +457,7 @@ def parse(stream):
                     continue  # Skip processing this line
                 elif is_empty:
                     state.last_line_empty = True
-                    yield ""
+                    yield state.space_left()
                     continue
                 else:
                     last_line_empty_cache = state.last_line_empty
@@ -484,6 +485,14 @@ def parse(stream):
             if state.in_table and not state.in_code and not re.match(r"^\s*\|.+\|\s*$", line):
                 state.in_table = False
 
+            block_match = re.match(r"^<.?think>$", line)
+            if block_match:
+                state.in_blockquote = not state.in_blockquote
+                # consume and don't emit
+                if not state.in_blockquote:
+                    yield( RESET)
+                continue
+
             #
             # <code><pre>
             #
@@ -509,7 +518,7 @@ def parse(stream):
                     if state.PrettyPad:
                         yield state.CODEPAD[0]
                     else:
-                        yield "\n"
+                        yield state.space_left() + "\n"
 
                     logging.debug(f"In code: ({state.in_code})")
 
@@ -788,16 +797,14 @@ def main():
                  **A markdown renderer for modern terminals**
                  ##### Usage examples:
 
-                 ``` bash
+                 ```bash
                  sd [filename]
                  cat README.md | sd
                  stdbuf -oL llm chat | sd
                  SD_BASEHSV=0.5,0.4,0.8 sd <(curl -s https://raw.githubusercontent.com/kristopolous/Streamdown/refs/heads/main/tests/fizzbuzz.md)
                  ```
 
-                 If no filename is provided and no input is piped, this help message is displayed.
-
-                 """)
+                 If no filename is provided and no input is piped, this help message is displayed.\n\n""")
         else:
             # this is a more sophisticated thing that we'll do in the main loop
             state.is_pty = True

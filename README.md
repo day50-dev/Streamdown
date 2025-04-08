@@ -33,14 +33,15 @@ The configuration file uses TOML format and currently supports the following sec
 
 **`[colors]`**
 
-This section defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived. Due to limitations in TOML, these all must be floats (have a decimal point).
+This section defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived. Due to limitations in TOML, these all must be floats (have a decimal point). The defaults are [at the beginning of the source](https://github.com/kristopolous/Streamdown/blob/main/streamdown/sd.py#L33).
 
 *   `HSV`: [ 0.0 - 1.0, 0.0 - 1.0, 0.0 - 1.0 ] 
-*   `DARK`: Multipliers for background elements, code blocks. (Default: S=1.50, V=0.30)
-*   `MID`: Multipliers for inline code backgrounds, table headers. (Default: S=1.00, V=0.50)
-*   `SYMBOL`: Multipliers for list bullets, horizontal rules, links. (Default: S=1.00, V=1.50)
-*   `HEAD`: Multipliers for level 3 headers. (Default: S=2.00, V=1.50)
-*   `BRIGHT`: Multipliers for level 2 headers. (Default: S=2.00, V=1.90)
+*   `DARK`: Multipliers for background elements, code blocks. 
+*   `GREY`: Multipliers for blockquote and thinkblock. 
+*   `MID`: Multipliers for inline code backgrounds, table headers. 
+*   `SYMBOL`: Multipliers for list bullets, horizontal rules, links. 
+*   `HEAD`: Multipliers for level 3 headers. 
+*   `BRIGHT`: Multipliers for level 2 headers. 
 
 Example:
 ```toml
