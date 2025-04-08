@@ -772,10 +772,7 @@ def main():
     try:
         inp = sys.stdin
         if args.filename:
-            try:
-                inp = open(args.filename, "r")
-            except FileNotFoundError:
-                logging.error(f"Error: File not found: {args.filename}")
+            inp = open(args.filename, "r")
  
         elif sys.stdin.isatty():
             parser.print_help()
