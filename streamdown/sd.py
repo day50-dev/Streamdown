@@ -377,11 +377,9 @@ def line_format(line):
         else:
             result += match
 
-
         last_token = token
     return result
 
-# new strategy. We are going to call things need_newline and some thing not.
 def parse(stream):
     last_line_empty_cache = None
     char = None
@@ -851,7 +849,6 @@ def main():
                 print(chunk, end="", flush=True)
             else:
                 sys.stdout.write(chunk)
-
 
     except KeyboardInterrupt:
         state.exit = 130
