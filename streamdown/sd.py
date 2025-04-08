@@ -364,11 +364,11 @@ def line_format(line):
         return f'\033]8;;{url}\033\\{LINK}{description}{UNDERLINE[1]}\033]8;;\033\\'
 
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
-    tokenList = re.findall(r"(\*\*|\*|_|`|[^_*`]+)", line)
+    tokenList = re.findall(r"((\*\*|\*|_|`)(.?)|[^_*`]+)", line)
     result = ""
     last_token = None
 
-    for token in tokenList:
+    for (match, token, next_token) in tokenList:
         if token == "`":
             state.in_code = not state.in_code
             if state.in_code:
@@ -379,21 +379,32 @@ def line_format(line):
         # This is important here because we ignore formatting
         # inside of our code block.
         elif state.in_code:
-            result += token
+            result += token 
+            result += next_token
 
         elif token == "**" and (state.in_bold or not_text(last_token)):
             state.in_bold = not state.in_bold
             result += BOLD[0] if state.in_bold else BOLD[1]
+            result += next_token
 
         elif token == "*" and (state.in_italic or not_text(last_token)):
-            state.in_italic = not state.in_italic
-            result += ITALIC[0] if state.in_italic else ITALIC[1]
+            # This is the use case of talking about * and then following
+            # up on something as opposed to *like this*.
+            if state.in_italic or (not state.in_italic and next_token != ' '):
+                state.in_italic = not state.in_italic
+                result += ITALIC[0] if state.in_italic else ITALIC[1]
+            else:
+                result += token
+
+            result += next_token
 
         elif token == "_" and (state.in_underline or not_text(last_token)):
             state.in_underline = not state.in_underline
             result += UNDERLINE[0] if state.in_underline else UNDERLINE[1]
+            result += next_token
         else:
-            result += token  
+            result += match
+
 
         last_token = token
     return result
