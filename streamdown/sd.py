@@ -41,7 +41,7 @@ Timeout = 0.5
 Width = 0
 
 [colors]
-HSV = [320.0, 0.5, 0.5]
+HSV =    [0.8, 0.5, 0.5]
 DARK =   { H = 1.00, S = 1.50, V = 0.30 }
 MID  =   { H = 1.00, S = 1.00, V = 0.50 }
 SYMBOL = { H = 1.00, S = 1.00, V = 1.50 }
@@ -798,7 +798,7 @@ def main():
                  sd [filename]
                  cat README.md | sd
                  stdbuf -oL llm chat | sd
-                 SD_BASEHSV=100,0.4,0.8 sd <(curl -s https://raw.githubusercontent.com/kristopolous/Streamdown/refs/heads/main/tests/fizzbuzz.md)
+                 SD_BASEHSV=0.5,0.4,0.8 sd <(curl -s https://raw.githubusercontent.com/kristopolous/Streamdown/refs/heads/main/tests/fizzbuzz.md)
                  ```
 
                  If no filename is provided and no input is piped, this help message is displayed.
