@@ -4,8 +4,7 @@
 # dependencies = [
 #     "pygments",
 #     "appdirs",
-#     "toml",
-#     "colorsys"
+#     "toml"
 # ]
 # ///
 import appdirs
