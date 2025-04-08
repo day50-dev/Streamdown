@@ -62,10 +62,7 @@ config_toml_path, config_toml_content = ensure_config_file()
 config = toml.loads(config_toml_content)
 colors = config.get("colors", {})
 features = config.get("features", {})
-
-H = colors.get("HSV")[0]
-S = colors.get("HSV")[1]
-V = colors.get("HSV")[2]
+H, S, V = colors.get("HSV")
 
 try:
     env_sd_colors = os.getenv("SD_BASEHSV")
