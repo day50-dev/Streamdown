@@ -79,7 +79,7 @@ except Exception as e:
 
 def apply_multipliers(name, H, S, V):
     m = colors.get(name)
-    r, g, b = colorsys.hsv_to_rgb(H * m['H'], S * m["S"], V * m["V"])
+    r, g, b = colorsys.hsv_to_rgb(min(1.0, H * m['H']), min(1.0, S * m["S"]), min(1.0, V * m["V"]))
     return ';'.join([str(int(x * 256)) for x in [r, g, b]]) + "m"
 
 DARK   = apply_multipliers("DARK", H, S, V)
