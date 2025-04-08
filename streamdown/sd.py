@@ -172,6 +172,7 @@ class ParseState:
         # So this can either be False, Code.Backtick or Code.Spaces
         self.in_list = False
         self.in_code = False
+        self.inline_code = False
         self.in_bold = False
         self.in_italic = False
         self.in_table = False # (Code.[Header|Body] | False)
@@ -342,8 +343,8 @@ def line_format(line):
 
     for (match, token, next_token) in tokenList:
         if token == "`":
-            state.in_code = not state.in_code
-            if state.in_code:
+            state.inline_code = not state.inline_code
+            if state.inline_code:
                 result += f'{BG}{MID}'
             else:
                 result += state.bg
@@ -351,7 +352,7 @@ def line_format(line):
 
         # This is important here because we ignore formatting
         # inside of our code block.
-        elif state.in_code:
+        elif state.inline_code:
             result += match
 
         elif token == "**" and (state.in_bold or not_text(last_token)):
