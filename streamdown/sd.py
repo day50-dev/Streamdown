@@ -757,9 +757,7 @@ def main():
     
     state.FullWidth = int(args.width)
     if not state.FullWidth:
-        state.FullWidth = features.get("Width") or 0
-    if not state.FullWidth:
-        state.FullWidth = int(get_terminal_width())
+        state.FullWidth = features.get("Width") or int(get_terminal_width())
     
     state.Width = state.FullWidth - 2 * MARGIN
     state.CODEPAD = [
