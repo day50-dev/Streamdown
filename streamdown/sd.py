@@ -375,12 +375,12 @@ def line_format(line):
                 result += f'{BG}{MID}'
             else:
                 result += state.bg
+            result += next_token
 
         # This is important here because we ignore formatting
         # inside of our code block.
         elif state.in_code:
-            result += token 
-            result += next_token
+            result += match
 
         elif token == "**" and (state.in_bold or not_text(last_token)):
             state.in_bold = not state.in_bold
