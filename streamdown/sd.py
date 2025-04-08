@@ -338,30 +338,31 @@ def line_format(line):
         return f'\033]8;;{url}\033\\{LINK}{description}{UNDERLINE[1]}\033]8;;\033\\'
 
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
-    tokenList = re.findall(r"((\*\*|\*|_|`)([^_*`]?)|[^_*`]+)", line)
+    tokenList = re.finditer(r"((\*\*|\*|_|`)|[^_*`]+)", line)
     result = ""
-    last_token = None
 
-    for (match, token, next_token) in tokenList:
+    for match in tokenList:
+        token = match.group(1)
+        next_token = line[match.end()] if match.end() < len(line) else ""
+        prev_token = line[match.start()-1] if match.start() > 0 else ""
+
         if token == "`":
             state.inline_code = not state.inline_code
             if state.inline_code:
                 result += f'{BG}{MID}'
             else:
                 result += state.bg
-            result += next_token
-
+   
         # This is important here because we ignore formatting
         # inside of our code block.
         elif state.inline_code:
-            result += match
+            result += token
 
-        elif token == "**" and (state.in_bold or not_text(last_token)):
+        elif token == "**" and (state.in_bold or not_text(prev_token)):
             state.in_bold = not state.in_bold
             result += BOLD[0] if state.in_bold else BOLD[1]
-            result += next_token
-
-        elif token == "*" and (state.in_italic or not_text(last_token)):
+ 
+        elif token == "*" and (state.in_italic or not_text(prev_token)):
             # This is the use case of talking about * and then following
             # up on something as opposed to *like this*.
             if state.in_italic or (not state.in_italic and next_token != ' '):
@@ -370,16 +371,12 @@ def line_format(line):
             else:
                 result += token
 
-            result += next_token
-
-        elif token == "_" and (state.in_underline or not_text(last_token)):
+        elif token == "_" and (state.in_underline or not_text(prev_token)):
             state.in_underline = not state.in_underline
             result += UNDERLINE[0] if state.in_underline else UNDERLINE[1]
-            result += next_token
         else:
-            result += match
+            result += token
 
-        last_token = token
     return result
 
 def parse(stream):
@@ -770,8 +767,10 @@ def main():
         level=os.getenv('LOGLEVEL') or getattr(logging, args.loglevel.upper()), format='%(asctime)s - %(levelname)s - %(message)s')
 
     try:
-        inp = open(args.filename, "r") if args.filename else sys.stdin
-        if sys.stdin.isatty():
+        inp = sys.stdin
+        if args.filename:
+            inp = open(args.filename, "r")
+        elif sys.stdin.isatty():
             parser.print_help()
             sys.exit()
         else:
