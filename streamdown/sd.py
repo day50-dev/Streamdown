@@ -770,11 +770,8 @@ def main():
         level=os.getenv('LOGLEVEL') or getattr(logging, args.loglevel.upper()), format='%(asctime)s - %(levelname)s - %(message)s')
 
     try:
-        inp = sys.stdin
-        if args.filename:
-            inp = open(args.filename, "r")
- 
-        elif sys.stdin.isatty():
+        inp = open(args.filename, "r") if args.filename else sys.stdin
+        if sys.stdin.isatty():
             parser.print_help()
             sys.exit()
         else:
