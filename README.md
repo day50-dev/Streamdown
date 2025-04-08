@@ -35,7 +35,7 @@ The configuration file uses TOML format and currently supports the following sec
 
 This section defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived. Due to limitations in TOML, these all must be floats (have a decimal point).
 
-*   `HSV`: [ 0.0 - 360.0, 0.0 - 1.0, 0.0 - 1.0 ] 
+*   `HSV`: [ 0.0 - 1.0, 0.0 - 1.0, 0.0 - 1.0 ] 
 *   `DARK`: Multipliers for background elements, code blocks. (Default: S=1.50, V=0.30)
 *   `MID`: Multipliers for inline code backgrounds, table headers. (Default: S=1.00, V=0.50)
 *   `SYMBOL`: Multipliers for list bullets, horizontal rules, links. (Default: S=1.00, V=1.50)
@@ -45,7 +45,7 @@ This section defines the base Hue (H), Saturation (S), and Value (V) from which 
 Example:
 ```toml
 [colors]
-HSV = [240.0, 0.5, 0.5]
+HSV = [0.7, 0.5, 0.5]
 DARK = { H = 1.0, S = 1.2, V = 0.25 } # Make dark elements less saturated and darker
 SYMBOL = { H = 1.0, S = 1.8, V = 1.8 } # Make symbols more vibrant
 ```
