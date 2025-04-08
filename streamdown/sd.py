@@ -655,8 +655,8 @@ def parse(stream):
 
             #
             # <li> <ul> <ol>
-            #
-            list_item_match = re.match(r"^(\s*)([*\-]|\d+\.)\s+(.*)", line)
+            # llama-4 maverick uses + for lists ... for some reason
+            list_item_match = re.match(r"^(\s*)([\+*\-]|\d+\.)\s+(.*)", line)
             if list_item_match:
                 state.in_list = True
 
