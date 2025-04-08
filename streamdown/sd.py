@@ -364,7 +364,7 @@ def line_format(line):
         return f'\033]8;;{url}\033\\{LINK}{description}{UNDERLINE[1]}\033]8;;\033\\'
 
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
-    tokenList = re.findall(r"((\*\*|\*|_|`)(.?)|[^_*`]+)", line)
+    tokenList = re.findall(r"((\*\*|\*|_|`)([^_*`]?)|[^_*`]+)", line)
     result = ""
     last_token = None
 
@@ -548,7 +548,7 @@ def parse(stream):
             if state.in_code:
                 try:
                     if not state.code_first_line and (
-                            (state.in_code == Code.Backtick and     line.strip() == "```") or
+                            (                     state.in_code == Code.Backtick and     line.strip() == "```"  ) or
                             (state.CodeSpaces and state.in_code == Code.Spaces   and not line.startswith('    '))
                         ):
                         state.code_language = None
