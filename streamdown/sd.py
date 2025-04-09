@@ -63,9 +63,6 @@ _style = toml.loads(default_toml).get('style') | config.get("style", {})
 _features = toml.loads(default_toml).get('features') | config.get("features", {})
 H, S, V = _style.get("HSV")
 
-MARGIN  = _style.get("Margin")
-MARGIN_SPACES = " " * MARGIN
-
 FG = "\033[38;2;"
 BG = "\033[48;2;"
 RESET = "\033[0m"
@@ -694,7 +691,7 @@ def apply_multipliers(name, H, S, V):
     return ';'.join([str(int(x * 256)) for x in [r, g, b]]) + "m"
 
 def main():
-    global H, S, V
+    global H, S, V, MARGIN_SPACES
     parser = ArgumentParser(description="Streamdown - A markdown renderer for modern terminals")
     parser.add_argument("filenameList", nargs="*", help="Input file to process (also takes stdin)")
     parser.add_argument("-l", "--loglevel", default="INFO", help="Set the logging level")
@@ -714,6 +711,7 @@ def main():
     for attr in ['Margin', 'ListIndent', 'Syntax']:
         setattr(Style, attr, _style.get(attr))
     
+    MARGIN_SPACES = " " * Style.Margin
     state.FullWidth = int(args.width) or _style.get("Width") or int(get_terminal_width())
     state.Width = state.FullWidth - 2 * Style.Margin
     Style.Codebg = f"{BG}{Style.Dark}"
