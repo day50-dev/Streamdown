@@ -259,9 +259,7 @@ def emit_h(level, text):
         return f"{MARGIN_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}"
     elif level == 4:    # ####
         return f"{MARGIN_SPACES}{FG}{SYMBOL}{text}{RESET}"
-    elif level == 5:    # #####
-        return f"{MARGIN_SPACES}{text}{RESET}"
-    else:  # level == 6
+    else:  # level 5 or 6
         return f"{MARGIN_SPACES}{text}{RESET}"
 
 def code_wrap(text_in):
@@ -606,7 +604,6 @@ def parse(stream):
                         state.code_gen = len(highlighted_code)
 
                         code_line = ' ' * indent + this_batch.strip()
-                        #print(f"--{code_line}--")
 
                         margin = state.FullWidth - visible_length(code_line)
                         yield f"{CODEBG}{code_line}{' ' * max(0, margin)}{BGRESET}"  
@@ -694,9 +691,6 @@ def parse(stream):
             # <h1> <h2> <h3>
             # <h4> <h5> <h6>
             # 
-            # Some text
-            # ---------
-            # This is valid h1 syntax
             header_match = re.match(r"^\s*(#{1,6})\s+(.*)", line)
             if header_match:
                 level = len(header_match.group(1))
