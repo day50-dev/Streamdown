@@ -709,10 +709,7 @@ def main():
         if len(env_colors) > 1: S = float(env_colors[1])
         if len(env_colors) > 2: V = float(env_colors[2])
 
-    state.FullWidth = int(args.width)
-    if not state.FullWidth:
-        state.FullWidth = _style.get("Width") or int(get_terminal_width())
-
+    state.FullWidth = int(args.width) or _style.get("Width") or int(get_terminal_width())
     state.Width = state.FullWidth - 2 * MARGIN
 
     for color in ["Dark", "Mid", "Symbol", "Head", "Grey", "Bright"]:
