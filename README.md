@@ -31,27 +31,30 @@ Streamdown uses a configuration file located at `~/.config/streamdown/config.tom
 
 The configuration file uses TOML format and currently supports the following sections:
 
-**`[colors]`**
+**`[style]`**
 
 This section defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived. Due to limitations in TOML, these all must be floats (have a decimal point). The defaults are [at the beginning of the source](https://github.com/kristopolous/Streamdown/blob/main/streamdown/sd.py#L33).
 
 *   `HSV`: [ 0.0 - 1.0, 0.0 - 1.0, 0.0 - 1.0 ] 
-*   `DARK`: Multipliers for background elements, code blocks. 
-*   `GREY`: Multipliers for blockquote and thinkblock. 
-*   `MID`: Multipliers for inline code backgrounds, table headers. 
-*   `SYMBOL`: Multipliers for list bullets, horizontal rules, links. 
-*   `HEAD`: Multipliers for level 3 headers. 
-*   `BRIGHT`: Multipliers for level 2 headers. 
+*   `Dark`: Multipliers for background elements, code blocks. 
+*   `Grey`: Multipliers for blockquote and thinkblock. 
+*   `Mid`: Multipliers for inline code backgrounds, table headers. 
+*   `Symbol`: Multipliers for list bullets, horizontal rules, links. 
+*   `Head`: Multipliers for level 3 headers. 
+*   `Bright`: Multipliers for level 2 headers. 
+*   `Margin` (integer, default: `2`): The left and right indent for the output. 
+*   `Width` (integer, default: `0`): Along with the `Margin`, `Width` specifies the base width of the content, which when set to 0, means use the terminal width. See [#6](https://github.com/kristopolous/Streamdown/issues/6) for more details
+*   `PrettyPad` (boolean, default: `false`): Uses a unicode vertical pad trick to add a half height background to code blocks. This makes copy/paste have artifacts. See [#2](https://github.com/kristopolous/Streamdown/issues/2). I like it on. But that's just me
+*   `ListIndent` (integer, default: `2`): This is the recursive indent for the list styles.
+*   `Syntax` (string, default `monokai`): This the syntax [highlighting theme which come via pygments](https://pygments.org/styles/).
 
 Example:
 ```toml
-[colors]
+[style]
 HSV = [0.7, 0.5, 0.5]
-DARK = { H = 1.0, S = 1.2, V = 0.25 } # Make dark elements less saturated and darker
-SYMBOL = { H = 1.0, S = 1.8, V = 1.8 } # Make symbols more vibrant
+Dark = { H = 1.0, S = 1.2, V = 0.25 } # Make dark elements less saturated and darker
+Symbol = { H = 1.0, S = 1.8, V = 1.8 } # Make symbols more vibrant
 ```
-
-The [highlighting themes come via pygments](https://pygments.org/styles/).
 
 **`[features]`**
 
@@ -59,10 +62,8 @@ This section controls optional features:
 
 *   `CodeSpaces` (boolean, default: `true`): Enables detection of code blocks indented with 4 spaces. Set to `false` to disable this detection method (triple-backtick blocks still work).
 *   `Clipboard` (boolean, default: `true`): Enables copying the last code block encountered to the system clipboard using OSC 52 escape sequences upon exit. Set to `false` to disable.
-*   `Margin` (integer, default: `2`): The left and right indent for the output. 
-*   `PrettyPad` (boolean, default: `false`): Uses a unicode vertical pad trick to add a half height background to code blocks. This makes copy/paste have artifacts. See [#2](https://github.com/kristopolous/Streamdown/issues/2). I like it on. But that's just me
+*   `Logging` (boolean, default: `false`): Enables logging to tmpdir (/tmp/sd) of the raw markdown for debugging and bug reporting.
 *   `Timeout` (float, default: `0.5`): This is a workaround to the [buffer parsing bugs](https://github.com/kristopolous/Streamdown/issues/4). By increasing the select timeout, the parser loop only gets triggerd on newline which means that having to resume from things like a code block, inside a list, inside a table, between buffers, without breaking formatting doesn't need to be done. It's a problem I'm working on (2025-04-01) and there will be bugs. Set this value to something like 3.0 and you'll avoid it with a pretty minor tradeoff.
-*   `Width` (integer, default: `0`): Along with the `Margin`, `Width` specifies the base width of the content, which when set to 0, means use the terminal width. See [#6](https://github.com/kristopolous/Streamdown/issues/6) for more details
 
 Example:
 ```toml
