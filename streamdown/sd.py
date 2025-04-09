@@ -514,8 +514,6 @@ def parse(stream):
                     state.where_from = "code pad"
                     if state.PrettyPad:
                         yield state.CODEPAD[0]
-                    else:
-                        yield state.space_left() + "\n"
 
                     logging.debug(f"In code: ({state.in_code})")
 
@@ -537,10 +535,8 @@ def parse(stream):
                         state.where_from = "code pad"
                         if state.PrettyPad:
                             yield state.CODEPAD[1]
-                        else:
-                            yield f"{RESET}\n"
 
-                        logging.debug(f"Not in code: {state.in_code}")
+                        logging.debug(f"code: {state.in_code}")
 
                         if code_type == Code.Backtick:
                             continue
@@ -604,8 +600,6 @@ def parse(stream):
                         this_batch = highlighted_code[state.code_gen-delta :]
                         if this_batch.startswith(FGRESET):
                             this_batch = this_batch[len(FGRESET) :]
-
-                        logging.debug(f"{state.code_buffer} {bytes(this_batch, 'utf-8')}")
 
                         ## this is the crucial counter that will determine
                         # the begninning of the next line
@@ -764,7 +758,7 @@ def main():
     ]
 
     logging.basicConfig(stream=sys.stdout,
-        level=os.getenv('LOGLEVEL') or getattr(logging, args.loglevel.upper()), format='%(asctime)s - %(levelname)s - %(message)s')
+        level=os.getenv('LOGLEVEL') or getattr(logging, args.loglevel.upper()), format=f'%(message)s')
 
     try:
         inp = sys.stdin
@@ -781,7 +775,7 @@ def main():
         buffer = []
         flush = False
         for chunk in parse(inp):
-            # we allow a "peek forward" for content which may need extra formatting
+            #logging.debug(state.where_from)
             if state.emit_flag:
                 if state.emit_flag == Code.Flush:
                     flush = True
