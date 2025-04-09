@@ -499,7 +499,7 @@ def parse(stream):
                     state.code_language = code_match.group(1) or 'Bash'
 
                 elif state.CodeSpaces and last_line_empty_cache and not state.in_list:
-                    code_match = re.match(r"^    ", line)
+                    code_match = re.match(r"^    \s*[^\s\*]", line)
                     if code_match:
                         state.in_code = Code.Spaces
                         state.code_language = 'Bash'
