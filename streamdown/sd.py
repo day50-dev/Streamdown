@@ -709,14 +709,13 @@ def main():
         if len(env_colors) > 1: S = float(env_colors[1])
         if len(env_colors) > 2: V = float(env_colors[2])
 
-    state.FullWidth = int(args.width) or _style.get("Width") or int(get_terminal_width())
-    state.Width = state.FullWidth - 2 * MARGIN
-
     for color in ["Dark", "Mid", "Symbol", "Head", "Grey", "Bright"]:
         setattr(Style, color, apply_multipliers(color, H, S, V))
     for attr in ['Margin', 'ListIndent', 'Syntax']:
         setattr(Style, attr, _style.get(attr))
     
+    state.FullWidth = int(args.width) or _style.get("Width") or int(get_terminal_width())
+    state.Width = state.FullWidth - 2 * Style.Margin
     Style.Codebg = f"{BG}{Style.Dark}"
     Style.Link = f"{FG}{Style.Symbol}{UNDERLINE[0]}"
     Style.Blockquote = f"{FG}{Style.Grey} \u258E "
@@ -726,8 +725,7 @@ def main():
         f"{RESET}{FG}{Style.Dark}{'▀' * state.FullWidth}{RESET}"
     ]
 
-    logging.basicConfig(stream=sys.stdout,
-        level=os.getenv('LOGLEVEL') or getattr(logging, args.loglevel.upper()), format=f'%(message)s')
+    logging.basicConfig(stream=sys.stdout, level=args.loglevel.upper(), format=f'%(message)s')
     try:
         inp = sys.stdin
         if args.exec:
