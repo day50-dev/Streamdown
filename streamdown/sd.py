@@ -59,35 +59,18 @@ def ensure_config_file():
 
 config_toml_path, config_toml_content = ensure_config_file()
 config = toml.loads(config_toml_content)
-Style = toml.loads(default_toml).get('style') | config.get("style", {})
-Features = toml.loads(default_toml).get('features') | config.get("features", {})
-H, S, V = Style.get("HSV")
-
-try:
-    env_sd_colors = os.getenv("SD_BASEHSV")
-    if env_sd_colors:
-        env_colors = env_sd_colors.split(",")
-        if len(env_colors) > 0: H = float(env_colors[0])
-        if len(env_colors) > 1: S = float(env_colors[1])
-        if len(env_colors) > 2: V = float(env_colors[2])
-except Exception as e:
-    logging.warning(f"Error parsing SD_BASEHSV: {e}")
+_style = toml.loads(default_toml).get('style') | config.get("style", {})
+_features = toml.loads(default_toml).get('features') | config.get("features", {})
+H, S, V = _style.get("HSV")
 
 def apply_multipliers(name, H, S, V):
-    m = Style.get(name)
+    m = _style.get(name)
     r, g, b = colorsys.hsv_to_rgb(min(1.0, H * m["H"]), min(1.0, S * m["S"]), min(1.0, V * m["V"]))
     return ';'.join([str(int(x * 256)) for x in [r, g, b]]) + "m"
 
-DARK   = apply_multipliers("Dark", H, S, V)
-MID    = apply_multipliers("Mid", H, S, V)
-SYMBOL = apply_multipliers("Symbol", H, S, V)
-HEAD   = apply_multipliers("Head", H, S, V)
-GREY   = apply_multipliers("Grey", H, S, V)
-BRIGHT = apply_multipliers("Bright", H, S, V)
-
-SYNTAX  = Style.get("Syntax")
-MARGIN  = Style.get("Margin")
-LIST_INDENT = Style.get('ListIndent')
+SYNTAX  = _style.get("Syntax")
+MARGIN  = _style.get("Margin")
+LIST_INDENT = _style.get('ListIndent')
 MARGIN_SPACES = " " * MARGIN
 
 FG = "\033[38;2;"
@@ -95,14 +78,10 @@ BG = "\033[48;2;"
 RESET = "\033[0m"
 FGRESET = "\033[39m"
 BGRESET = "\033[49m"
-BQUOTE = f"{FG}{GREY} \u258E "
 
 BOLD      = ["\033[1m", "\033[22m"]
 UNDERLINE = ["\033[4m", "\033[24m"]
 ITALIC    = ["\033[3m", "\033[23m"]
-
-CODEBG = f"{BG}{DARK}"
-LINK = f"{FG}{SYMBOL}{UNDERLINE[0]}"
 
 ANSIESCAPE = r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
 KEYCODE_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
@@ -122,6 +101,10 @@ def debug_write(text):
 class Goto(Exception):
     pass
 
+class Style:
+    PrettyPad = _style.get("PrettyPad")
+    pass
+
 class Code:
     Spaces = 'spaces'
     Backtick = 'backtick'
@@ -139,11 +122,10 @@ class ParseState:
         self.maybe_prompt = False
         self.emit_flag = None
 
-        self.CodeSpaces = Features.get("CodeSpaces")
-        self.Clipboard = Features.get("Clipboard")
-        self.Logging = Features.get("Logging")
-        self.Timeout = Features.get("Timeout")
-        self.PrettyPad = Style.get("PrettyPad")
+        self.CodeSpaces = _features.get("CodeSpaces")
+        self.Clipboard = _features.get("Clipboard")
+        self.Logging = _features.get("Logging")
+        self.Timeout = _features.get("Timeout")
 
         # If the entire block is indented this will
         # tell us what that is
@@ -196,7 +178,7 @@ def format_table(rowList):
     # Subtract num_cols + 1 for the vertical borders '│'
     available_width = state.Width - (num_cols + 1)
     col_width = max(1, available_width // num_cols)
-    state.bg = f"{BG}{DARK}"
+    state.bg = f"{BG}{Style.Dark}"
 
     # --- First Pass: Wrap text and calculate row heights ---
     for row in rowList:
@@ -210,10 +192,10 @@ def format_table(rowList):
         row_height = max(row_height, len(wrapped_cell))
 
     # --- Second Pass: Format and emit rows ---
-    bg_color = MID if state.in_table == Code.Header else DARK
+    bg_color = Style.Mid if state.in_table == Style.Head else Style.Dark
     for ix in range(row_height):
         # This is the fancy row separator
-        extra = f"\033[4;58;2;{MID}" if not state.in_table == Code.Header and (ix == row_height - 1) else ""
+        extra = f"\033[4;58;2;{Style.Mid}" if not state.in_table == Style.Head and (ix == row_height - 1) else ""
         line_segments = []
 
         # Now we want to snatch this row index from all our cells
@@ -228,7 +210,7 @@ def format_table(rowList):
             line_segments.append(f"{BG}{bg_color}{extra} {margin_segment}")
 
         # Correct indentation: This should be outside the c_idx loop
-        joined_line = f"{BG}{bg_color}{extra}{FG}{SYMBOL}│{RESET}".join(line_segments)
+        joined_line = f"{BG}{bg_color}{extra}{FG}{Style.Symbol}│{RESET}".join(line_segments)
         # Correct indentation and add missing characters
         yield f"{MARGIN_SPACES}{joined_line}{RESET}"
 
@@ -240,11 +222,11 @@ def emit_h(level, text):
     if level == 1:      #
         return f"\n{MARGIN_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
     elif level == 2:    ##
-        return f"\n{MARGIN_SPACES}{BOLD[0]}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
+        return f"\n{MARGIN_SPACES}{BOLD[0]}{FG}{Code.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
     elif level == 3:    ###
         return f"{MARGIN_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}"
     elif level == 4:    ####
-        return f"{MARGIN_SPACES}{FG}{SYMBOL}{text}{RESET}"
+        return f"{MARGIN_SPACES}{FG}{Style.Symbol}{text}{RESET}"
     else:  # level 5 or 6
         return f"{MARGIN_SPACES}{text}{RESET}"
 
@@ -295,6 +277,9 @@ def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
         margin = max(0, width - visible_length(line_content))
         lines.append(line_content + ' ' * margin + RESET)
 
+    if len(lines) < 1:
+        return []
+
     return [lines[0], *[current_style + x for x in lines[1:]]]
 
 def line_format(line):
@@ -305,7 +290,7 @@ def line_format(line):
     def process_links(match):
         description = match.group(1)
         url = match.group(2)
-        return f'\033]8;;{url}\033\\{LINK}{description}{UNDERLINE[1]}\033]8;;\033\\'
+        return f'\033]8;;{url}\033\\{Style.Link}{description}{UNDERLINE[1]}\033]8;;\033\\'
 
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
     tokenList = re.finditer(r"((\*\*|\*|_|`)|[^_*`]+)", line)
@@ -319,7 +304,7 @@ def line_format(line):
         if token == "`":
             state.inline_code = not state.inline_code
             if state.inline_code:
-                result += f'{BG}{MID}'
+                result += f'{BG}{Style.Mid}'
             else:
                 result += state.bg
    
@@ -365,8 +350,8 @@ def parse(stream):
         if byte is not None:
             if byte == b'': break
             state.buffer += byte
+            debug_write(byte)
 
-        debug_write(byte)
         if not (byte == b'\n' or byte is None): continue
 
         line = state.buffer.decode('utf-8')
@@ -448,10 +433,10 @@ def parse(stream):
                 state.code_buffer = ""
                 state.code_gen = 0
                 state.code_first_line = True
-                state.bg = f"{BG}{DARK}"
+                state.bg = f"{BG}{Style.Dark}"
                 state.where_from = "code pad"
-                if state.PrettyPad:
-                    yield state.CODEPAD[0]
+                if Style.PrettyPad:
+                    yield Style.Codepad[0]
 
                 logging.debug(f"In code: ({state.in_code})")
 
@@ -471,8 +456,8 @@ def parse(stream):
                     state.bg = BGRESET
 
                     state.where_from = "code pad"
-                    if state.PrettyPad:
-                        yield state.CODEPAD[1]
+                    if Style.PrettyPad:
+                        yield Style.Codepad[1]
 
                     logging.debug(f"code: {state.in_code}")
 
@@ -546,7 +531,7 @@ def parse(stream):
                     code_line = ' ' * indent + this_batch.strip()
 
                     margin = state.FullWidth - visible_length(code_line)
-                    yield f"{CODEBG}{code_line}{' ' * max(0, margin)}{BGRESET}"  
+                    yield f"{Style.Codebg}{code_line}{' ' * max(0, margin)}{BGRESET}"  
                 continue
             except Goto as ex:
                 pass
@@ -565,9 +550,9 @@ def parse(stream):
             # This guarantees we are at the first line
             # \n buffer
             if not state.in_table:
-                state.in_table = Code.Header
+                state.in_table = Style.Head
 
-            elif state.in_table == Code.Header:
+            elif state.in_table == Style.Head:
                 # we ignore the separator, this is just a check
                 if not re.match(r"^[\s|:-]+$", line):
                     logging.warning(f"Table definition row 2 was NOT a separator. Instead it was:\n({line})")
@@ -617,7 +602,7 @@ def parse(stream):
                 bullet = f"{list_number}"
             
             wrapped_lineList = wrap_text(content, wrap_width, LIST_INDENT, 
-                first_line_prefix      = f"{(' ' * (indent - len(bullet)))}{FG}{SYMBOL}{bullet}{RESET} ",
+                first_line_prefix      = f"{(' ' * (indent - len(bullet)))}{FG}{Style.Symbol}{bullet}{RESET} ",
                 subsequent_line_prefix = " " * (indent - 1)
             )
             for wrapped_line in wrapped_lineList:
@@ -639,7 +624,7 @@ def parse(stream):
         if hr_match:
             if state.last_line_empty or last_line_empty_cache:
                 # print a horizontal rule using a unicode midline 
-                yield f"{MARGIN_SPACES}{FG}{SYMBOL}{'─' * state.Width}{RESET}"
+                yield f"{MARGIN_SPACES}{FG}{Style.Symbol}{'─' * state.Width}{RESET}"
             else:
                 # We tell the next level up that the beginning of the buffer should be a flag.
                 # Underneath this condition it will no longer yield
@@ -711,21 +696,36 @@ def emit(inp):
             sys.stdout.write(chunk)
 
 def main():
+    global H, S, V
     parser = ArgumentParser(description="Streamdown - A markdown renderer for modern terminals")
     parser.add_argument("filenameList", nargs="*", help="Input file to process (also takes stdin)")
     parser.add_argument("-l", "--loglevel", default="INFO", help="Set the logging level")
+    parser.add_argument("-c", "--color", default=None, help="Set the hsv base: h,s,v")
     parser.add_argument("-w", "--width", default="0", help="Set the width")
     parser.add_argument("-e", "--exec", help="Wrap a program for more 'proper' i/o handling")
     args = parser.parse_args()
-    
+
+    if args.color:
+        env_colors = args.colors.split(",")
+        if len(env_colors) > 0: H = float(env_colors[0])
+        if len(env_colors) > 1: S = float(env_colors[1])
+        if len(env_colors) > 2: V = float(env_colors[2])
+
     state.FullWidth = int(args.width)
     if not state.FullWidth:
-        state.FullWidth = Style.get("Width") or int(get_terminal_width())
+        state.FullWidth = _style.get("Width") or int(get_terminal_width())
+
+    for color in ["Dark", "Mid", "Symbol", "Head", "Grey", "Bright"]:
+        setattr(Style, color, apply_multipliers(color, H, S, V))
     
+    Style.Codebg = f"{BG}{Style.Dark}"
+    Style.Link = f"{FG}{Style.Symbol}{UNDERLINE[0]}"
+    Style.Blockquote = f"{FG}{Style.Grey} \u258E "
+
     state.Width = state.FullWidth - 2 * MARGIN
-    state.CODEPAD = [
-        f"{RESET}{FG}{DARK}{'▄' * state.FullWidth}{RESET}\n",
-        f"{RESET}{FG}{DARK}{'▀' * state.FullWidth}{RESET}"
+    Style.Codepad = [
+        f"{RESET}{FG}{Style.Dark}{'▄' * state.FullWidth}{RESET}\n",
+        f"{RESET}{FG}{Style.Dark}{'▀' * state.FullWidth}{RESET}"
     ]
 
     logging.basicConfig(stream=sys.stdout,
@@ -749,7 +749,7 @@ def main():
             # this is a more sophisticated thing that we'll do in the main loop
             state.is_pty = True
             os.set_blocking(inp.fileno(), False) 
-            emit(sys.stdin)
+            emit(inp)
 
     except KeyboardInterrupt:
         state.exit = 130
