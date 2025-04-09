@@ -116,9 +116,8 @@ def debug_write(text):
         if state.Logging == True:
             tmp_dir = os.path.join(tempfile.gettempdir(), "sd")
             os.makedirs(tmp_dir, exist_ok=True)
-            state.Logging = tempfile.NamedTemporaryFile(dir=tmp_dir, prefix="dbg", delete=False, encoding="utf-8", mode="w")
-        print(f"{text}", file=state.Logging, end="")
-        state.Logging.flush()
+            state.Logging = tempfile.NamedTemporaryFile(dir=tmp_dir, prefix="dbg", delete=False, mode="wb")
+        state.Logging.write(text)
 
 class Goto(Exception):
     pass
@@ -132,7 +131,7 @@ class Code:
 
 class ParseState:
     def __init__(self):
-        self.buffer = ''
+        self.buffer = b''
         self.current_line = ''
         self.first_line = True
         self.last_line_empty = False
@@ -352,10 +351,7 @@ def line_format(line):
 
 def parse(stream):
     last_line_empty_cache = None
-    _char = b''
     byte = None
-    utf = None
-    process_buffer = False
     while True:
         if state.is_pty:
             byte = None
@@ -367,41 +363,27 @@ def parse(stream):
             byte = stream.read(1)
 
         if byte is not None:
-            _char += byte
-            # If this doesn't work then we are on a multi-byte
-            # and should be read in many of them
-            try:
-                utf = _char.decode('utf-8')
-            except:
-                continue
-
-            state.buffer += utf
-            _char = b''
-
-            # EOF
             if byte == b'': break
+            state.buffer += byte
 
-        # print(state.buffer)
-        debug_write(utf)
+        debug_write(byte)
         if not (byte == b'\n' or byte is None): continue
 
-        state.has_newline = state.buffer.endswith('\n')
-
-        state.maybe_prompt = not state.has_newline and state.current()['none'] and re.match('^.*>', state.buffer)
+        line = state.buffer.decode('utf-8')
+        state.has_newline = line.endswith('\n')
+        state.maybe_prompt = not state.has_newline and state.current()['none'] and re.match('^.*>', line)
 
         # let's wait for a newline
         if state.maybe_prompt:
             state.emit_flag = Code.Flush
-            yield state.buffer
-            state.buffer = ''
+            yield line
+            state.buffer = b''
             continue
 
         if not state.has_newline:
             continue
 
-        # Process complete line
-        line = state.buffer
-        state.buffer = ''
+        state.buffer = b''
         # --- Collapse Multiple Empty Lines if not in code blocks ---
         if not state.in_code:
             is_empty = line.strip() == ""
