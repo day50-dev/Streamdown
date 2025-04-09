@@ -63,14 +63,7 @@ _style = toml.loads(default_toml).get('style') | config.get("style", {})
 _features = toml.loads(default_toml).get('features') | config.get("features", {})
 H, S, V = _style.get("HSV")
 
-def apply_multipliers(name, H, S, V):
-    m = _style.get(name)
-    r, g, b = colorsys.hsv_to_rgb(min(1.0, H * m["H"]), min(1.0, S * m["S"]), min(1.0, V * m["V"]))
-    return ';'.join([str(int(x * 256)) for x in [r, g, b]]) + "m"
-
-SYNTAX  = _style.get("Syntax")
 MARGIN  = _style.get("Margin")
-LIST_INDENT = _style.get('ListIndent')
 MARGIN_SPACES = " " * MARGIN
 
 FG = "\033[38;2;"
@@ -222,9 +215,9 @@ def emit_h(level, text):
     if level == 1:      #
         return f"\n{MARGIN_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
     elif level == 2:    ##
-        return f"\n{MARGIN_SPACES}{BOLD[0]}{FG}{Code.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
+        return f"\n{MARGIN_SPACES}{BOLD[0]}{FG}{Style.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
     elif level == 3:    ###
-        return f"{MARGIN_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}"
+        return f"{MARGIN_SPACES}{FG}{Style.Head}{BOLD[0]}{text}{RESET}"
     elif level == 4:    ####
         return f"{MARGIN_SPACES}{FG}{Style.Symbol}{text}{RESET}"
     else:  # level 5 or 6
@@ -472,7 +465,7 @@ def parse(stream):
                     state.code_first_line = False
                     try:
                         lexer = get_lexer_by_name(state.code_language)
-                        custom_style = get_style_by_name(SYNTAX)
+                        custom_style = get_style_by_name(Style.Syntax)
                     except pygments.util.ClassNotFound:
                         lexer = get_lexer_by_name("Bash")
                         custom_style = get_style_by_name("default")
@@ -594,14 +587,14 @@ def parse(stream):
 
             indent = len(state.list_item_stack) * 2
 
-            wrap_width = state.Width - indent - (2 * LIST_INDENT) 
+            wrap_width = state.Width - indent - (2 * Style.ListIndent) 
 
             bullet = '•'
             if list_type == "number":
                 list_number = int(max(state.ordered_list_numbers[-1], float(list_item_match.group(2))))
                 bullet = f"{list_number}"
             
-            wrapped_lineList = wrap_text(content, wrap_width, LIST_INDENT, 
+            wrapped_lineList = wrap_text(content, wrap_width, Style.ListIndent,
                 first_line_prefix      = f"{(' ' * (indent - len(bullet)))}{FG}{Style.Symbol}{bullet}{RESET} ",
                 subsequent_line_prefix = " " * (indent - 1)
             )
@@ -695,6 +688,11 @@ def emit(inp):
         else:
             sys.stdout.write(chunk)
 
+def apply_multipliers(name, H, S, V):
+    m = _style.get(name)
+    r, g, b = colorsys.hsv_to_rgb(min(1.0, H * m["H"]), min(1.0, S * m["S"]), min(1.0, V * m["V"]))
+    return ';'.join([str(int(x * 256)) for x in [r, g, b]]) + "m"
+
 def main():
     global H, S, V
     parser = ArgumentParser(description="Streamdown - A markdown renderer for modern terminals")
@@ -706,7 +704,7 @@ def main():
     args = parser.parse_args()
 
     if args.color:
-        env_colors = args.colors.split(",")
+        env_colors = args.color.split(",")
         if len(env_colors) > 0: H = float(env_colors[0])
         if len(env_colors) > 1: S = float(env_colors[1])
         if len(env_colors) > 2: V = float(env_colors[2])
@@ -715,14 +713,17 @@ def main():
     if not state.FullWidth:
         state.FullWidth = _style.get("Width") or int(get_terminal_width())
 
+    state.Width = state.FullWidth - 2 * MARGIN
+
     for color in ["Dark", "Mid", "Symbol", "Head", "Grey", "Bright"]:
         setattr(Style, color, apply_multipliers(color, H, S, V))
+    for attr in ['Margin', 'ListIndent', 'Syntax']:
+        setattr(Style, attr, _style.get(attr))
     
     Style.Codebg = f"{BG}{Style.Dark}"
     Style.Link = f"{FG}{Style.Symbol}{UNDERLINE[0]}"
     Style.Blockquote = f"{FG}{Style.Grey} \u258E "
 
-    state.Width = state.FullWidth - 2 * MARGIN
     Style.Codepad = [
         f"{RESET}{FG}{Style.Dark}{'▄' * state.FullWidth}{RESET}\n",
         f"{RESET}{FG}{Style.Dark}{'▀' * state.FullWidth}{RESET}"
