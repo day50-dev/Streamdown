@@ -706,9 +706,56 @@ def get_terminal_width():
     except (AttributeError, OSError):
         return 80
 
+def emit(inp):
+    buffer = []
+    flush = False
+    for chunk in parse(inp):
+        if state.emit_flag:
+            if state.emit_flag == Code.Flush:
+                flush = True
+                state.emit_flag = None
+            else:
+                buffer[0] = emit_h(state.emit_flag, buffer[0])
+                state.emit_flag = None
+                continue
+
+        if not state.has_newline:
+            chunk = chunk.rstrip("\n")
+        elif not chunk.endswith("\n"):
+            chunk += "\n"
+
+        if chunk.endswith("\n"):
+            state.current_line = ''
+        else:
+            state.current_line += chunk
+            
+        buffer.append(chunk)
+        if flush:
+            chunk = "\n".join(buffer)
+            buffer = []
+            flush = False
+
+        elif len(buffer) == 1:
+            continue
+
+        else:
+            chunk = buffer.pop(0)
+
+        if state.is_pty:
+            print(chunk, end="", flush=True)
+        else:
+            sys.stdout.write(chunk)
+
+    if len(buffer):
+        chunk = buffer.pop(0)
+        if state.is_pty:
+            print(chunk, end="", flush=True)
+        else:
+            sys.stdout.write(chunk)
+
 def main():
     parser = ArgumentParser(description="Streamdown - A markdown renderer for modern terminals")
-    parser.add_argument("filename", nargs="?", help="Input file to process (also takes stdin)")
+    parser.add_argument("filenameList", nargs="*", help="Input file to process (also takes stdin)")
     parser.add_argument("-l", "--loglevel", default="INFO", help="Set the logging level")
     parser.add_argument("-w", "--width", default="0", help="Set the width")
     parser.add_argument("-e", "--exec", help="Wrap a program for more 'proper' i/o handling")
@@ -727,13 +774,16 @@ def main():
     logging.basicConfig(stream=sys.stdout,
         level=os.getenv('LOGLEVEL') or getattr(logging, args.loglevel.upper()), format=f'%(message)s')
     try:
-        inp = sys.stdin
         if args.exec:
             state.sub = subprocess.Popen(args.exec.split(' '), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             inp = state.sub.stdout
 
-        elif args.filename:
-            inp = open(args.filename, "r")
+        elif args.filenameList:
+            for fname in args.filenameList:
+                if len(args.filenameList) > 1:
+                    emit(StringIO(f"\n------\n# {fname}\n\n------\n"))
+                emit(open(fname, "r"))
+                
         elif sys.stdin.isatty():
             parser.print_help()
             sys.exit()
@@ -741,54 +791,7 @@ def main():
             # this is a more sophisticated thing that we'll do in the main loop
             state.is_pty = True
             os.set_blocking(inp.fileno(), False) 
-
-        buffer = []
-        flush = False
-        for chunk in parse(inp):
-            #logging.debug(state.where_from)
-            if state.emit_flag:
-                if state.emit_flag == Code.Flush:
-                    flush = True
-                    state.emit_flag = None
-                else:
-                    buffer[0] = emit_h(state.emit_flag, buffer[0])
-                    state.emit_flag = None
-                    # and we abandon the yield
-                    continue
-
-            if not state.has_newline:
-                chunk = chunk.rstrip("\n")
-            elif not chunk.endswith("\n"):
-                chunk += "\n"
-
-            if chunk.endswith("\n"):
-                state.current_line = ''
-            else:
-                state.current_line += chunk
-                
-            buffer.append(chunk)
-            if flush:
-                chunk = "\n".join(buffer)
-                buffer = []
-                flush = False
-
-            elif len(buffer) == 1:
-                continue
-
-            else:
-                chunk = buffer.pop(0)
-
-            if state.is_pty:
-                print(chunk, end="", flush=True)
-            else:
-                sys.stdout.write(chunk)
-
-        if len(buffer):
-            chunk = buffer.pop(0)
-            if state.is_pty:
-                print(chunk, end="", flush=True)
-            else:
-                sys.stdout.write(chunk)
+            emit(sys.stdin)
 
     except KeyboardInterrupt:
         state.exit = 130
