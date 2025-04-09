@@ -17,6 +17,7 @@ import re
 import select
 import shutil
 import sys
+import subprocess
 import tempfile
 import toml
 import traceback
@@ -90,6 +91,7 @@ BRIGHT = apply_multipliers("BRIGHT", H, S, V)
 STYLE  = colors.get("STYLE", config_default.get('colors').get("STYLE"))
 MARGIN = features.get("Margin", config_default.get('features').get("Margin"))
 MARGIN_SPACES = " " * MARGIN
+LIST_INDENT = 2
 
 FG = "\033[38;2;"
 BG = "\033[48;2;"
@@ -111,8 +113,6 @@ KEYCODE_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
 visible_length = lambda x: len(visible(x))
 extract_ansi_codes = lambda text: re.findall(r"\033\[[0-9;]*[mK]", text)
-
-_master, _slave = pty.openpty()  # Create a new pseudoterminal
 
 def debug_write(text):
     if state.Logging:
@@ -192,28 +192,19 @@ class ParseState:
 state = ParseState()
 
 def format_table(rowList):
-    if not rowList: return []
-
     num_cols = len(rowList)
-    if num_cols == 0: return []
-    formatted = []
     row_height = 0
     wrapped_cellList = []
 
     # Calculate max width per column (integer division)
     # Subtract num_cols + 1 for the vertical borders '│'
     available_width = state.Width - (num_cols + 1)
-    if available_width <= 0:
-        # Handle extremely narrow terminals gracefully
-        col_width = 1
-    else:
-        col_width = available_width // num_cols
-
+    col_width = max(1, available_width // num_cols)
     state.bg = f"{BG}{DARK}"
 
     # --- First Pass: Wrap text and calculate row heights ---
     for row in rowList:
-        wrapped_cell = wrap_text(line_format(row), width=col_width)
+        wrapped_cell = wrap_text(row, width=col_width)
 
         # Ensure at least one line, even for empty cells
         if not wrapped_cell:
@@ -243,21 +234,20 @@ def format_table(rowList):
         # Correct indentation: This should be outside the c_idx loop
         joined_line = f"{BG}{bg_color}{extra}{FG}{SYMBOL}│{RESET}".join(line_segments)
         # Correct indentation and add missing characters
-        formatted.append(f"{joined_line}{RESET}")
+        yield f"{MARGIN_SPACES}{joined_line}{RESET}"
 
     state.bg = BGRESET
-    return formatted
 
 def emit_h(level, text):
     text = line_format(text)
     spaces_to_center = ((state.Width - visible_length(text)) / 2)
-    if level == 1:      # #
+    if level == 1:      #
         return f"\n{MARGIN_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
-    elif level == 2:    # ##
+    elif level == 2:    ##
         return f"\n{MARGIN_SPACES}{BOLD[0]}{FG}{BRIGHT}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
-    elif level == 3:    # ###
+    elif level == 3:    ###
         return f"{MARGIN_SPACES}{FG}{HEAD}{BOLD[0]}{text}{RESET}"
-    elif level == 4:    # ####
+    elif level == 4:    ####
         return f"{MARGIN_SPACES}{FG}{SYMBOL}{text}{RESET}"
     else:  # level 5 or 6
         return f"{MARGIN_SPACES}{text}{RESET}"
@@ -281,18 +271,14 @@ def code_wrap(text_in):
 def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_line_prefix="", buffer=True):
     if width == -1:
         width = state.Width
-    # Wraps text to the given width, preserving ANSI escape codes across lines.
+
     words = line_format(text).split()
     lines = []
     current_line = ""
     current_style = ""
-    width -= len(state.space_left())
     
-    for i, word in enumerate(words):
-        # Accumulate ANSI codes within the current word
-        codes = extract_ansi_codes(word)
-        if codes:
-            current_style += "".join(codes)
+    for word in words:
+        current_style += "".join(extract_ansi_codes(word) or [])
 
         if visible_length(current_line) + visible_length(word) + 1 <= width:  # +1 for space
             current_line += (" " if current_line else "") + word
@@ -300,8 +286,8 @@ def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
             # Word doesn't fit, finalize the previous line
             prefix = first_line_prefix if not lines else subsequent_line_prefix
             line_content = prefix + current_line
-            margin = width - visible_length(line_content)
-            lines.append(line_content + (' ' * max(0, margin)) + RESET)
+            margin = max(0, width - visible_length(line_content))
+            lines.append(line_content + ' ' * margin + RESET)
 
             # Start new line
             current_line = (" " * indent) + current_style + word
@@ -310,20 +296,10 @@ def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
     if current_line:
         prefix = first_line_prefix if not lines else subsequent_line_prefix
         line_content = prefix + current_line
-        margin = width - visible_length(line_content)
-        lines.append(line_content + (' ' * max(0, margin)) + RESET)
+        margin = max(0, width - visible_length(line_content))
+        lines.append(line_content + ' ' * margin + RESET)
 
-    # Re-apply current style to the beginning of each subsequent line
-    final_lines = []
-    for i, line in enumerate(lines):
-        if i == 0:
-            final_lines.append(line)
-        else:
-            # Prepend the accumulated style. Since margin/RESET are already added,
-            # this style applies to the *start* of the next logical text block.
-            final_lines.append(current_style + line)
-
-    return final_lines
+    return [lines[0], *[current_style + x for x in lines[1:]]]
 
 def line_format(line):
     def not_text(token):
@@ -381,11 +357,11 @@ def parse(stream):
     last_line_empty_cache = None
     char = None
     process_buffer = False
-
+    _master, _slave = pty.openpty()  # Create a new pseudoterminal
     try:
         while True:
             if state.is_pty:
-                ready, _, _ = select.select([stream.fileno(), _master], [], [], state.Timeout)
+                ready, _, _ = select.select([_slave, stream.fileno(), _master], [], [], state.Timeout)
 
                 if _master in ready:  # Read from PTY
                     data = os.read(_master, 1024)
@@ -418,7 +394,8 @@ def parse(stream):
             else:
                 char = stream.read(1)
                 if len(char) == 0: break
-                char = char.encode('utf-8')
+                if type(char) is str:
+                    char = char.encode('utf-7')
 
             if char:
                 state.buffer += char.decode('utf-8')
@@ -635,13 +612,9 @@ def parse(stream):
                     # Let's assume everything worked out I guess.
                     # We set our header to false and basically say we are expecting the body
                     state.in_table = Code.Body 
-                    # And then ignore this row since we ignore the separator
                     continue
 
-                formatted = format_table(cells)
-                for l in formatted:
-                    yield f"{MARGIN_SPACES}{l}"
-
+                yield from format_table(cells)
                 continue
 
             #
@@ -673,14 +646,14 @@ def parse(stream):
 
                 indent = len(state.list_item_stack) * 2
 
-                wrap_width = state.Width - indent - 4
+                wrap_width = state.Width - indent - (2 * LIST_INDENT) 
 
                 bullet = '•'
                 if list_type == "number":
                     list_number = int(max(state.ordered_list_numbers[-1], float(list_item_match.group(2))))
                     bullet = f"{list_number}"
                 
-                wrapped_lineList = wrap_text(content, wrap_width, 2, buffer = False,
+                wrapped_lineList = wrap_text(content, wrap_width, LIST_INDENT, buffer = False,
                     first_line_prefix      = f"{(' ' * (indent - len(bullet)))}{FG}{SYMBOL}{bullet}{RESET} ",
                     subsequent_line_prefix = " " * (indent - 1)
                 )
@@ -753,10 +726,13 @@ def main():
 
     logging.basicConfig(stream=sys.stdout,
         level=os.getenv('LOGLEVEL') or getattr(logging, args.loglevel.upper()), format=f'%(message)s')
-
     try:
         inp = sys.stdin
-        if args.filename:
+        if args.exec:
+            state.sub = subprocess.Popen(args.exec.split(' '), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            inp = state.sub.stdout
+
+        elif args.filename:
             inp = open(args.filename, "r")
         elif sys.stdin.isatty():
             parser.print_help()
