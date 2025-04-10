@@ -12,7 +12,7 @@ This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [r
 ## Some Features
 
 #### Provides clean copyable code for long code blocks and short terminals. 
-![copyable](https://github.com/user-attachments/assets/7462c278-904c-4dbc-b09d-72254e7e639d)
+![copyable](https://github.com/user-attachments/assets/4a3539c5-b5d1-4d6a-8bce-032724d8909d)
 
 #### Does OSC 8 links for modern terminals.
 
@@ -20,10 +20,13 @@ This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [r
 
 
 #### Doesn't consume characters like _ and * as style when they are in `blocks like this` because `_they_can_be_varaiables_`
-![dunder](https://github.com/user-attachments/assets/eb9ab001-3bc7-4e4b-978f-bc00f29c2a41)
+![dunder](https://github.com/user-attachments/assets/d41d7fec-6dec-4387-b53d-f2098f269a5e)
 
-#### Also, tables are carefully supported to hopefully not be too broken
-![table](https://github.com/user-attachments/assets/265509b1-d910-467a-ac39-f219c128e32d)
+#### Tables are carefully supported
+![table](https://github.com/user-attachments/assets/dbe3d13e-6bac-4f45-bf30-f1857ed98898)
+
+#### Colors are highly (and quickly) configurable for people who care a lot, or just a little.
+![configurable](https://github.com/user-attachments/assets/04b36749-4bb8-4c14-9758-84eb6e19b704)
 
 
 ## Configuration
