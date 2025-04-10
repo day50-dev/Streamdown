@@ -115,11 +115,13 @@ class ParseState:
         self.emit_flag = None
         self.scrape = None
         self.scrape_ix = 0
+        self.terminal = None
 
         self.CodeSpaces = _features.get("CodeSpaces")
         self.Clipboard = _features.get("Clipboard")
         self.Logging = _features.get("Logging")
         self.Timeout = _features.get("Timeout")
+        self.WidthArg = None
 
         # If the entire block is indented this will
         # tell us what that is
@@ -163,7 +165,7 @@ class ParseState:
         return state
 
     def space_left(self):
-        return (MARGIN_SPACES if len(self.current_line) == 0 else "") + (BQUOTE if self.in_blockquote else "")
+        return (Style.MarginSpaces if len(self.current_line) == 0 else "") + (BQUOTE if self.in_blockquote else "")
 
 state = ParseState()
 
@@ -210,7 +212,7 @@ def format_table(rowList):
         # Correct indentation: This should be outside the c_idx loop
         joined_line = f"{BG}{bg_color}{extra}{FG}{Style.Symbol}│{RESET}".join(line_segments)
         # Correct indentation and add missing characters
-        yield f"{MARGIN_SPACES}{joined_line}{RESET}"
+        yield f"{Style.MarginSpaces}{joined_line}{RESET}"
 
     state.bg = BGRESET
 
@@ -218,21 +220,21 @@ def emit_h(level, text):
     text = line_format(text)
     spaces_to_center = ((state.Width - visible_length(text)) / 2)
     if level == 1:      #
-        return f"\n{MARGIN_SPACES}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
+        return f"\n{Style.MarginSpaces}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
     elif level == 2:    ##
-        return f"\n{MARGIN_SPACES}{BOLD[0]}{FG}{Style.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
+        return f"\n{Style.MarginSpaces}{BOLD[0]}{FG}{Style.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
     elif level == 3:    ###
-        return f"{MARGIN_SPACES}{FG}{Style.Head}{BOLD[0]}{text}{RESET}"
+        return f"{Style.MarginSpaces}{FG}{Style.Head}{BOLD[0]}{text}{RESET}"
     elif level == 4:    ####
-        return f"{MARGIN_SPACES}{FG}{Style.Symbol}{text}{RESET}"
+        return f"{Style.MarginSpaces}{FG}{Style.Symbol}{text}{RESET}"
     else:  # level 5 or 6
-        return f"{MARGIN_SPACES}{text}{RESET}"
+        return f"{Style.MarginSpaces}{text}{RESET}"
 
 def code_wrap(text_in):
     # get the indentation of the first line
     indent = len(text_in) - len(text_in.lstrip())
     text = text_in.lstrip()
-    mywidth = state.FullWidth - indent
+    mywidth = state.WidthFull - indent
 
     # We take special care to preserve empty lines
     if len(text) == 0:
@@ -564,7 +566,7 @@ def parse(stream):
 
                     code_line = ' ' * indent + this_batch.strip()
 
-                    margin = state.FullWidth - visible_length(code_line)
+                    margin = state.WidthFull - visible_length(code_line)
                     yield f"{Style.Codebg}{code_line}{' ' * max(0, margin)}{BGRESET}"  
                 continue
             except Goto as ex:
@@ -658,7 +660,7 @@ def parse(stream):
         if hr_match:
             if state.last_line_empty or last_line_empty_cache:
                 # print a horizontal rule using a unicode midline 
-                yield f"{MARGIN_SPACES}{FG}{Style.Symbol}{'─' * state.Width}{RESET}"
+                yield f"{Style.MarginSpaces}{FG}{Style.Symbol}{'─' * state.Width}{RESET}"
             else:
                 # We tell the next level up that the beginning of the buffer should be a flag.
                 # Underneath this condition it will no longer yield
@@ -686,6 +688,7 @@ def emit(inp):
     buffer = []
     flush = False
     for chunk in parse(inp):
+        width_calc()
         if state.emit_flag:
             if state.emit_flag == Code.Flush:
                 flush = True
@@ -734,8 +737,16 @@ def apply_multipliers(name, H, S, V):
     r, g, b = colorsys.hsv_to_rgb(min(1.0, H * m["H"]), min(1.0, S * m["S"]), min(1.0, V * m["V"]))
     return ';'.join([str(int(x * 256)) for x in [r, g, b]]) + "m"
 
+def width_calc():
+    state.WidthFull = state.WidthArg or int(get_terminal_width())
+    state.Width = state.WidthFull - 2 * Style.Margin
+    Style.Codepad = [
+        f"{RESET}{FG}{Style.Dark}{'▄' * state.WidthFull}{RESET}\n",
+        f"{RESET}{FG}{Style.Dark}{'▀' * state.WidthFull}{RESET}"
+    ]
+
 def main():
-    global H, S, V, MARGIN_SPACES
+    global H, S, V
 
     parser = ArgumentParser(description="Streamdown - A markdown renderer for modern terminals")
     parser.add_argument("filenameList", nargs="*", help="Input file to process (also takes stdin)")
@@ -761,17 +772,14 @@ def main():
         os.makedirs(args.scrape, exist_ok=True)
         state.scrape = args.scrape
 
-    MARGIN_SPACES = " " * Style.Margin
-    state.FullWidth = int(args.width) or _style.get("Width") or int(get_terminal_width())
-    state.Width = state.FullWidth - 2 * Style.Margin
+    Style.MarginSpaces = " " * Style.Margin
+    state.WidthArg = int(args.width) or _style.get("Width") or 0
+    width_calc()
+
     Style.Codebg = f"{BG}{Style.Dark}"
     Style.Link = f"{FG}{Style.Symbol}{UNDERLINE[0]}"
     Style.Blockquote = f"{FG}{Style.Grey} \u258E "
 
-    Style.Codepad = [
-        f"{RESET}{FG}{Style.Dark}{'▄' * state.FullWidth}{RESET}\n",
-        f"{RESET}{FG}{Style.Dark}{'▀' * state.FullWidth}{RESET}"
-    ]
 
     logging.basicConfig(stream=sys.stdout, level=args.loglevel.upper(), format=f'%(message)s')
     state.exec_master, state.exec_slave = pty.openpty()
@@ -805,7 +813,7 @@ def main():
         state.exit = 130
         
     except Exception as ex:
-        if state.exec_master:
+        if state.terminal:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
         logging.warning(f"Exception thrown: {type(ex)} {ex}")
         traceback.print_exc()
@@ -819,7 +827,7 @@ def main():
         print(f"\033]52;c;{base64_string}\a", end="", flush=True)
 
 
-    if state.exec_master:
+    if state.terminal:
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
         os.close(state.exec_master)
         if state.exec_sub:
