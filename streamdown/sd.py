@@ -240,7 +240,7 @@ def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
     if width == -1:
         width = state.Width
 
-    words = line_format(text).split()
+    words = line_format(text).split() + [""]
     lines = []
     current_line = ""
     current_style = ""
@@ -248,7 +248,7 @@ def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
     for word in words:
         current_style += "".join(extract_ansi_codes(word) or [])
 
-        if visible_length(current_line) + visible_length(word) + 1 <= width:  # +1 for space
+        if len(word) and visible_length(current_line) + visible_length(word) + 1 <= width:  # +1 for space
             current_line += (" " if current_line else "") + word
         else:
             # Word doesn't fit, finalize the previous line
@@ -259,13 +259,6 @@ def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
 
             # Start new line
             current_line = (" " * indent) + current_style + word
-
-    # Add the last line
-    if current_line:
-        prefix = first_line_prefix if not lines else subsequent_line_prefix
-        line_content = prefix + current_line
-        margin = max(0, width - visible_length(line_content))
-        lines.append(line_content + ' ' * margin + RESET)
 
     if len(lines) < 1:
         return []
