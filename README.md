@@ -6,7 +6,6 @@ I needed a streaming Markdown renderer and I couldn't find one. So here we go. F
 
 [sd demo](https://github.com/user-attachments/assets/48dba6fa-2282-4be9-8087-a2ad8e7c7d12)
 
-
 This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [richify.py](https://github.com/gianlucatruda/richify) which rerenders the whole buffer and blocks with an elipses or [glow](https://github.com/charmbracelet/glow) which buffers everything, this streams and does exactly what it says.
 
 ## Some Features
@@ -27,6 +26,8 @@ This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [r
 
 #### Colors are highly (and quickly) configurable for people who care a lot, or just a little.
 ![configurable](https://github.com/user-attachments/assets/04b36749-4bb8-4c14-9758-84eb6e19b704)
+
+Significant effort has been made to make the code hackable and small. It clocks in at about 700 lines as of this writing.
 
 ## Configuration
 Streamdown uses a TOML configuration file located at `~/.config/streamdown/config.toml` (following the XDG Base Directory Specification). If this file does not exist upon first run, it will be created with default values. 
