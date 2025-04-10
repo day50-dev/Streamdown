@@ -35,7 +35,7 @@ Here are the sections:
 
 **`[style]`**
 
-Defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived. Due to limitations in TOML, these all must be floats (have a decimal point). The defaults are [at the beginning of the source](https://github.com/kristopolous/Streamdown/blob/main/streamdown/sd.py#L33).
+Defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived. The defaults are [at the beginning of the source](https://github.com/kristopolous/Streamdown/blob/main/streamdown/sd.py#L33).
 
 *   `HSV`: [ 0.0 - 1.0, 0.0 - 1.0, 0.0 - 1.0 ] 
 *   `Dark`: Multipliers for background elements, code blocks. 
