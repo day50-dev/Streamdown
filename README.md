@@ -81,7 +81,7 @@ Timeout = 1.0
 ## Demo
 Do this
 
-    $ ./tester.sh tests/*md | streamdown/sd.py
+    $ ./streamdown/sd.py tests/*md
 
 Certainly room for improvement and I'll probably continue to make them
 
