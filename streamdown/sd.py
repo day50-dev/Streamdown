@@ -441,6 +441,8 @@ def parse(stream):
                         yield Style.Codepad[1]
 
                     logging.debug(f"code: {state.in_code}")
+                    state.emit_flush = True
+                    yield RESET
 
                     if code_type == Code.Backtick:
                         continue
