@@ -91,3 +91,11 @@ At least one of these should work, hopefully
     $ pipx install -e .
     $ pip install -e .
     $ uv pip install -e . 
+
+### Future work
+
+#### CSS
+I'm really considering using `tinycss2` and making an actual stylesheet engine. This is related to another problem - getting a modern HTML renderer in the browser that actually works. I *think* it's probably a separate project.
+
+#### scrape
+This is already partially implemented. The idea is every code block can get extracted and put in a directory so you can have a conversation to generate every piece of a project, similar to Aider, Claude or Goose,  but in the most hands-off yet still convenient way possible.
