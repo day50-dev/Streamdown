@@ -11,6 +11,7 @@ import appdirs, toml
 import logging, tempfile
 import os,      sys
 import pty,     select
+import termios, tty
 
 import math
 import re
@@ -109,6 +110,7 @@ class ParseState:
         self.first_line = True
         self.last_line_empty = False
         self.is_pty = False
+        self.is_exec = False
         self.maybe_prompt = False
         self.emit_flag = None
         self.scrape = None
@@ -146,6 +148,11 @@ class ParseState:
         self.in_table = False # (Code.[Header|Body] | False)
         self.in_underline = False
         self.in_blockquote = False
+
+        self.exec_sub = None
+        self.exec_master = None
+        self.exec_slave = None
+        self.exec_kb = 0
 
         self.exit = 0
         self.where_from = None
@@ -322,11 +329,33 @@ def parse(stream):
     byte = None
     TimeoutIx = 0
     while True:
-        if state.is_pty:
+        if state.is_pty or state.is_exec:
             byte = None
-            ready, _, _ = select.select([stream.fileno()], [], [], state.Timeout)
+            ready, _, _ = select.select([stream.fileno(), state.exec_master], [], [], state.Timeout)
 
-            if stream.fileno() in ready: 
+            if (state.is_exec or state.exec_kb) and stream.fileno() in ready or state.exec_master in ready:
+                # This is keyboard input
+                if stream.fileno() in ready:
+                    byte = os.read(stream.fileno(), 1)
+
+                    state.exec_kb += 1
+                    os.write(state.exec_master, byte)
+
+                    if byte == b'\r':
+                        state.exec_kb = 0
+
+                    if state.exec_kb == 1:
+                        tty.setraw(sys.stdin.fileno())
+                    elif state.exec_kb == 0:
+                        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
+
+                if state.exec_master in ready:
+                    byte = os.read(state.exec_master, 1)
+                    if state.exec_kb:
+                        os.write(sys.stdout.fileno(), byte)
+                        continue
+
+            elif stream.fileno() in ready: 
                 byte = os.read(stream.fileno(), 1)
                 TimeoutIx = 0
             elif TimeoutIx == 0:
@@ -353,6 +382,8 @@ def parse(stream):
             state.emit_flag = Code.Flush
             yield line
             state.buffer = b''
+            if state.is_exec:
+               tty.setraw(sys.stdin.fileno())
             continue
 
         if not state.has_newline:
@@ -380,7 +411,7 @@ def parse(stream):
         else:
             state.in_list = False
 
-        if state.first_indent == None:
+        if state.first_indent is None:
             state.first_indent = len(line) - len(line.lstrip())
         if len(line) - len(line.lstrip()) >= state.first_indent:
             line = line[state.first_indent:]
@@ -705,6 +736,7 @@ def apply_multipliers(name, H, S, V):
 
 def main():
     global H, S, V, MARGIN_SPACES
+
     parser = ArgumentParser(description="Streamdown - A markdown renderer for modern terminals")
     parser.add_argument("filenameList", nargs="*", help="Input file to process (also takes stdin)")
     parser.add_argument("-l", "--loglevel", default="INFO", help="Set the logging level")
@@ -742,11 +774,17 @@ def main():
     ]
 
     logging.basicConfig(stream=sys.stdout, level=args.loglevel.upper(), format=f'%(message)s')
+    state.exec_master, state.exec_slave = pty.openpty()
     try:
         inp = sys.stdin
         if args.exec:
-            state.sub = subprocess.Popen(args.exec.split(' '), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            inp = state.sub.stdout
+            state.terminal = termios.tcgetattr(sys.stdin)
+            state.is_exec = True
+            state.exec_sub = subprocess.Popen(args.exec.split(' '), stdin=state.exec_slave, stdout=state.exec_slave, stderr=state.exec_slave, close_fds=True)
+            os.close(state.exec_slave)  # We don't need slave in parent
+            # Set stdin to raw mode so we don't need to press enter
+            tty.setraw(sys.stdin.fileno())
+            emit(sys.stdin)
 
         elif args.filenameList:
             for fname in args.filenameList:
@@ -763,11 +801,13 @@ def main():
             os.set_blocking(inp.fileno(), False) 
             emit(inp)
 
-    except KeyboardInterrupt:
+    except (OSError, KeyboardInterrupt) as ex:
         state.exit = 130
         
     except Exception as ex:
-        logging.warning(f"Exception thrown: {ex}")
+        if state.exec_master:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
+        logging.warning(f"Exception thrown: {type(ex)} {ex}")
         traceback.print_exc()
 
     if state.Clipboard and state.code_buffer:
@@ -778,6 +818,12 @@ def main():
         base64_string = base64_bytes.decode('utf-8')
         print(f"\033]52;c;{base64_string}\a", end="", flush=True)
 
+
+    if state.exec_master:
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
+        os.close(state.exec_master)
+        if state.exec_sub:
+            state.exec_sub.wait()
     sys.exit(state.exit)
 
 if __name__ == "__main__":
