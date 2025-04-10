@@ -111,6 +111,8 @@ class ParseState:
         self.is_pty = False
         self.maybe_prompt = False
         self.emit_flag = None
+        self.scrape = None
+        self.scrape_ix = 0
 
         self.CodeSpaces = _features.get("CodeSpaces")
         self.Clipboard = _features.get("Clipboard")
@@ -318,6 +320,7 @@ def line_format(line):
 def parse(stream):
     last_line_empty_cache = None
     byte = None
+    TimeoutIx = 0
     while True:
         if state.is_pty:
             byte = None
@@ -325,6 +328,12 @@ def parse(stream):
 
             if stream.fileno() in ready: 
                 byte = os.read(stream.fileno(), 1)
+                TimeoutIx = 0
+            elif TimeoutIx == 0:
+                # This is our record separator for debugging - hands peaking
+                debug_write("🫣".encode('utf-8'))
+                TimeoutIx += 1
+
         else:
             byte = stream.read(1)
 
@@ -430,6 +439,16 @@ def parse(stream):
                         (                     state.in_code == Code.Backtick and     line.strip() == "```"  ) or
                         (state.CodeSpaces and state.in_code == Code.Spaces   and not line.startswith('    '))
                     ):
+                    if state.scrape:
+                        ext = "sh"
+                        try:
+                            ext = get_lexer_by_name(state.code_language).filenames[0].split('.')[-1]
+                        except:
+                            pass
+
+                        open(os.path.join(state.scrape, f"file_{state.scrape_ix}.{ext}"), 'w').write(state.code_buffer)
+                        state.scrape_ix += 1
+
                     state.code_language = None
                     state.code_indent = 0
                     code_type = state.in_code
@@ -443,6 +462,7 @@ def parse(stream):
                     logging.debug(f"code: {state.in_code}")
                     state.emit_flush = True
                     yield RESET
+
 
                     if code_type == Code.Backtick:
                         continue
@@ -691,6 +711,7 @@ def main():
     parser.add_argument("-c", "--color", default=None, help="Set the hsv base: h,s,v")
     parser.add_argument("-w", "--width", default="0", help="Set the width")
     parser.add_argument("-e", "--exec", help="Wrap a program for more 'proper' i/o handling")
+    parser.add_argument("-s", "--scrape", help="Scrape code snippets to a directory")
     args = parser.parse_args()
 
     if args.color:
@@ -704,6 +725,10 @@ def main():
     for attr in ['Margin', 'ListIndent', 'Syntax']:
         setattr(Style, attr, _style.get(attr))
     
+    if args.scrape:
+        os.makedirs(args.scrape, exist_ok=True)
+        state.scrape = args.scrape
+
     MARGIN_SPACES = " " * Style.Margin
     state.FullWidth = int(args.width) or _style.get("Width") or int(get_terminal_width())
     state.Width = state.FullWidth - 2 * Style.Margin
