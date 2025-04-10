@@ -346,7 +346,7 @@ def parse(stream):
 
         line = state.buffer.decode('utf-8')
         state.has_newline = line.endswith('\n')
-        state.maybe_prompt = not state.has_newline and state.current()['none'] and re.match('^.*>', line)
+        state.maybe_prompt = not state.has_newline and state.current()['none'] and re.match(r'^.*>\s+$', line)
 
         # let's wait for a newline
         if state.maybe_prompt:
