@@ -136,9 +136,8 @@ class ParseState:
         self.ordered_list_numbers = []
         self.list_item_stack = []  # stack of (indent, type)
 
-        # So this can either be False, Code.Backtick or Code.Spaces
         self.in_list = False
-        self.in_code = False
+        self.in_code = False # (Code.[Backtick|Spaces] | False)
         self.inline_code = False
         self.in_bold = False
         self.in_italic = False
@@ -240,6 +239,7 @@ def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
     if width == -1:
         width = state.Width
 
+    # The empty word clears the buffer at the end.
     words = line_format(text).split() + [""]
     lines = []
     current_line = ""
@@ -256,8 +256,6 @@ def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
             line_content = prefix + current_line
             margin = max(0, width - visible_length(line_content))
             lines.append(line_content + ' ' * margin + RESET)
-
-            # Start new line
             current_line = (" " * indent) + current_style + word
 
     if len(lines) < 1:
