@@ -2,12 +2,11 @@
 
 [![PyPI version](https://badge.fury.io/py/streamdown.svg)](https://badge.fury.io/py/streamdown)
 
-I needed a streaming Markdown renderer and honestly all the ones I found lacking. They were broken or janky in some kind of way. So here we go. From the ground up. It's a bad idea but it has to be done.
+I needed a streaming Markdown renderer and I couldn't find one. So here we go. From the ground up. It's a bad idea but it has to be done.
 
 [sd demo](https://github.com/user-attachments/assets/48dba6fa-2282-4be9-8087-a2ad8e7c7d12)
 
-
-This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [richify.py](https://github.com/gianlucatruda/richify) which jumps around the page or blocks with an elipses or [glow](https://github.com/charmbracelet/glow) which buffers everything, this streams and does exactly what you want.
+This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [richify.py](https://github.com/gianlucatruda/richify) which rerenders the whole buffer and blocks with an elipses or [glow](https://github.com/charmbracelet/glow) which buffers everything, this streams and does exactly what it says.
 
 ## Some Features
 
@@ -28,15 +27,16 @@ This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [r
 #### Colors are highly (and quickly) configurable for people who care a lot, or just a little.
 ![configurable](https://github.com/user-attachments/assets/04b36749-4bb8-4c14-9758-84eb6e19b704)
 
+Significant effort has been made to make the code hackable and small. It clocks in at about 700 lines as of this writing.
 
 ## Configuration
-Streamdown uses a configuration file located at `~/.config/streamdown/config.toml` (following the XDG Base Directory Specification). If this file does not exist upon first run, it will be created with default values.
+Streamdown uses a TOML configuration file located at `~/.config/streamdown/config.toml` (following the XDG Base Directory Specification). If this file does not exist upon first run, it will be created with default values. 
 
-The configuration file uses TOML format and currently supports the following sections:
+Here are the sections:
 
 **`[style]`**
 
-This section defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived. Due to limitations in TOML, these all must be floats (have a decimal point). The defaults are [at the beginning of the source](https://github.com/kristopolous/Streamdown/blob/main/streamdown/sd.py#L33).
+Defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived. The defaults are [at the beginning of the source](https://github.com/kristopolous/Streamdown/blob/main/streamdown/sd.py#L33).
 
 *   `HSV`: [ 0.0 - 1.0, 0.0 - 1.0, 0.0 - 1.0 ] 
 *   `Dark`: Multipliers for background elements, code blocks. 
@@ -61,12 +61,12 @@ Symbol = { H = 1.0, S = 1.8, V = 1.8 } # Make symbols more vibrant
 
 **`[features]`**
 
-This section controls optional features:
+Controls optional features:
 
 *   `CodeSpaces` (boolean, default: `true`): Enables detection of code blocks indented with 4 spaces. Set to `false` to disable this detection method (triple-backtick blocks still work).
 *   `Clipboard` (boolean, default: `true`): Enables copying the last code block encountered to the system clipboard using OSC 52 escape sequences upon exit. Set to `false` to disable.
-*   `Logging` (boolean, default: `false`): Enables logging to tmpdir (/tmp/sd) of the raw markdown for debugging and bug reporting.
-*   `Timeout` (float, default: `0.5`): This is a workaround to the [buffer parsing bugs](https://github.com/kristopolous/Streamdown/issues/4). By increasing the select timeout, the parser loop only gets triggerd on newline which means that having to resume from things like a code block, inside a list, inside a table, between buffers, without breaking formatting doesn't need to be done. It's a problem I'm working on (2025-04-01) and there will be bugs. Set this value to something like 3.0 and you'll avoid it with a pretty minor tradeoff.
+*   `Logging` (boolean, default: `false`): Enables logging to tmpdir (/tmp/sd) of the raw markdown for debugging and bug reporting. The logging uses an emoji as a record separator so the actual streaming delays can be simulated and replayed.
+*   `Timeout` (float, default: `0.5`): This is a workaround to the [buffer parsing bugs](https://github.com/kristopolous/Streamdown/issues/4). By increasing the select timeout, the parser loop only gets triggerd on newline which means that having to resume from things like a code block, inside a list, inside a table, between buffers, without breaking formatting doesn't need to be done. I assert (2025-04-09) this is no longer a bug. Feel free to turn on `Logging` and post an issue if you find a repeatable one. 
 
 Example:
 ```toml
@@ -91,3 +91,14 @@ At least one of these should work, hopefully
     $ pipx install -e .
     $ pip install -e .
     $ uv pip install -e . 
+
+### Future work
+
+#### CSS
+I'm really considering using `tinycss2` and making an actual stylesheet engine. This is related to another problem - getting a modern HTML renderer in the terminal that is actually navigable. I *think* it's probably a separate project.
+
+#### scrape
+This is already partially implemented. The idea is every code block can get extracted and put in a directory so you can have a conversation to generate every piece of a project, similar to Aider, Claude or Goose,  but in the most hands-off yet still convenient way possible.
+
+#### exec
+I'm trying to get a readline capable wrapper so that interaction is as transparent as possible. After many days of research I've given up on trying to hack it through tty/pty hijacking and pipes and decided it has to be a standard wrapper. This should be low effort.
