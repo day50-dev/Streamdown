@@ -30,13 +30,11 @@ This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [r
 
 
 ## Configuration
-Streamdown uses a configuration file located at `~/.config/streamdown/config.toml` (following the XDG Base Directory Specification). If this file does not exist upon first run, it will be created with default values.
-
-The configuration file uses TOML format and currently supports the following sections:
+Streamdown uses a TOML configuration file located at `~/.config/streamdown/config.toml` (following the XDG Base Directory Specification). If this file does not exist upon first run, it will be created with default values. Here are the sections:
 
 **`[style]`**
 
-This section defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived. Due to limitations in TOML, these all must be floats (have a decimal point). The defaults are [at the beginning of the source](https://github.com/kristopolous/Streamdown/blob/main/streamdown/sd.py#L33).
+Defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived. Due to limitations in TOML, these all must be floats (have a decimal point). The defaults are [at the beginning of the source](https://github.com/kristopolous/Streamdown/blob/main/streamdown/sd.py#L33).
 
 *   `HSV`: [ 0.0 - 1.0, 0.0 - 1.0, 0.0 - 1.0 ] 
 *   `Dark`: Multipliers for background elements, code blocks. 
@@ -61,7 +59,7 @@ Symbol = { H = 1.0, S = 1.8, V = 1.8 } # Make symbols more vibrant
 
 **`[features]`**
 
-This section controls optional features:
+Controls optional features:
 
 *   `CodeSpaces` (boolean, default: `true`): Enables detection of code blocks indented with 4 spaces. Set to `false` to disable this detection method (triple-backtick blocks still work).
 *   `Clipboard` (boolean, default: `true`): Enables copying the last code block encountered to the system clipboard using OSC 52 escape sequences upon exit. Set to `false` to disable.
