@@ -242,6 +242,31 @@ def code_wrap(text_in):
 
     return (indent, res)
 
+def ansi_collapse(codelist, inp):
+    sgr = lambda l: re.compile(r'\x1b\[(' + '|'.join(l) +')[0-9;]*m')
+
+    nums = {
+        'fg': r'3\d',
+        'bg': r'4\d',
+        'b': r'2?1',
+        'i': r'2?3',
+        'u': r'2?2',
+        'reset': '0'
+    }
+
+    for stanza in inp:
+        mg = re.search( sgr([f'(?P<{k}>{v})' for k, v in nums.items()]), stanza )
+
+        if mg:
+            mg = mg.groupdict()
+            if mg['reset']:
+                return inp                 
+
+            my_filter = sgr( [nums[k] for k, v in mg.items() if v] )
+            codelist = list(filter(lambda x: not re.search( my_filter, x ), codelist))
+
+    return codelist + inp
+
 def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_line_prefix=""):
     if width == -1:
         width = state.Width
@@ -271,6 +296,9 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
 
         if len(codes):
             current_style += codes
+
+        if codes:
+            current_style = ansi_collapse(current_style, codes)
 
     if len(lines) < 1:
         return []
