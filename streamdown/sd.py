@@ -763,6 +763,8 @@ def main():
             inp = state.sub.stdout
 
         elif args.filenameList:
+            # Let's say we only care about logging in streams
+            state.Logging = False
             for fname in args.filenameList:
                 if len(args.filenameList) > 1:
                     emit(StringIO(f"\n------\n# {fname}\n\n------\n"))
