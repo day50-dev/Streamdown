@@ -13,5 +13,15 @@ def Plugin(line in, State, Style):
 * It's responsible for maintaining its own state. 
 * The State and Style are from the main program if it chooses to observe it.
 
+The important caveat is this thing is truly streaming. You may get totally part
+
+ial text li
+
+ke this and then have to reco
+
+nstruct it.
+
+It is up to you how you'd like to yield it. You can buffer and wait for the whole segment if you need to, emit based on lines, whatever is needed. That's up to you!
+
 Check the files, they're pretty small and should be fairly self explanatory.
 
