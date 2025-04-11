@@ -3,6 +3,7 @@
 # requires-python = ">=3.8"
 # dependencies = [
 #     "pygments",
+#     "pylatexenc",
 #     "appdirs",
 #     "toml"
 # ]
@@ -26,6 +27,8 @@ from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import Terminal256Formatter
 from pygments.styles import get_style_by_name
+
+from plugins import latex
 
 default_toml = """
 [features]
@@ -359,6 +362,17 @@ def parse(stream):
             continue
 
         state.buffer = b''
+        # Run through the plugins first
+        res = latex.Plugin(line, state, Style)
+        if res is True:
+          # This means everything was consumed by our plugin and 
+          # we should continue
+          continue
+        elif res is not None:
+          for row in res:
+            yield row
+            continue
+
         # --- Collapse Multiple Empty Lines if not in code blocks ---
         if not state.in_code:
             is_empty = line.strip() == ""
