@@ -10,27 +10,24 @@ This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [r
 
 ## Some Features
 
-#### Provides clean copyable code for long code blocks and short terminals. 
+### Provides clean copyable code for long code blocks and short terminals. 
 ![copyable](https://github.com/user-attachments/assets/4a3539c5-b5d1-4d6a-8bce-032724d8909d)
 
-#### Does OSC 8 links for modern terminals.
-
+### Does OSC 8 links for modern terminals.
 [links.webm](https://github.com/user-attachments/assets/a5f71791-7c58-4183-ad3b-309f470c08a3)
 
-
-#### Doesn't consume characters like _ and * as style when they are in `blocks like this` because `_they_can_be_varaiables_`
+### Doesn't consume characters like _ and * as style when they are in `blocks like this` because `_they_can_be_varaiables_`
 ![dunder](https://github.com/user-attachments/assets/d41d7fec-6dec-4387-b53d-f2098f269a5e)
 
-#### Tables are carefully supported
+### Tables are carefully supported
 ![table](https://github.com/user-attachments/assets/dbe3d13e-6bac-4f45-bf30-f1857ed98898)
 
-#### Colors are highly (and quickly) configurable for people who care a lot, or just a little.
+### Colors are highly (and quickly) configurable for people who care a lot, or just a little.
 ![configurable](https://github.com/user-attachments/assets/04b36749-4bb8-4c14-9758-84eb6e19b704)
 
-#### There's a [Plugin](https://github.com/kristopolous/Streamdown/tree/main/streamdown/plugins) system if you need to extend Streadown's parser.
+### Has a [Plugin](https://github.com/kristopolous/Streamdown/tree/main/streamdown/plugins) system to extend the parser and renderer.
 For instance, here is the [latext plugin](https://github.com/kristopolous/Streamdown/blob/main/streamdown/plugins/latex.py) doing math inside a table:
 ![calc](https://github.com/user-attachments/assets/0b0027ca-8ef0-4b4a-b4ae-e36ff623a683)
-
 
 
 ## Configuration
