@@ -7,9 +7,9 @@ def Plugin(line in, State, Style):
   return None | [ ansi escaped and formatted line, ]
 ```
 
-* If None, its assumed the plugin is uninterested. 
+* If None, its assumed the plugin is uninterested in the incoming line.
 * If it's an array, it's assumed it should be yielded and no other code should be run
-* If it's non-None then it receives priority as the first plugin called until it returns none, claiming it's done with the code
+* If it's non-None then it receives priority as the first plugin called until it returns none, claiming it's done with the parsing
 * It's responsible for maintaining its own state. 
 * The State and Style are from the main program if it chooses to observe it.
 
