@@ -20,7 +20,7 @@ import subprocess
 import traceback
 import colorsys
 import base64
-from io import StringIO
+from io import BytesIO
 import pygments.util
 from argparse import ArgumentParser
 from pygments import highlight
@@ -76,12 +76,14 @@ BOLD      = ["\033[1m", "\033[22m"]
 UNDERLINE = ["\033[4m", "\033[24m"]
 ITALIC    = ["\033[3m", "\033[23m"]
 
+ESCAPE = r"\033\[[0-9;]*[mK]"
 ANSIESCAPE = r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
 KEYCODE_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
 visible_length = lambda x: len(visible(x))
-extract_ansi_codes = lambda text: re.findall(r"\033\[[0-9;]*[mK]", text)
+
+extract_ansi_codes = lambda text: re.findall(ESCAPE, text)
 
 def debug_write(text):
     if state.Logging:
@@ -176,7 +178,7 @@ def format_table(rowList):
 
     # --- First Pass: Wrap text and calculate row heights ---
     for row in rowList:
-        wrapped_cell = wrap_text(row, width=col_width)
+        wrapped_cell = text_wrap(row, width=col_width)
 
         # Ensure at least one line, even for empty cells
         if not wrapped_cell:
@@ -240,7 +242,7 @@ def code_wrap(text_in):
 
     return (indent, res)
 
-def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_line_prefix=""):
+def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_line_prefix=""):
     if width == -1:
         width = state.Width
 
@@ -248,10 +250,14 @@ def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
     words = line_format(text).split() + [""]
     lines = []
     current_line = ""
-    current_style = ""
+    current_style = []
     
     for word in words:
-        current_style += "".join(extract_ansi_codes(word) or [])
+        # we apply the style if we see it at the beginning of the word
+        codes = extract_ansi_codes(word)
+        if len(codes) and word.startswith(codes[0]):
+            # this pop(0) is intentional
+            current_style.append(codes.pop(0))
 
         if len(word) and visible_length(current_line) + visible_length(word) + 1 <= width:  # +1 for space
             current_line += (" " if current_line else "") + word
@@ -260,13 +266,16 @@ def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
             prefix = first_line_prefix if not lines else subsequent_line_prefix
             line_content = prefix + current_line
             margin = max(0, width - visible_length(line_content))
-            lines.append(line_content + ' ' * margin + RESET)
-            current_line = (" " * indent) + current_style + word
+            lines.append(line_content + state.bg + ' ' * margin)
+            current_line = (" " * indent) + "".join(current_style) + word
+
+        if len(codes):
+            current_style += codes
 
     if len(lines) < 1:
         return []
 
-    return [lines[0], *[current_style + x for x in lines[1:]]]
+    return lines
 
 def line_format(line):
     def not_text(token):
@@ -618,7 +627,7 @@ def parse(stream):
                 list_number = int(max(state.ordered_list_numbers[-1], float(list_item_match.group(2))))
                 bullet = f"{list_number}"
             
-            wrapped_lineList = wrap_text(content, wrap_width, Style.ListIndent,
+            wrapped_lineList = text_wrap(content, wrap_width, Style.ListIndent,
                 first_line_prefix      = f"{(' ' * (indent - len(bullet)))}{FG}{Style.Symbol}{bullet}{RESET} ",
                 subsequent_line_prefix = " " * (indent - 1)
             )
@@ -655,7 +664,7 @@ def parse(stream):
             # we want to prevent word wrap
             yield f"{state.space_left()}{line_format(line)}"
         else:
-            wrapped_lines = wrap_text(line)
+            wrapped_lines = text_wrap(line)
             for wrapped_line in wrapped_lines:
                 yield f"{state.space_left()}{wrapped_line}\n"
 
@@ -767,7 +776,7 @@ def main():
             state.Logging = False
             for fname in args.filenameList:
                 if len(args.filenameList) > 1:
-                    emit(StringIO(f"\n------\n# {fname}\n\n------\n"))
+                    emit(BytesIO(f"\n------\n# {fname}\n\n------\n".encode('utf-8')))
                 emit(open(fname, "rb"))
                 
         elif sys.stdin.isatty():

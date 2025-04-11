@@ -6,4 +6,6 @@ Now we will do one that is a bit harder `we do this to_force_a_line_break_and_th
 
 Now we will do one that is much  harder `we do this to_force_a_line_break_and_have_more_text` and end it at the point that's wrapped before we continue with our text.
 
+Now we will do one that is much  harder **we do this to_force_a_line_break_and_have_more_text** and end it at the point that's wrapped before we continue with our text.
+
 This is designed for a width around 70
