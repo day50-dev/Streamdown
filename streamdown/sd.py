@@ -335,27 +335,31 @@ def parse(stream):
             byte = None
             ready, _, _ = select.select([stream.fileno(), state.exec_master], [], [], state.Timeout)
 
-            if (state.is_exec or state.exec_kb) and stream.fileno() in ready or state.exec_master in ready:
+            if state.is_exec: #(state.is_exec or state.exec_kb) and stream.fileno() in ready or state.exec_master in ready:
                 # This is keyboard input
                 if stream.fileno() in ready:
                     byte = os.read(stream.fileno(), 1)
 
                     state.exec_kb += 1
                     os.write(state.exec_master, byte)
+                    print(state.exec_kb)
 
                     if byte == b'\r':
                         state.exec_kb = 0
+                        print("keyboard")
+                        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
 
                     if state.exec_kb == 1:
                         tty.setraw(sys.stdin.fileno())
-                    elif state.exec_kb == 0:
-                        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
+                    # elif state.exec_kb == 0:
+                    #    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
 
                 if state.exec_master in ready:
                     byte = os.read(state.exec_master, 1)
                     if state.exec_kb:
                         os.write(sys.stdout.fileno(), byte)
                         continue
+
 
             elif stream.fileno() in ready: 
                 byte = os.read(stream.fileno(), 1)
@@ -364,6 +368,7 @@ def parse(stream):
                 # This is our record separator for debugging - hands peaking
                 debug_write("🫣".encode('utf-8'))
                 TimeoutIx += 1
+
 
         else:
             byte = stream.read(1)
@@ -569,7 +574,7 @@ def parse(stream):
                     margin = state.WidthFull - visible_length(code_line)
                     yield f"{Style.Codebg}{code_line}{' ' * max(0, margin)}{BGRESET}"  
                 continue
-            except Goto as ex:
+            except Goto:
                 pass
             
             except Exception as ex:
@@ -809,7 +814,7 @@ def main():
             os.set_blocking(inp.fileno(), False) 
             emit(inp)
 
-    except (OSError, KeyboardInterrupt) as ex:
+    except (OSError, KeyboardInterrupt):
         state.exit = 130
         
     except Exception as ex:
