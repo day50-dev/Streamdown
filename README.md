@@ -27,11 +27,12 @@ This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [r
 #### Colors are highly (and quickly) configurable for people who care a lot, or just a little.
 ![configurable](https://github.com/user-attachments/assets/04b36749-4bb8-4c14-9758-84eb6e19b704)
 
-#### There's even a [plugin](https://github.com/kristopolous/Streamdown/tree/main/streamdown/plugins) system if you need to extend it.
-
 Significant effort has been made to make the code hackable and small. Hopefully it's not confusing.
 
 ## Configuration
+
+#### There's a [Plugin](https://github.com/kristopolous/Streamdown/tree/main/streamdown/plugins) system if you need to extend Streadown's parser.
+
 Streamdown uses a TOML configuration file located at `~/.config/streamdown/config.toml` (following the XDG Base Directory Specification). If this file does not exist upon first run, it will be created with default values. 
 
 Here are the sections:
