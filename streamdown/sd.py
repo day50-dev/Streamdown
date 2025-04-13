@@ -174,9 +174,12 @@ def format_table(rowList):
     # Subtract num_cols + 1 for the vertical borders '│'
     available_width = state.Width - (num_cols + 1)
     col_width = max(1, available_width // num_cols)
-    state.bg = f"{BG}{Style.Dark}"
+    bg_color = Style.Mid if state.in_table == Style.Head else Style.Dark
+    state.bg = f"{BG}{bg_color}"
 
-    # --- First Pass: Wrap text and calculate row heights ---
+    # First Pass: Wrap text and calculate row heights
+    # Note this is where every cell is formatted so if 
+    # you are styling, do it before here!
     for row in rowList:
         wrapped_cell = text_wrap(row, width=col_width)
 
@@ -188,7 +191,6 @@ def format_table(rowList):
         row_height = max(row_height, len(wrapped_cell))
 
     # --- Second Pass: Format and emit rows ---
-    bg_color = Style.Mid if state.in_table == Style.Head else Style.Dark
     for ix in range(row_height):
         # This is the fancy row separator
         extra = f"\033[4;58;2;{Style.Mid}" if not state.in_table == Style.Head and (ix == row_height - 1) else ""
@@ -242,9 +244,10 @@ def code_wrap(text_in):
 
     return (indent, res)
 
+# This marvelously obscure code "compacts" long lines of repetitive ANSI format strings by
+# removing duplicates. Here's how it works
 def ansi_collapse(codelist, inp):
-    sgr = lambda l: re.compile(r'\x1b\[(' + '|'.join(l) +')[0-9;]*m')
-
+    # We break SGR strings into various classes concerning their applicate or removal
     nums = {
         'fg': r'3\d',
         'bg': r'4\d',
@@ -254,15 +257,28 @@ def ansi_collapse(codelist, inp):
         'reset': '0'
     }
 
+    # We have a routine that creates large regex matching strings for them based on 
+    # lists that can pass to it
+    sgr = lambda l: re.compile(r'\x1b\[(' + '|'.join(l) +')[0-9;]*m')
+
     for stanza in inp:
+        # We construct a named-register regex using the dictionary and run it
+        # over a stanza of our input
         mg = re.search( sgr([f'(?P<{k}>{v})' for k, v in nums.items()]), stanza )
 
         if mg:
+            # this means we now have a dictionary populated with whether 
+            # we have those tags or not
             mg = mg.groupdict()
+
+            # if it's a reset we can disregard everything
             if mg['reset']:
                 return inp                 
 
+            # Find the tags we have by doing a dictionary None check. Make new regex SGR ANSI codes from it
             my_filter = sgr( [nums[k] for k, v in mg.items() if v] )
+
+            # Use that code list as a filter to remove extra
             codelist = list(filter(lambda x: not re.search( my_filter, x ), codelist))
 
     return codelist + inp
