@@ -329,7 +329,7 @@ def line_format(line):
     def process_links(match):
         description = match.group(1)
         url = match.group(2)
-        return f'\033]8;;{url}\033\\{Style.Link}{description}{UNDERLINE[1]}\033]8;;\033\\'
+        return f'\033]8;;{url}\033\\{Style.Link}{description}{UNDERLINE[1]}\033]8;;\033\\{FGRESET}'
 
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
     tokenList = re.finditer(r"((\*\*|\*|_|`)|[^_*`]+)", line)
