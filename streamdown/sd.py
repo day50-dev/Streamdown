@@ -154,7 +154,7 @@ class ParseState:
         self.in_italic = False
         self.in_table = False # (Code.[Header|Body] | False)
         self.in_underline = False
-        self.in_blockquote = False
+        self.block_depth = 0
 
         self.exit = 0
         self.where_from = None
@@ -165,7 +165,7 @@ class ParseState:
         return state
 
     def space_left(self):
-        return (MARGIN_SPACES if len(self.current_line) == 0 else "") + (BQUOTE if self.in_blockquote else "")
+        return (MARGIN_SPACES if len(self.current_line) == 0 else "") + (Style.Blockquote * self.block_depth)
 
 state = ParseState()
 
@@ -467,13 +467,21 @@ def parse(stream):
         if state.in_table and not state.in_code and not re.match(r"^\s*\|.+\|\s*$", line):
             state.in_table = False
 
-        block_match = re.match(r"^<.?think>$", line)
+        block_match = re.match(r"^((> )*|<.?think>)", line)
         if block_match:
-            state.in_blockquote = not state.in_blockquote
-            # consume and don't emit
-            if not state.in_blockquote:
-                yield( RESET)
-            continue
+            if block_match.group(1) == '</think>':
+                state.block_depth = 0
+                yield(RESET)
+            elif block_match.group(1) == '<think>':
+                state.block_depth = 1
+            else:
+                state.block_depth = int(len(block_match.group(0)) / 2)
+                # we also need to consume those tokens
+                line = line[state.block_depth * 2:]
+        else:
+            if state.block_depth > 0:
+                yield RESET
+                state.block_depth = 0
 
         #
         # <code><pre>
