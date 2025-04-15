@@ -28,7 +28,7 @@ from pygments.lexers import get_lexer_by_name
 from pygments.formatters import Terminal256Formatter
 from pygments.styles import get_style_by_name
 
-from plugins import latex
+from .plugins import latex
 
 default_toml = """
 [features]

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "streamdown"
-version = "0.11.0"
+version = "0.12.0"
 description = "A streaming markdown renderer for modern terminals with syntax highlighting"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -30,6 +30,7 @@ dependencies = [
     "pygments",
     "appdirs",
     "toml",
+    "pylatexenc",
 ]
 
 [project.urls]
@@ -42,3 +43,5 @@ sd = "streamdown.sd:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["streamdown"]
+include = ["streamdown/plugins/*"]
+
