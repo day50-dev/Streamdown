@@ -20,6 +20,7 @@ import subprocess
 import traceback
 import colorsys
 import base64
+import importlib
 from io import BytesIO
 import pygments.util
 from argparse import ArgumentParser
@@ -28,7 +29,10 @@ from pygments.lexers import get_lexer_by_name
 from pygments.formatters import Terminal256Formatter
 from pygments.styles import get_style_by_name
 
-from .plugins import latex
+if __package__ is None:
+    from plugins import latex
+else:
+    from .plugins import latex
 
 default_toml = """
 [features]
@@ -408,6 +412,7 @@ def parse(stream):
         if state.maybe_prompt:
             state.emit_flag = Code.Flush
             yield line
+            state.current_line = ''
             state.buffer = b''
             continue
 
