@@ -21,6 +21,7 @@ import subprocess
 import traceback
 import colorsys
 import base64
+import importlib
 from io import BytesIO
 import pygments.util
 from argparse import ArgumentParser
@@ -29,7 +30,10 @@ from pygments.lexers import get_lexer_by_name
 from pygments.formatters import Terminal256Formatter
 from pygments.styles import get_style_by_name
 
-from .plugins import latex
+if __package__ is None:
+    from plugins import latex
+else:
+    from .plugins import latex
 
 default_toml = """
 [features]
@@ -160,6 +164,7 @@ class ParseState:
         self.exec_master = None
         self.exec_slave = None
         self.exec_kb = 0
+        self.exec_israw = False
 
         self.exit = 0
         self.where_from = None
@@ -389,20 +394,22 @@ def parse(stream):
     while True:
         if state.is_pty or state.is_exec:
             byte = None
-            ready, _, _ = select.select([stream.fileno(), state.exec_master], [], [], state.Timeout)
+            ready_in, _, _ = select.select(
+                    [stream.fileno(), state.exec_master], [], [], state.Timeout)
 
             if state.is_exec: #(state.is_exec or state.exec_kb) and stream.fileno() in ready or state.exec_master in ready:
+                
                 # This is keyboard input
-                if stream.fileno() in ready:
+                #sys.stdout.write("0" if state.exec_master in ready_in else "1")
+                if stream.fileno() in ready_in:
                     byte = os.read(stream.fileno(), 1)
 
                     state.exec_kb += 1
                     os.write(state.exec_master, byte)
-                    print(state.exec_kb)
+                    #print(state.exec_kb)
 
                     if byte == b'\r':
                         state.exec_kb = 0
-                        print("keyboard")
                         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
 
                     if state.exec_kb == 1:
@@ -410,14 +417,26 @@ def parse(stream):
                     # elif state.exec_kb == 0:
                     #    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
 
-                if state.exec_master in ready:
+                if state.exec_master in ready_in:
                     byte = os.read(state.exec_master, 1)
+                    if not state.exec_israw:
+                        print("flip raw")
+                        state.exec_israw = True
+                        tty.setraw(sys.stdin.fileno())
+
                     if state.exec_kb:
                         os.write(sys.stdout.fileno(), byte)
                         continue
 
+                else:
+                    if state.exec_israw:
+                        print("flop nah")
+                        state.exec_israw = True
+                        state.exec_israw = False
+                        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
 
-            elif stream.fileno() in ready: 
+
+            elif stream.fileno() in ready_in: 
                 byte = os.read(stream.fileno(), 1)
                 TimeoutIx = 0
             elif TimeoutIx == 0:
