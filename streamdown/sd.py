@@ -21,7 +21,7 @@ import subprocess
 import traceback
 import colorsys
 import base64
-from io import StringIO
+from io import BytesIO
 import pygments.util
 from argparse import ArgumentParser
 from pygments import highlight
@@ -29,7 +29,7 @@ from pygments.lexers import get_lexer_by_name
 from pygments.formatters import Terminal256Formatter
 from pygments.styles import get_style_by_name
 
-from plugins import latex
+from .plugins import latex
 
 default_toml = """
 [features]
@@ -77,12 +77,14 @@ BOLD      = ["\033[1m", "\033[22m"]
 UNDERLINE = ["\033[4m", "\033[24m"]
 ITALIC    = ["\033[3m", "\033[23m"]
 
+ESCAPE = r"\033\[[0-9;]*[mK]"
 ANSIESCAPE = r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
 KEYCODE_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
 visible_length = lambda x: len(visible(x))
-extract_ansi_codes = lambda text: re.findall(r"\033\[[0-9;]*[mK]", text)
+
+extract_ansi_codes = lambda text: re.findall(ESCAPE, text)
 
 def debug_write(text):
     if state.Logging:
@@ -181,11 +183,14 @@ def format_table(rowList):
     # Subtract num_cols + 1 for the vertical borders '│'
     available_width = state.Width - (num_cols + 1)
     col_width = max(1, available_width // num_cols)
-    state.bg = f"{BG}{Style.Dark}"
+    bg_color = Style.Mid if state.in_table == Style.Head else Style.Dark
+    state.bg = f"{BG}{bg_color}"
 
-    # --- First Pass: Wrap text and calculate row heights ---
+    # First Pass: Wrap text and calculate row heights
+    # Note this is where every cell is formatted so if 
+    # you are styling, do it before here!
     for row in rowList:
-        wrapped_cell = wrap_text(row, width=col_width)
+        wrapped_cell = text_wrap(row, width=col_width)
 
         # Ensure at least one line, even for empty cells
         if not wrapped_cell:
@@ -195,7 +200,6 @@ def format_table(rowList):
         row_height = max(row_height, len(wrapped_cell))
 
     # --- Second Pass: Format and emit rows ---
-    bg_color = Style.Mid if state.in_table == Style.Head else Style.Dark
     for ix in range(row_height):
         # This is the fancy row separator
         extra = f"\033[4;58;2;{Style.Mid}" if not state.in_table == Style.Head and (ix == row_height - 1) else ""
@@ -249,7 +253,46 @@ def code_wrap(text_in):
 
     return (indent, res)
 
-def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_line_prefix=""):
+# This marvelously obscure code "compacts" long lines of repetitive ANSI format strings by
+# removing duplicates. Here's how it works
+def ansi_collapse(codelist, inp):
+    # We break SGR strings into various classes concerning their applicate or removal
+    nums = {
+        'fg': r'3\d',
+        'bg': r'4\d',
+        'b': r'2?1',
+        'i': r'2?3',
+        'u': r'2?2',
+        'reset': '0'
+    }
+
+    # We have a routine that creates large regex matching strings for them based on 
+    # lists that can pass to it
+    sgr = lambda l: re.compile(r'\x1b\[(' + '|'.join(l) +')[0-9;]*m')
+
+    for stanza in inp:
+        # We construct a named-register regex using the dictionary and run it
+        # over a stanza of our input
+        mg = re.search( sgr([f'(?P<{k}>{v})' for k, v in nums.items()]), stanza )
+
+        if mg:
+            # this means we now have a dictionary populated with whether 
+            # we have those tags or not
+            mg = mg.groupdict()
+
+            # if it's a reset we can disregard everything
+            if mg['reset']:
+                return inp                 
+
+            # Find the tags we have by doing a dictionary None check. Make new regex SGR ANSI codes from it
+            my_filter = sgr( [nums[k] for k, v in mg.items() if v] )
+
+            # Use that code list as a filter to remove extra
+            codelist = list(filter(lambda x: not re.search( my_filter, x ), codelist))
+
+    return codelist + inp
+
+def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_line_prefix=""):
     if width == -1:
         width = state.Width
 
@@ -257,10 +300,14 @@ def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
     words = line_format(text).split() + [""]
     lines = []
     current_line = ""
-    current_style = ""
+    current_style = []
     
     for word in words:
-        current_style += "".join(extract_ansi_codes(word) or [])
+        # we apply the style if we see it at the beginning of the word
+        codes = extract_ansi_codes(word)
+        if len(codes) and word.startswith(codes[0]):
+            # this pop(0) is intentional
+            current_style.append(codes.pop(0))
 
         if len(word) and visible_length(current_line) + visible_length(word) + 1 <= width:  # +1 for space
             current_line += (" " if current_line else "") + word
@@ -269,13 +316,19 @@ def wrap_text(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
             prefix = first_line_prefix if not lines else subsequent_line_prefix
             line_content = prefix + current_line
             margin = max(0, width - visible_length(line_content))
-            lines.append(line_content + ' ' * margin + RESET)
-            current_line = (" " * indent) + current_style + word
+            lines.append(line_content + state.bg + ' ' * margin)
+            current_line = (" " * indent) + "".join(current_style) + word
+
+        if len(codes):
+            current_style += codes
+
+        if codes:
+            current_style = ansi_collapse(current_style, codes)
 
     if len(lines) < 1:
         return []
 
-    return [lines[0], *[current_style + x for x in lines[1:]]]
+    return lines
 
 def line_format(line):
     def not_text(token):
@@ -285,7 +338,7 @@ def line_format(line):
     def process_links(match):
         description = match.group(1)
         url = match.group(2)
-        return f'\033]8;;{url}\033\\{Style.Link}{description}{UNDERLINE[1]}\033]8;;\033\\'
+        return f'\033]8;;{url}\033\\{Style.Link}{description}{UNDERLINE[1]}\033]8;;\033\\{FGRESET}'
 
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
     tokenList = re.finditer(r"((\*\*|\*|_|`)|[^_*`]+)", line)
@@ -656,7 +709,7 @@ def parse(stream):
                 list_number = int(max(state.ordered_list_numbers[-1], float(list_item_match.group(2))))
                 bullet = f"{list_number}"
             
-            wrapped_lineList = wrap_text(content, wrap_width, Style.ListIndent,
+            wrapped_lineList = text_wrap(content, wrap_width, Style.ListIndent,
                 first_line_prefix      = f"{(' ' * (indent - len(bullet)))}{FG}{Style.Symbol}{bullet}{RESET} ",
                 subsequent_line_prefix = " " * (indent - 1)
             )
@@ -693,7 +746,7 @@ def parse(stream):
             # we want to prevent word wrap
             yield f"{state.space_left()}{line_format(line)}"
         else:
-            wrapped_lines = wrap_text(line)
+            wrapped_lines = text_wrap(line)
             for wrapped_line in wrapped_lines:
                 yield f"{state.space_left()}{wrapped_line}\n"
 
@@ -814,9 +867,11 @@ def main():
             emit(sys.stdin)
 
         elif args.filenameList:
+            # Let's say we only care about logging in streams
+            state.Logging = False
             for fname in args.filenameList:
                 if len(args.filenameList) > 1:
-                    emit(StringIO(f"\n------\n# {fname}\n\n------\n"))
+                    emit(BytesIO(f"\n------\n# {fname}\n\n------\n".encode('utf-8')))
                 emit(open(fname, "rb"))
                 
         elif sys.stdin.isatty():
