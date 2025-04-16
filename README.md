@@ -81,6 +81,31 @@ Width = 120
 Timeout = 1.0
 ```
 
+## Invocation
+The most exciting feature here is `--exec` with it you can do full readline support like this:
+
+   $ sd --exec "llm chat"
+
+And now you have all your readline stuff. It's pretty great.
+
+```shell
+Streamdown - A markdown renderer for modern terminals
+
+positional arguments:
+  filenameList          Input file to process (also takes stdin)
+
+options:
+  -h, --help            show this help message and exit
+  -l LOGLEVEL, --loglevel LOGLEVEL
+                        Set the logging level
+  -c COLOR, --color COLOR
+                        Set the hsv base: h,s,v
+  -w WIDTH, --width WIDTH
+                        Set the width
+  -e EXEC, --exec EXEC  Wrap a program for more 'proper' i/o handling
+
+```
+
 ## Demo
 Do this
 
@@ -103,5 +128,3 @@ I'm really considering using `tinycss2` and making an actual stylesheet engine. 
 #### scrape
 This is already partially implemented. The idea is every code block can get extracted and put in a directory so you can have a conversation to generate every piece of a project, similar to Aider, Claude or Goose,  but in the most hands-off yet still convenient way possible.
 
-#### exec
-I'm trying to get a readline capable wrapper so that interaction is as transparent as possible. After many days of research I've given up on trying to hack it through tty/pty hijacking and pipes and decided it has to be a standard wrapper. This should be low effort.
