@@ -82,7 +82,8 @@ UNDERLINE = ["\033[4m", "\033[24m"]
 ITALIC    = ["\033[3m", "\033[23m"]
 
 ESCAPE = r"\033\[[0-9;]*[mK]"
-ANSIESCAPE = r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
+ANSIESCAPE = r'\033(?:\[[0-9;?]*[a-zA-Z]|][0-9]*;;.*?\\|\\)'
+#r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
 KEYCODE_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
@@ -175,7 +176,7 @@ class ParseState:
         return state
 
     def space_left(self):
-        return (MARGIN_SPACES if len(self.current_line) == 0 else "") + (Style.Blockquote * self.block_depth)
+        return (Style.MarginSpaces if len(self.current_line) == 0 else "") + (Style.Blockquote * self.block_depth)
 
 state = ParseState()
 
@@ -397,43 +398,30 @@ def parse(stream):
             ready_in, _, _ = select.select(
                     [stream.fileno(), state.exec_master], [], [], state.Timeout)
 
-            if state.is_exec: #(state.is_exec or state.exec_kb) and stream.fileno() in ready or state.exec_master in ready:
-                
+            if state.is_exec: 
                 # This is keyboard input
-                #sys.stdout.write("0" if state.exec_master in ready_in else "1")
                 if stream.fileno() in ready_in:
                     byte = os.read(stream.fileno(), 1)
 
                     state.exec_kb += 1
                     os.write(state.exec_master, byte)
-                    #print(state.exec_kb)
 
-                    if byte == b'\r':
+                    if byte == b'\n':
+                        print("")
                         state.exec_kb = 0
-                        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
-
-                    if state.exec_kb == 1:
-                        tty.setraw(sys.stdin.fileno())
-                    # elif state.exec_kb == 0:
-                    #    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
+                    else:
+                        continue
 
                 if state.exec_master in ready_in:
+                    TimeoutIx = 0
                     byte = os.read(state.exec_master, 1)
-                    if not state.exec_israw:
-                        print("flip raw")
-                        state.exec_israw = True
-                        tty.setraw(sys.stdin.fileno())
 
                     if state.exec_kb:
                         os.write(sys.stdout.fileno(), byte)
-                        continue
 
-                else:
-                    if state.exec_israw:
-                        print("flop nah")
-                        state.exec_israw = True
-                        state.exec_israw = False
-                        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
+                if len(ready_in) == 0:
+                    TimeoutIx += 1
+                
 
 
             elif stream.fileno() in ready_in: 
@@ -443,7 +431,6 @@ def parse(stream):
                 # This is our record separator for debugging - hands peaking
                 debug_write("🫣".encode('utf-8'))
                 TimeoutIx += 1
-
 
         else:
             byte = stream.read(1)
@@ -457,7 +444,8 @@ def parse(stream):
 
         line = state.buffer.decode('utf-8')
         state.has_newline = line.endswith('\n')
-        state.maybe_prompt = not state.has_newline and state.current()['none'] and re.match(r'^.*>\s+$', line)
+        # I hate this. There should be better ways.
+        state.maybe_prompt = not state.has_newline and state.current()['none'] and re.match(r'^.*>\s+$', visible(line))
 
         # let's wait for a newline
         if state.maybe_prompt:
@@ -465,9 +453,6 @@ def parse(stream):
             yield line
             state.current_line = ''
             state.buffer = b''
-            if state.is_exec:
-               tty.setraw(sys.stdin.fileno())
-            continue
 
         if not state.has_newline:
             continue
@@ -891,7 +876,7 @@ def main():
             state.exec_sub = subprocess.Popen(args.exec.split(' '), stdin=state.exec_slave, stdout=state.exec_slave, stderr=state.exec_slave, close_fds=True)
             os.close(state.exec_slave)  # We don't need slave in parent
             # Set stdin to raw mode so we don't need to press enter
-            tty.setraw(sys.stdin.fileno())
+            tty.setcbreak(sys.stdin.fileno())
             emit(sys.stdin)
 
         elif args.filenameList:
