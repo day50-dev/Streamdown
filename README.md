@@ -84,7 +84,7 @@ Timeout = 1.0
 ## Invocation
 The most exciting feature here is `--exec` with it you can do full readline support like this:
 
-   $ sd --exec "llm chat"
+     $ sd --exec "llm chat"
 
 And now you have all your readline stuff. It's pretty great.
 
