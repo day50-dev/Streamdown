@@ -1,17 +1,27 @@
 # Streamdown Plugins
 
+See [#10](https://github.com/kristopolous/Streamdown/issues/10) for the rewrite effort.
+
 Streamdown contains a simple and hopefully not too painful plugin system
 
 ``` python
-def Plugin(line in, State, Style):
-  return None | [ ansi escaped and formatted line, ]
+def Plugin(line_in, State):
+  # state.in_level = "block" | "inline"
+
+  return None | {
+    state: "running" | "done"
+    pre: <unformatted>,
+    res: <ansi escaped formatted content>,
+    post: <unformatted>
+  }
 ```
 
+
 * If None, its assumed the plugin is uninterested in the incoming line.
-* If it's an array, it's assumed it should be yielded and no other code should be run
-* If it's non-None then it receives priority as the first plugin called until it returns none, claiming it's done with the parsing
+* If it's an object
+* If it's non-None then it receives priority as the first plugin called untel it returns none, claiming it's done with the parsing
 * It's responsible for maintaining its own state. 
-* The State and Style are from the main program if it chooses to observe it.
+* The State is from the main program if it chooses to observe it. The Style parameter is in State.style
 
 The important caveat is this thing is truly streaming. 
 ```

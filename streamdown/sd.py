@@ -110,6 +110,8 @@ class Code:
     Header = 'header'
     Body = 'body'
     Flush = 'flush'
+    Block = 'block'
+    Inline = 'inline'
 
 class ParseState:
     def __init__(self):
@@ -154,6 +156,7 @@ class ParseState:
         self.in_italic = False
         self.in_table = False # (Code.[Header|Body] | False)
         self.in_underline = False
+        self.in_level = None
         self.block_depth = 0
 
         self.exit = 0
@@ -377,7 +380,7 @@ def line_format(line):
 
     return result
 
-def parse(stream):
+def consumestream):
     last_line_empty_cache = None
     byte = None
     TimeoutIx = 0
@@ -421,7 +424,10 @@ def parse(stream):
 
         state.buffer = b''
         # Run through the plugins first
-        res = latex.Plugin(line, state, Style)
+        state.in_level = Code.Block
+        res = latex.Plugin(line, state)
+        if res is not None:
+
         if res is True:
           # This means everything was consumed by our plugin and 
           # we should continue
@@ -734,7 +740,7 @@ def get_terminal_width():
 def emit(inp):
     buffer = []
     flush = False
-    for chunk in parse(inp):
+    for chunk in consume(inp):
         if state.emit_flag:
             if state.emit_flag == Code.Flush:
                 flush = True
@@ -822,6 +828,9 @@ def main():
     ]
 
     logging.basicConfig(stream=sys.stdout, level=args.loglevel.upper(), format=f'%(message)s')
+    # Just a pointer
+    state.style = Style
+
     try:
         inp = sys.stdin
         if args.exec:
