@@ -407,6 +407,7 @@ def parse(stream):
                     os.write(state.exec_master, byte)
 
                     if byte == b'\n':
+                        state.buffer = b''
                         print("")
                         state.exec_kb = 0
                     else:
@@ -583,7 +584,7 @@ def parse(stream):
 
 
                     if code_type == Code.Backtick:
-                        continue
+                            continue
                     else:
                         # otherwise we don't want to consume
                         # nor do we want to be here.
