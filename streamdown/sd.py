@@ -337,8 +337,7 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
     return lines
 
 def line_format(line):
-    def not_text(token):
-        return not token or len(token.rstrip()) != len(token)
+    not_text = lambda token: not token or len(token.rstrip()) != len(token)
 
     # Apply OSC 8 hyperlink formatting after other formatting
     def process_links(match):
@@ -380,7 +379,7 @@ def line_format(line):
             else:
                 result += token
 
-        elif token == "_" and (state.in_underline or not_text(prev_token)):
+        elif token == "_" and (state.in_underline or (not_text(prev_token) and next_token.isalnum())):
             state.in_underline = not state.in_underline
             result += UNDERLINE[0] if state.in_underline else UNDERLINE[1]
         else:
@@ -585,7 +584,8 @@ def parse(stream):
 
 
                     if code_type == Code.Backtick:
-                            continue
+                        state.code_indent = len(line) - len(line.lstrip())
+                        continue
                     else:
                         # otherwise we don't want to consume
                         # nor do we want to be here.
@@ -601,11 +601,6 @@ def parse(stream):
                         custom_style = get_style_by_name("default")
 
                     formatter = Terminal256Formatter(style=custom_style)
-                    for i, char in enumerate(line):
-                        if char == " ":
-                            state.code_indent += 1
-                        else:
-                            break
                     line = line[state.code_indent :]
 
                 elif line.startswith(" " * state.code_indent):
