@@ -52,7 +52,7 @@ Dark    = { H = 1.00, S = 1.50, V = 0.25 }
 Mid     = { H = 1.00, S = 1.00, V = 0.50 }
 Symbol  = { H = 1.00, S = 1.00, V = 1.50 }
 Head    = { H = 1.00, S = 2.00, V = 1.50 }
-Grey    = { H = 1.00, S = 0.12, V = 1.25 }
+Grey    = { H = 1.00, S = 0.25, V = 1.37 }
 Bright  = { H = 1.00, S = 2.00, V = 2.00 }
 Syntax  = "monokai"
 """
@@ -176,7 +176,7 @@ class ParseState:
         return state
 
     def space_left(self):
-        return (Style.MarginSpaces if len(self.current_line) == 0 else "") + (Style.Blockquote * self.block_depth)
+        return Style.MarginSpaces + (Style.Blockquote * self.block_depth) if len(self.current_line) == 0 else "" 
 
 state = ParseState()
 
@@ -469,6 +469,23 @@ def parse(stream):
           for row in res:
             yield row
             continue
+        
+        # running this here avoids stray |
+        block_match = re.match(r"^((>\s*)+|<.?think>)", line)
+        if block_match:
+            if block_match.group(1) == '</think>':
+                state.block_depth = 0
+                yield RESET
+            elif block_match.group(1) == '<think>':
+                state.block_depth = 1
+            else:
+                state.block_depth = block_match.group(0).count('>')
+                # we also need to consume those tokens
+                line = line[len(block_match.group(0)):]
+        else:
+            if state.block_depth > 0:
+                line = FGRESET + line
+                state.block_depth = 0
 
         # --- Collapse Multiple Empty Lines if not in code blocks ---
         if not state.in_code:
@@ -483,7 +500,7 @@ def parse(stream):
             else:
                 last_line_empty_cache = state.last_line_empty
                 state.last_line_empty = False
-
+        
         # This is to reset our top-level line-based systems
         # \n buffer
         if not state.in_list and len(state.ordered_list_numbers) > 0:
@@ -505,22 +522,6 @@ def parse(stream):
         # we are in table or not table otherwise > 1 tables won't have a stylized header
         if state.in_table and not state.in_code and not re.match(r"^\s*\|.+\|\s*$", line):
             state.in_table = False
-
-        block_match = re.match(r"^((> )*|<.?think>)", line)
-        if block_match:
-            if block_match.group(1) == '</think>':
-                state.block_depth = 0
-                yield(RESET)
-            elif block_match.group(1) == '<think>':
-                state.block_depth = 1
-            else:
-                state.block_depth = int(len(block_match.group(0)) / 2)
-                # we also need to consume those tokens
-                line = line[state.block_depth * 2:]
-        else:
-            if state.block_depth > 0:
-                yield RESET
-                state.block_depth = 0
 
         #
         # <code><pre>
@@ -864,7 +865,7 @@ def main():
 
     Style.Codebg = f"{BG}{Style.Dark}"
     Style.Link = f"{FG}{Style.Symbol}{UNDERLINE[0]}"
-    Style.Blockquote = f"{FG}{Style.Grey} \u258E "
+    Style.Blockquote = f"{FG}{Style.Grey}│ "
 
 
     logging.basicConfig(stream=sys.stdout, level=args.loglevel.upper(), format=f'%(message)s')
@@ -873,6 +874,7 @@ def main():
         inp = sys.stdin
         if args.exec:
             state.terminal = termios.tcgetattr(sys.stdin)
+            print(state.terminal)
             state.is_exec = True
             state.exec_sub = subprocess.Popen(args.exec.split(' '), stdin=state.exec_slave, stdout=state.exec_slave, stderr=state.exec_slave, close_fds=True)
             os.close(state.exec_slave)  # We don't need slave in parent
