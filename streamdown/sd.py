@@ -874,7 +874,6 @@ def main():
         inp = sys.stdin
         if args.exec:
             state.terminal = termios.tcgetattr(sys.stdin)
-            print(state.terminal)
             state.is_exec = True
             state.exec_sub = subprocess.Popen(args.exec.split(' '), stdin=state.exec_slave, stdout=state.exec_slave, stderr=state.exec_slave, close_fds=True)
             os.close(state.exec_slave)  # We don't need slave in parent
