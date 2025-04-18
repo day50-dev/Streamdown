@@ -80,6 +80,7 @@ BGRESET = "\033[49m"
 BOLD      = ["\033[1m", "\033[22m"]
 UNDERLINE = ["\033[4m", "\033[24m"]
 ITALIC    = ["\033[3m", "\033[23m"]
+STRIKEOUT = ["\033[9m", "\033[29m"]
 
 ESCAPE = r"\033\[[0-9;]*[mK]"
 ANSIESCAPE = r'\033(?:\[[0-9;?]*[a-zA-Z]|][0-9]*;;.*?\\|\\)'
@@ -161,6 +162,7 @@ class ParseState:
         self.in_italic = False
         self.in_table = False # (Code.[Header|Body] | False)
         self.in_underline = False
+        self.in_strikeout = False
         self.block_depth = 0
 
         self.exec_sub = None
@@ -353,7 +355,7 @@ def line_format(line):
         return f'\033]8;;{url}\033\\{Style.Link}{description}{UNDERLINE[1]}\033]8;;\033\\{FGRESET}'
 
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
-    tokenList = re.finditer(r"((\*\*|\*|_{1,2}|`+)|[^_*`]+)", line)
+    tokenList = re.finditer(r"((~~|\*\*_|_\*\*|\*{1,3}|_{1,3}|`+)|[^~_*`]+)", line)
     result = ""
 
     for match in tokenList:
@@ -361,8 +363,13 @@ def line_format(line):
         next_token = line[match.end()] if match.end() < len(line) else ""
         prev_token = line[match.start()-1] if match.start() > 0 else ""
 
-        if "`" in token:
-            state.inline_code = not state.inline_code
+        # This trick makes sure that things like `` ` `` render right.
+        if "`" in token and (not state.inline_code or state.inline_code == token):
+            if state.inline_code:
+                state.inline_code = False
+            else:
+                state.inline_code = token
+
             if state.inline_code:
                 result += f'{BG}{Style.Mid}'
             else:
@@ -372,6 +379,16 @@ def line_format(line):
         # inside of our code block.
         elif state.inline_code:
             result += token
+
+        elif token == '~~' and (state.in_strikeout or not_text(prev_token)):
+            state.in_strikeout = not state.in_strikeout
+            result += STRIKEOUT[0] if state.in_strikeout else STRIKEOUT[1]
+
+        elif token in ['**_','_**','___','***'] and (state.in_bold or not_text(prev_token)):
+            state.in_bold = not state.in_bold
+            result += BOLD[0] if state.in_bold else BOLD[1]
+            state.in_italic = not state.in_italic
+            result += ITALIC[0] if state.in_italic else ITALIC[1]
 
         elif (token == '__' or token == "**") and (state.in_bold or not_text(prev_token)):
             state.in_bold = not state.in_bold
@@ -475,7 +492,7 @@ def parse(stream):
                 continue
         
         # running this here avoids stray |
-        block_match = re.match(r"^((>\s*)+|<.?think>)", line)
+        block_match = re.match(r"^\s*((>\s*)+|<.?think>)", line)
         if block_match:
             if block_match.group(1) == '</think>':
                 state.block_depth = 0
