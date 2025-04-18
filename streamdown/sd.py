@@ -493,7 +493,7 @@ def parse(stream):
         
         # running this here avoids stray |
         block_match = re.match(r"^\s*((>\s*)+|<.?think>)", line)
-        if block_match:
+        if not state.in_code and block_match:
             if block_match.group(1) == '</think>':
                 state.block_depth = 0
                 yield RESET
