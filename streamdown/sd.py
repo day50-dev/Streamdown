@@ -5,6 +5,7 @@
 #     "pygments",
 #     "pylatexenc",
 #     "appdirs",
+#     "term-image",
 #     "toml"
 # ]
 # ///
@@ -23,6 +24,7 @@ import colorsys
 import base64
 import importlib
 from io import BytesIO
+from term_image.image import from_file, from_url
 import pygments.util
 from argparse import ArgumentParser
 from pygments import highlight
@@ -339,12 +341,19 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
 def line_format(line):
     not_text = lambda token: not token or len(token.rstrip()) != len(token)
 
+    def process_images(match):
+        url = match.group(2)
+        image = from_url(url)
+        image.height = 20
+        print(f"{image:|.-1#}")
+
     # Apply OSC 8 hyperlink formatting after other formatting
     def process_links(match):
         description = match.group(1)
         url = match.group(2)
         return f'\033]8;;{url}\033\\{Style.Link}{description}{UNDERLINE[1]}\033]8;;\033\\{FGRESET}'
 
+    line = re.sub(r"\!\[([^\]]*)\]\(([^\)]+)\)", process_images, line)
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
     tokenList = re.finditer(r"((\*\*|\*|_|`)|[^_*`]+)", line)
     result = ""
