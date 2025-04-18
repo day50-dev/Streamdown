@@ -81,6 +81,7 @@ BOLD      = ["\033[1m", "\033[22m"]
 UNDERLINE = ["\033[4m", "\033[24m"]
 ITALIC    = ["\033[3m", "\033[23m"]
 STRIKEOUT = ["\033[9m", "\033[29m"]
+SUPER     = [ 0x2070, 0x00B9, 0x00B2, 0x00B3, 0x2074, 0x2075, 0x2076, 0x2077, 0x2078, 0x2079 ]
 
 ESCAPE = r"\033\[[0-9;]*[mK]"
 ANSIESCAPE = r'\033(?:\[[0-9;?]*[a-zA-Z]|][0-9]*;;.*?\\|\\)'
@@ -347,6 +348,7 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
 
 def line_format(line):
     not_text = lambda token: not token or len(token.rstrip()) != len(token)
+    footnotes = lambda match: ''.join([chr(SUPER[int(i)]) for i in match.group(1)])
 
     # Apply OSC 8 hyperlink formatting after other formatting
     def process_links(match):
@@ -355,6 +357,8 @@ def line_format(line):
         return f'\033]8;;{url}\033\\{Style.Link}{description}{UNDERLINE[1]}\033]8;;\033\\{FGRESET}'
 
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
+    line = re.sub(r"\[\^(\d+)\]:?", footnotes, line)
+
     tokenList = re.finditer(r"((~~|\*\*_|_\*\*|\*{1,3}|_{1,3}|`+)|[^~_*`]+)", line)
     result = ""
 
