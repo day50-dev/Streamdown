@@ -174,9 +174,12 @@ class ParseState:
         self.where_from = None
 
     def current(self):
-        state = { 'code': self.in_code, 'bold': self.in_bold, 'italic': self.in_italic, 'underline': self.in_underline }
+        state = { 'inline': self.inline_code, 'code': self.in_code, 'bold': self.in_bold, 'italic': self.in_italic, 'underline': self.in_underline }
         state['none'] = all(item is False for item in state.values())
         return state
+
+    def reset_inline(self):
+        self.inline_code = self.in_bold = self.in_italic = self.in_underline = False
 
     def space_left(self):
         return Style.MarginSpaces + (Style.Blockquote * self.block_depth) if len(self.current_line) == 0 else "" 
@@ -247,7 +250,7 @@ def emit_h(level, text):
         return f"{Style.MarginSpaces}{text}{RESET}"
 
 def code_wrap(text_in):
-    if state.WidthWrap:
+    if state.WidthWrap and len(text_in) > state.WidthFull:
         return (0, [text_in])
 
     # get the indentation of the first line
@@ -352,7 +355,7 @@ def line_format(line):
         return f'\033]8;;{url}\033\\{Style.Link}{description}{UNDERLINE[1]}\033]8;;\033\\{FGRESET}'
 
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
-    tokenList = re.finditer(r"((\*\*|\*|_|`+)|[^_*`]+)", line)
+    tokenList = re.finditer(r"((\*\*|\*|_{1,2}|`+)|[^_*`]+)", line)
     result = ""
 
     for match in tokenList:
@@ -372,7 +375,7 @@ def line_format(line):
         elif state.inline_code:
             result += token
 
-        elif token == "**" and (state.in_bold or not_text(prev_token)):
+        elif (token == '__' or token == "**") and (state.in_bold or not_text(prev_token)):
             state.in_bold = not state.in_bold
             result += BOLD[0] if state.in_bold else BOLD[1]
  
@@ -791,6 +794,9 @@ def emit(inp):
             state.current_line += chunk
             
         buffer.append(chunk)
+        # This *might* be dangerous
+        state.reset_inline()
+
         if flush:
             chunk = "\n".join(buffer)
             buffer = []
