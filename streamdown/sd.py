@@ -743,7 +743,7 @@ def parse(stream):
         #
         # <hr>
         #
-        hr_match = re.match(r"^[\s]*([-=_]){3,}[\s]*$", line)
+        hr_match = re.match(r"^[\s]*([-\*=_]){3,}[\s]*$", line)
         if hr_match:
             if state.last_line_empty or last_line_empty_cache:
                 # print a horizontal rule using a unicode midline 
