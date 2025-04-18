@@ -1,5 +1,5 @@
 #!/bin/bash
-TIMEOUT=${TIMEOUT:-0.1}
+TIMEOUT=${TIMEOUT:-0.01}
 
 while [[ $# -gt 0 ]]; do
     echo "## File: $1"

@@ -82,10 +82,11 @@ BGRESET = "\033[49m"
 BOLD      = ["\033[1m", "\033[22m"]
 UNDERLINE = ["\033[4m", "\033[24m"]
 ITALIC    = ["\033[3m", "\033[23m"]
+STRIKEOUT = ["\033[9m", "\033[29m"]
+SUPER     = [ 0x2070, 0x00B9, 0x00B2, 0x00B3, 0x2074, 0x2075, 0x2076, 0x2077, 0x2078, 0x2079 ]
 
 ESCAPE = r"\033\[[0-9;]*[mK]"
 ANSIESCAPE = r'\033(?:\[[0-9;?]*[a-zA-Z]|][0-9]*;;.*?\\|\\)'
-#r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
 KEYCODE_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
@@ -133,7 +134,10 @@ class ParseState:
         self.Clipboard = _features.get("Clipboard")
         self.Logging = _features.get("Logging")
         self.Timeout = _features.get("Timeout")
+
         self.WidthArg = None
+        self.WidthFull = None
+        self.WidthWrap = False
 
         # If the entire block is indented this will
         # tell us what that is
@@ -161,21 +165,24 @@ class ParseState:
         self.in_italic = False
         self.in_table = False # (Code.[Header|Body] | False)
         self.in_underline = False
+        self.in_strikeout = False
         self.block_depth = 0
 
         self.exec_sub = None
         self.exec_master = None
         self.exec_slave = None
         self.exec_kb = 0
-        self.exec_israw = False
 
         self.exit = 0
         self.where_from = None
 
     def current(self):
-        state = { 'code': self.in_code, 'bold': self.in_bold, 'italic': self.in_italic, 'underline': self.in_underline }
+        state = { 'inline': self.inline_code, 'code': self.in_code, 'bold': self.in_bold, 'italic': self.in_italic, 'underline': self.in_underline }
         state['none'] = all(item is False for item in state.values())
         return state
+
+    def reset_inline(self):
+        self.inline_code = self.in_bold = self.in_italic = self.in_underline = False
 
     def space_left(self):
         return Style.MarginSpaces + (Style.Blockquote * self.block_depth) if len(self.current_line) == 0 else "" 
@@ -235,17 +242,20 @@ def emit_h(level, text):
     text = line_format(text)
     spaces_to_center = ((state.Width - visible_length(text)) / 2)
     if level == 1:      #
-        return f"\n{Style.MarginSpaces}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
+        return f"\n{state.space_left()}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
     elif level == 2:    ##
-        return f"\n{Style.MarginSpaces}{BOLD[0]}{FG}{Style.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
+        return f"\n{state.space_left()}{BOLD[0]}{FG}{Style.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
     elif level == 3:    ###
-        return f"{Style.MarginSpaces}{FG}{Style.Head}{BOLD[0]}{text}{RESET}"
+        return f"{state.space_left()}{FG}{Style.Head}{BOLD[0]}{text}{RESET}"
     elif level == 4:    ####
-        return f"{Style.MarginSpaces}{FG}{Style.Symbol}{text}{RESET}"
+        return f"{state.space_left()}{FG}{Style.Symbol}{text}{RESET}"
     else:  # level 5 or 6
-        return f"{Style.MarginSpaces}{text}{RESET}"
+        return f"{state.space_left()}{text}{RESET}"
 
 def code_wrap(text_in):
+    if state.WidthWrap and len(text_in) > state.WidthFull:
+        return (0, [text_in])
+
     # get the indentation of the first line
     indent = len(text_in) - len(text_in.lstrip())
     text = text_in.lstrip()
@@ -340,6 +350,7 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
 
 def line_format(line):
     not_text = lambda token: not token or len(token.rstrip()) != len(token)
+    footnotes = lambda match: ''.join([chr(SUPER[int(i)]) for i in match.group(1)])
 
     def process_images(match):
         url = match.group(2)
@@ -355,7 +366,9 @@ def line_format(line):
 
     line = re.sub(r"\!\[([^\]]*)\]\(([^\)]+)\)", process_images, line)
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
-    tokenList = re.finditer(r"((\*\*|\*|_|`)|[^_*`]+)", line)
+    line = re.sub(r"\[\^(\d+)\]:?", footnotes, line)
+
+    tokenList = re.finditer(r"((~~|\*\*_|_\*\*|\*{1,3}|_{1,3}|`+)|[^~_*`]+)", line)
     result = ""
 
     for match in tokenList:
@@ -363,8 +376,13 @@ def line_format(line):
         next_token = line[match.end()] if match.end() < len(line) else ""
         prev_token = line[match.start()-1] if match.start() > 0 else ""
 
-        if token == "`":
-            state.inline_code = not state.inline_code
+        # This trick makes sure that things like `` ` `` render right.
+        if "`" in token and (not state.inline_code or state.inline_code == token):
+            if state.inline_code:
+                state.inline_code = False
+            else:
+                state.inline_code = token
+
             if state.inline_code:
                 result += f'{BG}{Style.Mid}'
             else:
@@ -375,7 +393,17 @@ def line_format(line):
         elif state.inline_code:
             result += token
 
-        elif token == "**" and (state.in_bold or not_text(prev_token)):
+        elif token == '~~' and (state.in_strikeout or not_text(prev_token)):
+            state.in_strikeout = not state.in_strikeout
+            result += STRIKEOUT[0] if state.in_strikeout else STRIKEOUT[1]
+
+        elif token in ['**_','_**','___','***'] and (state.in_bold or not_text(prev_token)):
+            state.in_bold = not state.in_bold
+            result += BOLD[0] if state.in_bold else BOLD[1]
+            state.in_italic = not state.in_italic
+            result += ITALIC[0] if state.in_italic else ITALIC[1]
+
+        elif (token == '__' or token == "**") and (state.in_bold or not_text(prev_token)):
             state.in_bold = not state.in_bold
             result += BOLD[0] if state.in_bold else BOLD[1]
  
@@ -430,8 +458,6 @@ def parse(stream):
 
                 if len(ready_in) == 0:
                     TimeoutIx += 1
-                
-
 
             elif stream.fileno() in ready_in: 
                 byte = os.read(stream.fileno(), 1)
@@ -470,17 +496,17 @@ def parse(stream):
         # Run through the plugins first
         res = latex.Plugin(line, state, Style)
         if res is True:
-          # This means everything was consumed by our plugin and 
-          # we should continue
-          continue
-        elif res is not None:
-          for row in res:
-            yield row
+            # This means everything was consumed by our plugin and 
+            # we should continue
             continue
+        elif res is not None:
+            for row in res:
+                yield row
+                continue
         
         # running this here avoids stray |
-        block_match = re.match(r"^((>\s*)+|<.?think>)", line)
-        if block_match:
+        block_match = re.match(r"^\s*((>\s*)+|<.?think>)", line)
+        if not state.in_code and block_match:
             if block_match.group(1) == '</think>':
                 state.block_depth = 0
                 yield RESET
@@ -534,9 +560,8 @@ def parse(stream):
         #
         # <code><pre>
         #
-        # This needs to be first
         if not state.in_code:
-            code_match = re.match(r"\s*```\s*([^\s]+|$)", line)
+            code_match = re.match(r"\s*```\s*([^\s]+|$)$", line)
             if code_match:
                 state.in_code = Code.Backtick
                 state.code_language = code_match.group(1) or 'Bash'
@@ -572,6 +597,7 @@ def parse(stream):
                         try:
                             ext = get_lexer_by_name(state.code_language).filenames[0].split('.')[-1]
                         except:
+                            logging.warning(f"Can't find canonical extension for {state.code_language}")
                             pass
 
                         open(os.path.join(state.scrape, f"file_{state.scrape_ix}.{ext}"), 'w').write(state.code_buffer)
@@ -657,7 +683,7 @@ def parse(stream):
 
                     code_line = ' ' * indent + this_batch.strip()
 
-                    margin = state.WidthFull - visible_length(code_line)
+                    margin = state.WidthFull - visible_length(code_line) % state.WidthFull
                     yield f"{Style.Codebg}{code_line}{' ' * max(0, margin)}{BGRESET}"  
                 continue
             except Goto:
@@ -719,18 +745,18 @@ def parse(stream):
             if list_type == "number":
                 state.ordered_list_numbers[-1] += 1
 
-            indent = len(state.list_item_stack) * 2
+            indent = (len(state.list_item_stack) - 1) * 2
 
             wrap_width = state.Width - indent - (2 * Style.ListIndent) 
 
             bullet = '•'
             if list_type == "number":
                 list_number = int(max(state.ordered_list_numbers[-1], float(list_item_match.group(2))))
-                bullet = f"{list_number}"
+                bullet = str(list_number)
             
             wrapped_lineList = text_wrap(content, wrap_width, Style.ListIndent,
-                first_line_prefix      = f"{(' ' * (indent - len(bullet)))}{FG}{Style.Symbol}{bullet}{RESET} ",
-                subsequent_line_prefix = " " * (indent - 1)
+                first_line_prefix      = f"{(' ' * (indent ))}{FG}{Style.Symbol}{bullet}{RESET} ",
+                subsequent_line_prefix = " " * (indent)
             )
             for wrapped_line in wrapped_lineList:
                 yield f"{state.space_left()}{wrapped_line}\n"
@@ -747,7 +773,7 @@ def parse(stream):
         #
         # <hr>
         #
-        hr_match = re.match(r"^[\s]*([-=_]){3,}[\s]*$", line)
+        hr_match = re.match(r"^[\s]*([-\*=_]){3,}[\s]*$", line)
         if hr_match:
             if state.last_line_empty or last_line_empty_cache:
                 # print a horizontal rule using a unicode midline 
@@ -768,12 +794,6 @@ def parse(stream):
             wrapped_lines = text_wrap(line)
             for wrapped_line in wrapped_lines:
                 yield f"{state.space_left()}{wrapped_line}\n"
-
-def get_terminal_width():
-    try:
-        return shutil.get_terminal_size().columns
-    except (AttributeError, OSError):
-        return 80
 
 def emit(inp):
     buffer = []
@@ -800,6 +820,9 @@ def emit(inp):
             state.current_line += chunk
             
         buffer.append(chunk)
+        # This *might* be dangerous
+        state.reset_inline()
+
         if flush:
             chunk = "\n".join(buffer)
             buffer = []
@@ -811,17 +834,10 @@ def emit(inp):
         else:
             chunk = buffer.pop(0)
 
-        if state.is_pty:
-            print(chunk, end="", flush=True)
-        else:
-            sys.stdout.write(chunk)
+        print(chunk, end="", flush=True)
 
     if len(buffer):
-        chunk = buffer.pop(0)
-        if state.is_pty:
-            print(chunk, end="", flush=True)
-        else:
-            sys.stdout.write(chunk)
+        print(buffer.pop(0), end="", flush=True)
 
 def apply_multipliers(name, H, S, V):
     m = _style.get(name)
@@ -829,7 +845,20 @@ def apply_multipliers(name, H, S, V):
     return ';'.join([str(int(x * 256)) for x in [r, g, b]]) + "m"
 
 def width_calc():
-    state.WidthFull = state.WidthArg or int(get_terminal_width())
+    if not state.WidthFull or not state.WidthArg:
+        if state.WidthArg:
+            state.WidthFull = state.WidthArg
+        else:
+            width = 80
+
+            try:
+                width = shutil.get_terminal_size().columns
+                state.WidthWrap = True
+            except (AttributeError, OSError):
+                pass
+
+            state.WidthFull = width
+
     state.Width = state.WidthFull - 2 * Style.Margin
     Style.Codepad = [
         f"{RESET}{FG}{Style.Dark}{'▄' * state.WidthFull}{RESET}\n",
@@ -843,9 +872,9 @@ def main():
     parser.add_argument("filenameList", nargs="*", help="Input file to process (also takes stdin)")
     parser.add_argument("-l", "--loglevel", default="INFO", help="Set the logging level")
     parser.add_argument("-c", "--color", default=None, help="Set the hsv base: h,s,v")
-    parser.add_argument("-w", "--width", default="0", help="Set the width")
-    parser.add_argument("-e", "--exec", help="Wrap a program for more 'proper' i/o handling")
-    parser.add_argument("-s", "--scrape", help="Scrape code snippets to a directory")
+    parser.add_argument("-w", "--width", default="0", help="Set the width WIDTH")
+    parser.add_argument("-e", "--exec", help="Wrap a program EXEC for more 'proper' i/o handling")
+    parser.add_argument("-s", "--scrape", help="Scrape code snippets to a directory SCRAPE")
     args = parser.parse_args()
 
     if args.color:
@@ -870,7 +899,6 @@ def main():
     Style.Codebg = f"{BG}{Style.Dark}"
     Style.Link = f"{FG}{Style.Symbol}{UNDERLINE[0]}"
     Style.Blockquote = f"{FG}{Style.Grey}│ "
-
 
     logging.basicConfig(stream=sys.stdout, level=args.loglevel.upper(), format=f'%(message)s')
     state.exec_master, state.exec_slave = pty.openpty()
