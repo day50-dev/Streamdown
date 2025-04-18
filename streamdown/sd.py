@@ -743,7 +743,7 @@ def parse(stream):
             
             wrapped_lineList = text_wrap(content, wrap_width, Style.ListIndent,
                 first_line_prefix      = f"{(' ' * (indent ))}{FG}{Style.Symbol}{bullet}{RESET} ",
-                subsequent_line_prefix = " " * (indent - 1)
+                subsequent_line_prefix = " " * (indent)
             )
             for wrapped_line in wrapped_lineList:
                 yield f"{state.space_left()}{wrapped_line}\n"
