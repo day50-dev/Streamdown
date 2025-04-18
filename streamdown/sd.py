@@ -131,7 +131,10 @@ class ParseState:
         self.Clipboard = _features.get("Clipboard")
         self.Logging = _features.get("Logging")
         self.Timeout = _features.get("Timeout")
+
         self.WidthArg = None
+        self.WidthFull = None
+        self.WidthWrap = False
 
         # If the entire block is indented this will
         # tell us what that is
@@ -244,6 +247,9 @@ def emit_h(level, text):
         return f"{Style.MarginSpaces}{text}{RESET}"
 
 def code_wrap(text_in):
+    if state.WidthWrap:
+        return (0, [text_in])
+
     # get the indentation of the first line
     indent = len(text_in) - len(text_in.lstrip())
     text = text_in.lstrip()
@@ -346,7 +352,7 @@ def line_format(line):
         return f'\033]8;;{url}\033\\{Style.Link}{description}{UNDERLINE[1]}\033]8;;\033\\{FGRESET}'
 
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
-    tokenList = re.finditer(r"((\*\*|\*|_|`)|[^_*`]+)", line)
+    tokenList = re.finditer(r"((\*\*|\*|_|`+)|[^_*`]+)", line)
     result = ""
 
     for match in tokenList:
@@ -354,7 +360,7 @@ def line_format(line):
         next_token = line[match.end()] if match.end() < len(line) else ""
         prev_token = line[match.start()-1] if match.start() > 0 else ""
 
-        if token == "`":
+        if "`" in token:
             state.inline_code = not state.inline_code
             if state.inline_code:
                 result += f'{BG}{Style.Mid}'
@@ -648,7 +654,7 @@ def parse(stream):
 
                     code_line = ' ' * indent + this_batch.strip()
 
-                    margin = state.WidthFull - visible_length(code_line)
+                    margin = state.WidthFull - visible_length(code_line) % state.WidthFull
                     yield f"{Style.Codebg}{code_line}{' ' * max(0, margin)}{BGRESET}"  
                 continue
             except Goto:
@@ -760,12 +766,6 @@ def parse(stream):
             for wrapped_line in wrapped_lines:
                 yield f"{state.space_left()}{wrapped_line}\n"
 
-def get_terminal_width():
-    try:
-        return shutil.get_terminal_size().columns
-    except (AttributeError, OSError):
-        return 80
-
 def emit(inp):
     buffer = []
     flush = False
@@ -820,7 +820,20 @@ def apply_multipliers(name, H, S, V):
     return ';'.join([str(int(x * 256)) for x in [r, g, b]]) + "m"
 
 def width_calc():
-    state.WidthFull = state.WidthArg or int(get_terminal_width())
+    if not state.WidthFull or not state.WidthArg:
+        if state.WidthArg:
+            state.WidthFull = state.WidthArg
+        else:
+            width = 80
+
+            try:
+                width = shutil.get_terminal_size().columns
+                state.WidthWrap = True
+            except (AttributeError, OSError):
+                pass
+
+            state.WidthFull = width
+
     state.Width = state.WidthFull - 2 * Style.Margin
     Style.Codepad = [
         f"{RESET}{FG}{Style.Dark}{'▄' * state.WidthFull}{RESET}\n",
