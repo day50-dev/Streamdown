@@ -527,7 +527,7 @@ def parse(stream):
         #
         # This needs to be first
         if not state.in_code:
-            code_match = re.match(r"\s*```\s*([^\s]+|$)", line)
+            code_match = re.match(r"\s*```\s*([^\s]+|$)$", line)
             if code_match:
                 state.in_code = Code.Backtick
                 state.code_language = code_match.group(1) or 'Bash'
@@ -710,17 +710,17 @@ def parse(stream):
             if list_type == "number":
                 state.ordered_list_numbers[-1] += 1
 
-            indent = len(state.list_item_stack) * 2
+            indent = (len(state.list_item_stack) - 1) * 2
 
             wrap_width = state.Width - indent - (2 * Style.ListIndent) 
 
             bullet = '•'
             if list_type == "number":
                 list_number = int(max(state.ordered_list_numbers[-1], float(list_item_match.group(2))))
-                bullet = f"{list_number}"
+                bullet = str(list_number)
             
             wrapped_lineList = text_wrap(content, wrap_width, Style.ListIndent,
-                first_line_prefix      = f"{(' ' * (indent - len(bullet)))}{FG}{Style.Symbol}{bullet}{RESET} ",
+                first_line_prefix      = f"{(' ' * (indent ))}{FG}{Style.Symbol}{bullet}{RESET} ",
                 subsequent_line_prefix = " " * (indent - 1)
             )
             for wrapped_line in wrapped_lineList:
