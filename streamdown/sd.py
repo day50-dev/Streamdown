@@ -83,7 +83,6 @@ ITALIC    = ["\033[3m", "\033[23m"]
 
 ESCAPE = r"\033\[[0-9;]*[mK]"
 ANSIESCAPE = r'\033(?:\[[0-9;?]*[a-zA-Z]|][0-9]*;;.*?\\|\\)'
-#r"\033(\[[0-9;]*[mK]|][0-9]*;;.*?\\|\\)"
 KEYCODE_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
@@ -168,7 +167,6 @@ class ParseState:
         self.exec_master = None
         self.exec_slave = None
         self.exec_kb = 0
-        self.exec_israw = False
 
         self.exit = 0
         self.where_from = None
@@ -239,15 +237,15 @@ def emit_h(level, text):
     text = line_format(text)
     spaces_to_center = ((state.Width - visible_length(text)) / 2)
     if level == 1:      #
-        return f"\n{Style.MarginSpaces}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
+        return f"\n{state.space_left()}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
     elif level == 2:    ##
-        return f"\n{Style.MarginSpaces}{BOLD[0]}{FG}{Style.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
+        return f"\n{state.space_left()}{BOLD[0]}{FG}{Style.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
     elif level == 3:    ###
-        return f"{Style.MarginSpaces}{FG}{Style.Head}{BOLD[0]}{text}{RESET}"
+        return f"{state.space_left()}{FG}{Style.Head}{BOLD[0]}{text}{RESET}"
     elif level == 4:    ####
-        return f"{Style.MarginSpaces}{FG}{Style.Symbol}{text}{RESET}"
+        return f"{state.space_left()}{FG}{Style.Symbol}{text}{RESET}"
     else:  # level 5 or 6
-        return f"{Style.MarginSpaces}{text}{RESET}"
+        return f"{state.space_left()}{text}{RESET}"
 
 def code_wrap(text_in):
     if state.WidthWrap and len(text_in) > state.WidthFull:
@@ -430,8 +428,6 @@ def parse(stream):
 
                 if len(ready_in) == 0:
                     TimeoutIx += 1
-                
-
 
             elif stream.fileno() in ready_in: 
                 byte = os.read(stream.fileno(), 1)
@@ -470,13 +466,13 @@ def parse(stream):
         # Run through the plugins first
         res = latex.Plugin(line, state, Style)
         if res is True:
-          # This means everything was consumed by our plugin and 
-          # we should continue
-          continue
-        elif res is not None:
-          for row in res:
-            yield row
+            # This means everything was consumed by our plugin and 
+            # we should continue
             continue
+        elif res is not None:
+            for row in res:
+                yield row
+                continue
         
         # running this here avoids stray |
         block_match = re.match(r"^((>\s*)+|<.?think>)", line)
@@ -534,7 +530,6 @@ def parse(stream):
         #
         # <code><pre>
         #
-        # This needs to be first
         if not state.in_code:
             code_match = re.match(r"\s*```\s*([^\s]+|$)$", line)
             if code_match:
@@ -572,6 +567,7 @@ def parse(stream):
                         try:
                             ext = get_lexer_by_name(state.code_language).filenames[0].split('.')[-1]
                         except:
+                            logging.warning(f"Can't find canonical extension for {state.code_language}")
                             pass
 
                         open(os.path.join(state.scrape, f"file_{state.scrape_ix}.{ext}"), 'w').write(state.code_buffer)
@@ -808,17 +804,10 @@ def emit(inp):
         else:
             chunk = buffer.pop(0)
 
-        if state.is_pty:
-            print(chunk, end="", flush=True)
-        else:
-            sys.stdout.write(chunk)
+        print(chunk, end="", flush=True)
 
     if len(buffer):
-        chunk = buffer.pop(0)
-        if state.is_pty:
-            print(chunk, end="", flush=True)
-        else:
-            sys.stdout.write(chunk)
+        print(buffer.pop(0), end="", flush=True)
 
 def apply_multipliers(name, H, S, V):
     m = _style.get(name)
@@ -853,9 +842,9 @@ def main():
     parser.add_argument("filenameList", nargs="*", help="Input file to process (also takes stdin)")
     parser.add_argument("-l", "--loglevel", default="INFO", help="Set the logging level")
     parser.add_argument("-c", "--color", default=None, help="Set the hsv base: h,s,v")
-    parser.add_argument("-w", "--width", default="0", help="Set the width")
-    parser.add_argument("-e", "--exec", help="Wrap a program for more 'proper' i/o handling")
-    parser.add_argument("-s", "--scrape", help="Scrape code snippets to a directory")
+    parser.add_argument("-w", "--width", default="0", help="Set the width WIDTH")
+    parser.add_argument("-e", "--exec", help="Wrap a program EXEC for more 'proper' i/o handling")
+    parser.add_argument("-s", "--scrape", help="Scrape code snippets to a directory SCRAPE")
     args = parser.parse_args()
 
     if args.color:
@@ -880,7 +869,6 @@ def main():
     Style.Codebg = f"{BG}{Style.Dark}"
     Style.Link = f"{FG}{Style.Symbol}{UNDERLINE[0]}"
     Style.Blockquote = f"{FG}{Style.Grey}│ "
-
 
     logging.basicConfig(stream=sys.stdout, level=args.loglevel.upper(), format=f'%(message)s')
     state.exec_master, state.exec_slave = pty.openpty()
