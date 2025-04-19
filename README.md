@@ -13,7 +13,7 @@ It's fully streaming and does not block
 You may have noticed that other, *inferior* renderers will inject line breaks when copying code that wraps around. We're better and now, you can be as well.
 ![copyable](https://github.com/user-attachments/assets/4a3539c5-b5d1-4d6a-8bce-032724d8909d)
 
-### Supports images, why not?
+### Supports imags
 Here's kitty and alacritty. Try to do that in glow...
 ![doggie](https://github.com/user-attachments/assets/9a392929-b6c2-4204-b257-e09305acb7af)
 
