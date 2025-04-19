@@ -2,7 +2,7 @@
 
 [![PyPI version](https://badge.fury.io/py/streamdown.svg)](https://badge.fury.io/py/streamdown)
 
-I needed a streaming Markdown renderer and I couldn't find one. So here we go. From the ground up. It's a bad idea but it has to be done.
+Streamdown is the only streaming markdown renderer for the terminal that _is not_ broken. 
 
 [sd demo](https://github.com/user-attachments/assets/48dba6fa-2282-4be9-8087-a2ad8e7c7d12)
 
@@ -10,7 +10,8 @@ This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [r
 
 ## Some Features
 
-### Provides clean copyable code for long code blocks and short terminals. 
+### Provides clean copyable code for long code blocks and short terminals.
+You may have noticed that other, *inferior* renderers will inject line breaks when copying code that wraps around. We're better and now, you can be as well.
 ![copyable](https://github.com/user-attachments/assets/4a3539c5-b5d1-4d6a-8bce-032724d8909d)
 
 ### Supports images, why not?
