@@ -19,11 +19,12 @@ Here's kitty and alacritty. Try to do that in glow...
 ### Does OSC 8 links for modern terminals (and optionally OSC 52 for clipboard)
 [links.webm](https://github.com/user-attachments/assets/a5f71791-7c58-4183-ad3b-309f470c08a3)
 
-### Doesn't consume characters like _ and * as style when they are in `blocks like this` because `_they_can_be_varaiables_`
-![dunder](https://github.com/user-attachments/assets/d41d7fec-6dec-4387-b53d-f2098f269a5e)
-
 ### Tables are carefully supported
 ![table](https://github.com/user-attachments/assets/dbe3d13e-6bac-4f45-bf30-f1857ed98898)
+
+As well as everything else...
+
+![dunder](https://github.com/user-attachments/assets/d41d7fec-6dec-4387-b53d-f2098f269a5e)
 
 ### Colors are highly (and quickly) configurable for people who care a lot, or just a little.
 ![configurable](https://github.com/user-attachments/assets/04b36749-4bb8-4c14-9758-84eb6e19b704)
