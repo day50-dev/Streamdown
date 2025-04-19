@@ -354,9 +354,15 @@ def line_format(line):
 
     def process_images(match):
         url = match.group(2)
-        image = from_url(url)
-        image.height = 20
-        print(f"{image:|.-1#}")
+        try:
+            if re.match(r"https://", url.lower()):
+                image = from_url(url)
+            else: 
+                image = from_file(url)
+            image.height = 20
+            print(f"{image:|.-1#}")
+        except:
+            return match.group(2)
 
     # Apply OSC 8 hyperlink formatting after other formatting
     def process_links(match):
