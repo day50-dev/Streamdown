@@ -4,7 +4,8 @@
 
 Streamdown is the streaming markdown renderer for the terminal that rocks.
 This will work with [simonw's llm](https://github.com/simonw/llm). You even get full readline and keyboard navigation support.
-Top Feature: It's fully streaming and does not block
+
+It's fully streaming and does not block
 
 ![Streamdown is Amaazing](https://github.com/user-attachments/assets/48fc266d-3e7e-4564-aa3b-0cd73e72a12a)
 
