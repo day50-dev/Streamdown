@@ -2,29 +2,29 @@
 
 [![PyPI version](https://badge.fury.io/py/streamdown.svg)](https://badge.fury.io/py/streamdown)
 
-I needed a streaming Markdown renderer and I couldn't find one. So here we go. From the ground up. It's a bad idea but it has to be done.
+Streamdown is the streaming markdown renderer for the terminal that rocks.
+This will work with [simonw's llm](https://github.com/simonw/llm). You even get full readline and keyboard navigation support.
 
-[sd demo](https://github.com/user-attachments/assets/48dba6fa-2282-4be9-8087-a2ad8e7c7d12)
+It's fully streaming and does not block
+![Streamdown is Amazing](https://github.com/user-attachments/assets/268cb340-78cc-4df0-a773-c5ac95eceeeb)
 
-This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [richify.py](https://github.com/gianlucatruda/richify) which rerenders the whole buffer and blocks with an elipses or [glow](https://github.com/charmbracelet/glow) which buffers everything, this streams and does exactly what it says.
+### Provides clean copyable code for long code lines
+You may have noticed that other, *inferior* renderers will inject line breaks when copying code that wraps around. We're better and now, you can be as well.
+![Handle That Mandle](https://github.com/user-attachments/assets/a27aa70c-f691-4796-84f0-c2eb18c7de23)
 
-## Some Features
-
-### Provides clean copyable code for long code blocks and short terminals. 
-![copyable](https://github.com/user-attachments/assets/4a3539c5-b5d1-4d6a-8bce-032724d8909d)
-
-### Supports images, why not?
+### Supports images
 Here's kitty and alacritty. Try to do that in glow...
 ![doggie](https://github.com/user-attachments/assets/9a392929-b6c2-4204-b257-e09305acb7af)
 
 ### Does OSC 8 links for modern terminals (and optionally OSC 52 for clipboard)
 [links.webm](https://github.com/user-attachments/assets/a5f71791-7c58-4183-ad3b-309f470c08a3)
 
-### Doesn't consume characters like _ and * as style when they are in `blocks like this` because `_they_can_be_varaiables_`
-![dunder](https://github.com/user-attachments/assets/d41d7fec-6dec-4387-b53d-f2098f269a5e)
-
 ### Tables are carefully supported
 ![table](https://github.com/user-attachments/assets/dbe3d13e-6bac-4f45-bf30-f1857ed98898)
+
+As well as everything else...
+
+![dunder](https://github.com/user-attachments/assets/d41d7fec-6dec-4387-b53d-f2098f269a5e)
 
 ### Colors are highly (and quickly) configurable for people who care a lot, or just a little.
 ![configurable](https://github.com/user-attachments/assets/04b36749-4bb8-4c14-9758-84eb6e19b704)
@@ -56,7 +56,7 @@ Defines the base Hue (H), Saturation (S), and Value (V) from which all other pal
 *   `Width` (integer, default: `0`): Along with the `Margin`, `Width` specifies the base width of the content, which when set to 0, means use the terminal width. See [#6](https://github.com/kristopolous/Streamdown/issues/6) for more details
 *   `PrettyPad` (boolean, default: `false`): Uses a unicode vertical pad trick to add a half height background to code blocks. This makes copy/paste have artifacts. See [#2](https://github.com/kristopolous/Streamdown/issues/2). I like it on. But that's just me
 *   `ListIndent` (integer, default: `2`): This is the recursive indent for the list styles.
-*   `Syntax` (string, default `monokai`): This the syntax [highlighting theme which come via pygments](https://pygments.org/styles/).
+*   `Syntax` (string, default `monokai`): This is the syntax [highlighting theme which come via pygments](https://pygments.org/styles/).
 
 Example:
 ```toml
@@ -115,10 +115,8 @@ Do this
 
     $ ./streamdown/sd.py tests/*md
 
-Certainly room for improvement and I'll probably continue to make them
-
 ## Install from source
-At least one of these should work, hopefully
+After the git clone least one of these should work, hopefully. it's using the modern uv pip tool.
 
     $ pipx install -e .
     $ pip install -e .
