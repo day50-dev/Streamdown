@@ -2,7 +2,7 @@
 
 [![PyPI version](https://badge.fury.io/py/streamdown.svg)](https://badge.fury.io/py/streamdown)
 
-Streamdown is the only streaming markdown renderer for the terminal that _is not_ broken. 
+Streamdown is the only streaming markdown renderer for the terminal that rocks.
 
 [sd demo](https://github.com/user-attachments/assets/48dba6fa-2282-4be9-8087-a2ad8e7c7d12)
 
