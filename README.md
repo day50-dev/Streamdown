@@ -13,6 +13,10 @@ This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [r
 ### Provides clean copyable code for long code blocks and short terminals. 
 ![copyable](https://github.com/user-attachments/assets/4a3539c5-b5d1-4d6a-8bce-032724d8909d)
 
+### Supports images, why not?
+Here's kitty and alacritty. Try to do that in glow...
+![doggie](https://github.com/user-attachments/assets/9a392929-b6c2-4204-b257-e09305acb7af)
+
 ### Does OSC 8 links for modern terminals.
 [links.webm](https://github.com/user-attachments/assets/a5f71791-7c58-4183-ad3b-309f470c08a3)
 
