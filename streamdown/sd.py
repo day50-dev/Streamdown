@@ -26,6 +26,7 @@ import importlib
 from io import BytesIO
 from term_image.image import from_file, from_url
 import pygments.util
+from functools import reduce
 from argparse import ArgumentParser
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
@@ -91,8 +92,8 @@ KEYCODE_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
 visible_length = lambda x: len(visible(x))
-
 extract_ansi_codes = lambda text: re.findall(ESCAPE, text)
+remove_ansi = lambda line, codeList: reduce(lambda line, code: line.replace(code, ''), codeList, line)
 
 def debug_write(text):
     if state.Logging:
@@ -270,6 +271,7 @@ def code_wrap(text_in):
         res.append(text[i : i + mywidth])
 
     return (indent, res)
+
 
 # This marvelously obscure code "compacts" long lines of repetitive ANSI format strings by
 # removing duplicates. Here's how it works
@@ -665,6 +667,10 @@ def parse(stream):
                     # then naively search back until our visible_lengths() match. This is not fast and there's certainly smarter
                     # ways of doing it but this thing is way trickery than you think
                     highlighted_code = highlight(state.code_buffer + tline, lexer, formatter)
+
+                    # Sometimes the highlighter will do things like a full reset or a background reset.
+                    # This is not what we want
+                    highlighted_code = re.sub(r"\033\[39(;00|)m", '', highlighted_code)
     
                     # Since we are streaming we ignore the resets and newlines at the end
                     if highlighted_code.endswith(FGRESET + "\n"):
