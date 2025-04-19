@@ -6,7 +6,7 @@ Streamdown is the streaming markdown renderer for the terminal that rocks.
 This will work with [simonw's llm](https://github.com/simonw/llm). You even get full readline and keyboard navigation support.
 
 It's fully streaming and does not block
-[Streamdown is Amazing!](https://github.com/user-attachments/assets/9f82e711-4913-4967-8445-f9c8aba98f04)
+![Streamdown is Amazing](https://github.com/user-attachments/assets/1df5ca51-d8dc-434b-aadc-0a9c666d6256)
 
 ### Provides clean copyable code for long code lines
 You may have noticed that other, *inferior* renderers will inject line breaks when copying code that wraps around. We're better and now, you can be as well.
