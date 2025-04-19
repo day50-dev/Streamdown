@@ -3,12 +3,10 @@
 [![PyPI version](https://badge.fury.io/py/streamdown.svg)](https://badge.fury.io/py/streamdown)
 
 Streamdown is the streaming markdown renderer for the terminal that rocks.
-
-[sd demo](https://github.com/user-attachments/assets/48dba6fa-2282-4be9-8087-a2ad8e7c7d12)
-
-This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [richify.py](https://github.com/gianlucatruda/richify) which rerenders the whole buffer and blocks with an elipses or [glow](https://github.com/charmbracelet/glow) which buffers everything, this streams and does exactly what it says. You even get full readline and keyboard navigation support.
-
+This will work with [simonw's llm](https://github.com/simonw/llm). You even get full readline and keyboard navigation support.
 Top Feature: It's fully streaming and does not block
+
+![Streamdown is Amaazing](https://github.com/user-attachments/assets/48fc266d-3e7e-4564-aa3b-0cd73e72a12a)
 
 ### Provides clean copyable code for long code lines
 You may have noticed that other, *inferior* renderers will inject line breaks when copying code that wraps around. We're better and now, you can be as well.
