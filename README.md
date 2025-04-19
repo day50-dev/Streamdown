@@ -14,7 +14,7 @@ You may have noticed that other, *inferior* renderers will inject line breaks wh
 
 ### Supports images
 Here's kitty and alacritty. Try to do that in glow...
-![doggie](https://github.com/user-attachments/assets/9a392929-b6c2-4204-b257-e09305acb7af)
+![doggie](https://github.com/user-attachments/assets/81c43983-68cd-40c1-b1d5-aa3a52004504)
 
 ### Does OSC 8 links for modern terminals (and optionally OSC 52 for clipboard)
 [links.webm](https://github.com/user-attachments/assets/a5f71791-7c58-4183-ad3b-309f470c08a3)
