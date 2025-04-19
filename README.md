@@ -10,8 +10,7 @@ It's fully streaming and does not block
 
 ### Provides clean copyable code for long code lines
 You may have noticed that other, *inferior* renderers will inject line breaks when copying code that wraps around. We're better and now, you can be as well.
-![Handle That Mandle](https://github.com/user-attachments/assets/818adadf-2525-4cc4-b81c-d6d81486013e)
-
+![Handle That Mandle](https://github.com/user-attachments/assets/a27aa70c-f691-4796-84f0-c2eb18c7de23)
 
 ### Supports images
 Here's kitty and alacritty. Try to do that in glow...
