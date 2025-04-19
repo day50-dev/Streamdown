@@ -6,7 +6,7 @@ Streamdown is the only streaming markdown renderer for the terminal that rocks.
 
 [sd demo](https://github.com/user-attachments/assets/48dba6fa-2282-4be9-8087-a2ad8e7c7d12)
 
-This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [richify.py](https://github.com/gianlucatruda/richify) which rerenders the whole buffer and blocks with an elipses or [glow](https://github.com/charmbracelet/glow) which buffers everything, this streams and does exactly what it says.
+This will work with [simonw's llm](https://github.com/simonw/llm) unlike with [richify.py](https://github.com/gianlucatruda/richify) which rerenders the whole buffer and blocks with an elipses or [glow](https://github.com/charmbracelet/glow) which buffers everything, this streams and does exactly what it says. You even get full readline and keyboard navigation support.
 
 ## Some Features
 
