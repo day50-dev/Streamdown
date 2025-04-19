@@ -20,7 +20,7 @@ Here's kitty and alacritty. Try to do that in glow...
 [links.webm](https://github.com/user-attachments/assets/a5f71791-7c58-4183-ad3b-309f470c08a3)
 
 ### Tables are carefully supported
-![table](https://github.com/user-attachments/assets/dbe3d13e-6bac-4f45-bf30-f1857ed98898)
+![table](https://github.com/user-attachments/assets/727d9919-fd5a-4c43-a1a7-68456896b53e)
 
 As well as everything else...
 
