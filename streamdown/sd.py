@@ -571,6 +571,7 @@ def parse(stream):
             code_match = re.match(r"^\s*```\s*([^\s]+|$)\s*$", line)
             if code_match:
                 state.in_code = Code.Backtick
+                state.code_indent = len(line) - len(line.lstrip())
                 state.code_language = code_match.group(1) or 'Bash'
 
             elif state.CodeSpaces and last_line_empty_cache and not state.in_list:
@@ -595,6 +596,7 @@ def parse(stream):
 
         if state.in_code:
             try:
+                # This is turning it OFF
                 if not state.code_first_line and (
                         (                     state.in_code == Code.Backtick and     line.strip() == "```"  ) or
                         (state.CodeSpaces and state.in_code == Code.Spaces   and not line.startswith('    '))
@@ -624,9 +626,7 @@ def parse(stream):
                     state.emit_flush = True
                     yield RESET
 
-
                     if code_type == Code.Backtick:
-                        state.code_indent = len(line) - len(line.lstrip())
                         continue
                     else:
                         # otherwise we don't want to consume
