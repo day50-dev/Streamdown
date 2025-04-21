@@ -22,7 +22,6 @@ import subprocess
 import traceback
 import colorsys
 import base64
-import importlib
 from io import BytesIO
 from term_image.image import from_file, from_url
 import pygments.util
