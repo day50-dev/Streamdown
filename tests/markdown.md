@@ -1,7 +1,7 @@
 Chatting with openrouter/meta-llama/llama-4-scout:free
 Type 'exit' or 'quit' to exit
 Type '!multi' to enter multiple lines, then '!end' to finish
-> **Markdown Syntax Overview**
+**Markdown Syntax Overview**
 ==========================
 
 Markdown is a lightweight markup language that allows you to create formatted text using plain text syntax. Here's a comprehensive overview of Markdown syntax:
