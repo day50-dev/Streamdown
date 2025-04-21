@@ -157,6 +157,7 @@ class ParseState:
 
         self.ordered_list_numbers = []
         self.list_item_stack = []  # stack of (indent, type)
+        self.list_indent_text = 0
 
         self.in_list = False
         self.in_code = False # (Code.[Backtick|Spaces] | False)
@@ -549,8 +550,9 @@ def parse(stream):
         # \n buffer
         if not state.in_list and len(state.ordered_list_numbers) > 0:
             state.ordered_list_numbers[0] = 0
-        else:
+        elif not line.startswith(' ' * state.list_indent_text):
             state.in_list = False
+            state.list_indent_text = 0
 
         if state.first_indent is None:
             state.first_indent = len(line) - len(line.lstrip())
@@ -735,11 +737,26 @@ def parse(stream):
         #
         # <li> <ul> <ol>
         # llama-4 maverick uses + and +- for lists ... for some reason
-        list_item_match = re.match(r"^(\s*)([\+*\-]|\+\-+|\d+\.)\s+(.*)", line)
+        content = line
+        bullet = ' '
+        list_item_match = re.match(r"^(\s*)([\+*\-] |\+\-+|\d+\.\s+)(.*)", line)
         if list_item_match:
+            # llama 4 maverick does this weird output like this
+            # 1. blah blah blah
+            #    this should be a list
+            #    
+            #    ```bash
+            #    blah blah
+            #    ```
+            #
+            #    still in the list
+            # We do this here so that the first line which is the bullet
+            # line gets the proper hang
+            state.list_indent_text = len(list_item_match.group(2)) - 1
             state.in_list = True
 
             indent = len(list_item_match.group(1))
+
             list_type = "number" if list_item_match.group(2)[0].isdigit() else "bullet"
             content = list_item_match.group(3)
 
@@ -759,21 +776,25 @@ def parse(stream):
             if list_type == "number":
                 state.ordered_list_numbers[-1] += 1
 
-            indent = (len(state.list_item_stack) - 1) * 2
-
-            wrap_width = state.Width - indent - (2 * Style.ListIndent) 
-
             bullet = '•'
             if list_type == "number":
                 list_number = int(max(state.ordered_list_numbers[-1], float(list_item_match.group(2))))
                 bullet = str(list_number)
+
+        # This is intentional ... we can get here in llama 4 using
+        # a weird thing
+        if state.in_list:
+            indent = (len(state.list_item_stack) - 1) * 2
+            wrap_width = state.current_width() - indent - (2 * Style.ListIndent) 
             
             wrapped_lineList = text_wrap(content, wrap_width, Style.ListIndent,
-                first_line_prefix      = f"{(' ' * (indent ))}{FG}{Style.Symbol}{bullet}{RESET} ",
+                first_line_prefix = f"{(' ' * (indent ))}{FG}{Style.Symbol}{bullet}{RESET} ",
                 subsequent_line_prefix = " " * (indent)
             )
             for wrapped_line in wrapped_lineList:
                 yield f"{state.space_left()}{wrapped_line}\n"
+
+
             continue
         #
         # <h1> ... <h6>
@@ -803,7 +824,7 @@ def parse(stream):
         if len(line) == 0: yield ""
         if len(line) < state.Width:
             # we want to prevent word wrap
-            yield f"{state.space_left()}{line_format(line)}"
+            yield f"{state.space_left()}{line_format(line.lstrip())}"
         else:
             wrapped_lines = text_wrap(line)
             for wrapped_line in wrapped_lines:
