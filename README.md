@@ -36,7 +36,7 @@ For instance, here is the [latex plugin](https://github.com/kristopolous/Streamd
 ![calc](https://github.com/user-attachments/assets/0b0027ca-8ef0-4b4a-b4ae-e36ff623a683)
 
 
-## Configuration
+## TOML Configuration 
 
 Streamdown uses a TOML configuration file located at `~/.config/streamdown/config.toml` (following the XDG Base Directory Specification). If this file does not exist upon first run, it will be created with default values. 
 
@@ -86,7 +86,7 @@ Width = 120
 Timeout = 1.0
 ```
 
-## Invocation
+## Command Line
 The most exciting feature here is `--exec` with it you can do full readline support like this:
 
      $ sd --exec "llm chat"
