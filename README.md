@@ -6,9 +6,9 @@
 
 The streaming markdown renderer for the terminal that rocks!
 Streamdown works with [simonw's llm](https://github.com/simonw/llm) along with any other streaming markdown. You even get full readline and keyboard navigation support.
-
-    $ pip install streamdown
-
+```bash
+$ pip install streamdown
+```
 ![Streamdown is Amazing](https://github.com/user-attachments/assets/268cb340-78cc-4df0-a773-c5ac95eceeeb)
 
 ### Provides clean copyable code for long code lines
