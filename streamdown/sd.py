@@ -43,6 +43,7 @@ CodeSpaces = true
 Clipboard  = true
 Logging    = false
 Timeout    = 0.5
+Savebrace  = true
 
 [style]
 Margin      = 2 
@@ -102,6 +103,13 @@ def debug_write(text):
             state.Logging = tempfile.NamedTemporaryFile(dir=tmp_dir, prefix="dbg", delete=False, mode="wb")
         state.Logging.write(text)
 
+def savebrace():
+    if state.Savebrace and state.code_buffer_raw:
+        path = os.path.join(tempfile.gettempdir(), "sd", 'savebrace')
+        with open(path, "a") as f:
+            f.write(state.code_buffer_raw)
+        
+
 class Goto(Exception):
     pass
 
@@ -134,6 +142,7 @@ class ParseState:
         self.Clipboard = _features.get("Clipboard")
         self.Logging = _features.get("Logging")
         self.Timeout = _features.get("Timeout")
+        self.Savebrace = _features.get("Savebrace")
 
         self.WidthArg = None
         self.WidthFull = None
@@ -149,6 +158,7 @@ class ParseState:
         # streaming code blocks while preserving
         # multiline parsing.
         self.code_buffer = ""
+        self.code_buffer_raw = ""
         self.code_gen = 0
         self.code_language = None
         self.code_first_line = False
@@ -586,7 +596,8 @@ def parse(stream):
                     state.code_language = 'Bash'
 
             if state.in_code:
-                state.code_buffer = ""
+                savebrace()
+                state.code_buffer = state.code_buffer_raw = ""
                 state.code_gen = 0
                 state.code_first_line = True
                 state.bg = f"{BG}{Style.Dark}"
@@ -614,7 +625,7 @@ def parse(stream):
                             logging.warning(f"Can't find canonical extension for {state.code_language}")
                             pass
 
-                        open(os.path.join(state.scrape, f"file_{state.scrape_ix}.{ext}"), 'w').write(state.code_buffer)
+                        open(os.path.join(state.scrape, f"file_{state.scrape_ix}.{ext}"), 'w').write(state.code_buffer_raw)
                         state.scrape_ix += 1
 
                     state.code_language = None
@@ -655,6 +666,7 @@ def parse(stream):
 
                 # By now we have the properly stripped code line
                 # in the line variable. Add it to the buffer.
+                state.code_buffer_raw += line
                 state.code_line += line
                 if state.code_line.endswith('\n'):
                     line = state.code_line
@@ -974,8 +986,8 @@ def main():
         logging.warning(f"Exception thrown: {type(ex)} {ex}")
         traceback.print_exc()
 
-    if state.Clipboard and state.code_buffer:
-        code = state.code_buffer
+    if state.Clipboard and state.code_buffer_raw:
+        code = state.code_buffer_raw
         # code needs to be a base64 encoded string before emitting
         code_bytes = code.encode('utf-8')
         base64_bytes = base64.b64encode(code_bytes)
