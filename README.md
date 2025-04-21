@@ -1,7 +1,8 @@
-# Streamdown
-
-[![PyPI version](https://badge.fury.io/py/streamdown.svg)](https://badge.fury.io/py/streamdown)
-
+<p align="center">
+<img src=https://github.com/user-attachments/assets/e0cce047-b0f4-4284-b9cd-94a9c0176a54 />
+<br/>
+<a href=https://pypi.org/project/streamdown><img src=https://badge.fury.io/py/streamdown.svg/></a>
+</p>
 Streamdown is the streaming markdown renderer for the terminal that rocks.
 This will work with [simonw's llm](https://github.com/simonw/llm). You even get full readline and keyboard navigation support.
 
