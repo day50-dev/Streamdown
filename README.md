@@ -1,5 +1,5 @@
 <p align="center">
-<img src=https://github.com/user-attachments/assets/e0cce047-b0f4-4284-b9cd-94a9c0176a54 />
+<img src=https://github.com/user-attachments/assets/1369cb72-ec42-412f-8774-b4ee17470181 />
 <br/>
 <a href=https://pypi.org/project/streamdown><img src=https://badge.fury.io/py/streamdown.svg/></a>
 </p>
