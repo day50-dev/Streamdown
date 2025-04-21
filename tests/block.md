@@ -4,10 +4,14 @@ So here is some text
 > territory with these. Blockquote is one
 > > of the few things that can be embedded
 > > in markdown. Stylistically they are 
-> > # This should be respected
 > > different than lists, but
-> not by much.
->>> as should this
+>> not by much
+> > # This should be respected
+> | Header 1 | Header 2 | Header 3 |
+> | -------- | -------- | -------- |
+> | Cell 1   | Cell 2   | Cell 3   |
+> | Cell 4   | Cell 5   | Cell 6   |
+>>> This should be 3
 >> > and this 
 > >> and this as equivalent
 

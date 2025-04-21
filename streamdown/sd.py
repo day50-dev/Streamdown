@@ -184,6 +184,9 @@ class ParseState:
     def reset_inline(self):
         self.inline_code = self.in_bold = self.in_italic = self.in_underline = False
 
+    def current_width(self):
+        return self.Width - (len(visible(self.space_left())) + Style.Margin)
+
     def space_left(self):
         return Style.MarginSpaces + (Style.Blockquote * self.block_depth) if len(self.current_line) == 0 else "" 
 
@@ -196,7 +199,7 @@ def format_table(rowList):
 
     # Calculate max width per column (integer division)
     # Subtract num_cols + 1 for the vertical borders '│'
-    available_width = state.Width - (num_cols + 1)
+    available_width = state.current_width() - (num_cols + 1)
     col_width = max(1, available_width // num_cols)
     bg_color = Style.Mid if state.in_table == Style.Head else Style.Dark
     state.bg = f"{BG}{bg_color}"
@@ -234,17 +237,17 @@ def format_table(rowList):
         # Correct indentation: This should be outside the c_idx loop
         joined_line = f"{BG}{bg_color}{extra}{FG}{Style.Symbol}│{RESET}".join(line_segments)
         # Correct indentation and add missing characters
-        yield f"{Style.MarginSpaces}{joined_line}{RESET}"
+        yield f"{state.space_left()}{FGRESET}{joined_line}{RESET}"
 
     state.bg = BGRESET
 
 def emit_h(level, text):
     text = line_format(text)
-    spaces_to_center = ((state.Width - visible_length(text)) / 2)
+    spaces_to_center = (state.current_width() -  visible_length(text)) / 2
     if level == 1:      #
-        return f"\n{state.space_left()}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}\n"
+        return f"{state.space_left()}\n{state.space_left()}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{BOLD[1]}\n{state.space_left()}"
     elif level == 2:    ##
-        return f"\n{state.space_left()}{BOLD[0]}{FG}{Style.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n\n"
+        return f"{state.space_left()}\n{state.space_left()}{BOLD[0]}{FG}{Style.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n{state.space_left()}"
     elif level == 3:    ###
         return f"{state.space_left()}{FG}{Style.Head}{BOLD[0]}{text}{RESET}"
     elif level == 4:    ####
