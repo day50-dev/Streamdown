@@ -12,17 +12,17 @@ $ pip install streamdown
 ![Streamdown is Amazing](https://github.com/user-attachments/assets/268cb340-78cc-4df0-a773-c5ac95eceeeb)
 
 ### Provides clean copyable code for long code lines
-You may have noticed that other, *inferior* renderers will inject line breaks when copying code that wraps around. We're better and now, you can be as well.
+You may have noticed *inferior* renderers inject line breaks when copying code that wraps around. We're better and now you are too!
 ![Handle That Mandle](https://github.com/user-attachments/assets/a27aa70c-f691-4796-84f0-c2eb18c7de23)
 
 ### Supports images
 Here's kitty and alacritty. Try to do that in glow...
 ![doggie](https://github.com/user-attachments/assets/81c43983-68cd-40c1-b1d5-aa3a52004504)
 
-### Does OSC 8 links for modern terminals (and optionally OSC 52 for clipboard)
+### Supports hyperlinks (OSC 8) and clipboard (OSC 52)
 [links.webm](https://github.com/user-attachments/assets/a5f71791-7c58-4183-ad3b-309f470c08a3)
 
-### Tables are carefully supported
+### Also, tables
 ![table](https://github.com/user-attachments/assets/dbe3d13e-6bac-4f45-bf30-f1857ed98898)
 
 As well as everything else...
@@ -37,7 +37,6 @@ For instance, here is the [latex plugin](https://github.com/kristopolous/Streamd
 
 
 ## Configuration
-
 
 Streamdown uses a TOML configuration file located at `~/.config/streamdown/config.toml` (following the XDG Base Directory Specification). If this file does not exist upon first run, it will be created with default values. 
 
