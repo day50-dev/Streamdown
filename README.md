@@ -22,7 +22,7 @@ Here's kitty and alacritty. Try to do that in glow...
 ### Supports hyperlinks (OSC 8) and clipboard (OSC 52)
 [links.webm](https://github.com/user-attachments/assets/a5f71791-7c58-4183-ad3b-309f470c08a3)
 
-### Also, tables
+### Supports tables
 ![table](https://github.com/user-attachments/assets/dbe3d13e-6bac-4f45-bf30-f1857ed98898)
 
 As well as everything else...
