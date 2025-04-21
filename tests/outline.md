@@ -18,7 +18,9 @@ Here's a breakdown of Rust's standout characteristics:
     *   **`Send` and `Sync` Traits:** These marker traits ensure that only types that are safe to send between threads (`Send`) or share across threads (`Sync`) can be used in concurrent contexts.
 
 *   **Performance:**
+    This is how llama-4 maverick would do it.
     *   **Zero-Cost Abstractions:** Many of Rust's high-level features (like generics, iterators, and closures) compile down to code as efficient as hand-written low-level code.  This means you can write expressive code without performance penalties.
+        This is how llama-4 maverick would do it.
     *   **No Runtime Overhead:**  Because Rust doesn't use a garbage collector, there are no pauses or unpredictability associated with garbage collection cycles.
     *   **Fine-Grained Control:** Rust still allows low-level control when needed (comparable to C/C++), giving developers the option to optimize critical sections of code.
 

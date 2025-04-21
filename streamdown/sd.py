@@ -43,6 +43,7 @@ CodeSpaces = true
 Clipboard  = true
 Logging    = false
 Timeout    = 0.5
+Savebrace  = true
 
 [style]
 Margin      = 2 
@@ -102,6 +103,13 @@ def debug_write(text):
             state.Logging = tempfile.NamedTemporaryFile(dir=tmp_dir, prefix="dbg", delete=False, mode="wb")
         state.Logging.write(text)
 
+def savebrace():
+    if state.Savebrace and state.code_buffer_raw:
+        path = os.path.join(tempfile.gettempdir(), "sd", 'savebrace')
+        with open(path, "a") as f:
+            f.write(state.code_buffer_raw)
+        
+
 class Goto(Exception):
     pass
 
@@ -134,6 +142,7 @@ class ParseState:
         self.Clipboard = _features.get("Clipboard")
         self.Logging = _features.get("Logging")
         self.Timeout = _features.get("Timeout")
+        self.Savebrace = _features.get("Savebrace")
 
         self.WidthArg = None
         self.WidthFull = None
@@ -149,6 +158,7 @@ class ParseState:
         # streaming code blocks while preserving
         # multiline parsing.
         self.code_buffer = ""
+        self.code_buffer_raw = ""
         self.code_gen = 0
         self.code_language = None
         self.code_first_line = False
@@ -157,6 +167,7 @@ class ParseState:
 
         self.ordered_list_numbers = []
         self.list_item_stack = []  # stack of (indent, type)
+        self.list_indent_text = 0
 
         self.in_list = False
         self.in_code = False # (Code.[Backtick|Spaces] | False)
@@ -549,8 +560,9 @@ def parse(stream):
         # \n buffer
         if not state.in_list and len(state.ordered_list_numbers) > 0:
             state.ordered_list_numbers[0] = 0
-        else:
+        elif not line.startswith(' ' * state.list_indent_text):
             state.in_list = False
+            state.list_indent_text = 0
 
         if state.first_indent is None:
             state.first_indent = len(line) - len(line.lstrip())
@@ -584,7 +596,8 @@ def parse(stream):
                     state.code_language = 'Bash'
 
             if state.in_code:
-                state.code_buffer = ""
+                savebrace()
+                state.code_buffer = state.code_buffer_raw = ""
                 state.code_gen = 0
                 state.code_first_line = True
                 state.bg = f"{BG}{Style.Dark}"
@@ -612,7 +625,7 @@ def parse(stream):
                             logging.warning(f"Can't find canonical extension for {state.code_language}")
                             pass
 
-                        open(os.path.join(state.scrape, f"file_{state.scrape_ix}.{ext}"), 'w').write(state.code_buffer)
+                        open(os.path.join(state.scrape, f"file_{state.scrape_ix}.{ext}"), 'w').write(state.code_buffer_raw)
                         state.scrape_ix += 1
 
                     state.code_language = None
@@ -653,6 +666,7 @@ def parse(stream):
 
                 # By now we have the properly stripped code line
                 # in the line variable. Add it to the buffer.
+                state.code_buffer_raw += line
                 state.code_line += line
                 if state.code_line.endswith('\n'):
                     line = state.code_line
@@ -735,11 +749,26 @@ def parse(stream):
         #
         # <li> <ul> <ol>
         # llama-4 maverick uses + and +- for lists ... for some reason
-        list_item_match = re.match(r"^(\s*)([\+*\-]|\+\-+|\d+\.)\s+(.*)", line)
+        content = line
+        bullet = ' '
+        list_item_match = re.match(r"^(\s*)([\+*\-] |\+\-+|\d+\.\s+)(.*)", line)
         if list_item_match:
+            # llama 4 maverick does this weird output like this
+            # 1. blah blah blah
+            #    this should be a list
+            #    
+            #    ```bash
+            #    blah blah
+            #    ```
+            #
+            #    still in the list
+            # We do this here so that the first line which is the bullet
+            # line gets the proper hang
+            state.list_indent_text = len(list_item_match.group(2)) - 1
             state.in_list = True
 
             indent = len(list_item_match.group(1))
+
             list_type = "number" if list_item_match.group(2)[0].isdigit() else "bullet"
             content = list_item_match.group(3)
 
@@ -759,21 +788,25 @@ def parse(stream):
             if list_type == "number":
                 state.ordered_list_numbers[-1] += 1
 
-            indent = (len(state.list_item_stack) - 1) * 2
-
-            wrap_width = state.Width - indent - (2 * Style.ListIndent) 
-
             bullet = '•'
             if list_type == "number":
                 list_number = int(max(state.ordered_list_numbers[-1], float(list_item_match.group(2))))
                 bullet = str(list_number)
+
+        # This is intentional ... we can get here in llama 4 using
+        # a weird thing
+        if state.in_list:
+            indent = (len(state.list_item_stack) - 1) * 2
+            wrap_width = state.current_width() - indent - (2 * Style.ListIndent) 
             
             wrapped_lineList = text_wrap(content, wrap_width, Style.ListIndent,
-                first_line_prefix      = f"{(' ' * (indent ))}{FG}{Style.Symbol}{bullet}{RESET} ",
+                first_line_prefix = f"{(' ' * (indent ))}{FG}{Style.Symbol}{bullet}{RESET} ",
                 subsequent_line_prefix = " " * (indent)
             )
             for wrapped_line in wrapped_lineList:
                 yield f"{state.space_left()}{wrapped_line}\n"
+
+
             continue
         #
         # <h1> ... <h6>
@@ -803,7 +836,7 @@ def parse(stream):
         if len(line) == 0: yield ""
         if len(line) < state.Width:
             # we want to prevent word wrap
-            yield f"{state.space_left()}{line_format(line)}"
+            yield f"{state.space_left()}{line_format(line.lstrip())}"
         else:
             wrapped_lines = text_wrap(line)
             for wrapped_line in wrapped_lines:
@@ -953,8 +986,8 @@ def main():
         logging.warning(f"Exception thrown: {type(ex)} {ex}")
         traceback.print_exc()
 
-    if state.Clipboard and state.code_buffer:
-        code = state.code_buffer
+    if state.Clipboard and state.code_buffer_raw:
+        code = state.code_buffer_raw
         # code needs to be a base64 encoded string before emitting
         code_bytes = code.encode('utf-8')
         base64_bytes = base64.b64encode(code_bytes)
