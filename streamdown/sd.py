@@ -568,7 +568,7 @@ def parse(stream):
         # <code><pre>
         #
         if not state.in_code:
-            code_match = re.match(r"\s*```\s*([^\s]+|$)$", line)
+            code_match = re.match(r"^\s*```\s*([^\s]+|$)\s*$", line)
             if code_match:
                 state.in_code = Code.Backtick
                 state.code_language = code_match.group(1) or 'Bash'
