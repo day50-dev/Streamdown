@@ -189,12 +189,12 @@ class ParseState:
         self.where_from = None
 
     def current(self):
-        state = { 'inline': self.inline_code, 'code': self.in_code, 'bold': self.in_bold, 'italic': self.in_italic, 'underline': self.in_underline }
+        state = { 'inline': self.inline_code, 'code': self.in_code, 'bold': self.in_bold, 'italic': self.in_italic, 'underline': self.in_underline, 'strikeout': self.in_strikeout }
         state['none'] = all(item is False for item in state.values())
         return state
 
     def reset_inline(self):
-        self.inline_code = self.in_bold = self.in_italic = self.in_underline = False
+        self.inline_code = self.in_bold = self.in_italic = self.in_underline = self.in_strikeout = False
 
     def full_width(self, offset = 0):
         return offset + (state.current_width(listwidth = True) if Style.PrettyBroken else self.WidthFull)
