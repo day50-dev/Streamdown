@@ -369,7 +369,7 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
     return lines
 
 def line_format(line):
-    not_text = lambda token: not token or not token.isalnum()
+    not_text = lambda token: not (token or token.isalnum() or token == '\\')
     footnotes = lambda match: ''.join([chr(SUPER[int(i)]) for i in match.group(1)])
 
     def process_images(match):
