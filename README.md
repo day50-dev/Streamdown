@@ -127,6 +127,5 @@ After the git clone least one of these should work, hopefully. it's using the mo
 
 ### Future work
 
-#### CSS
-I'm really considering using `tinycss2` and making an actual stylesheet engine. This is related to another problem - getting a modern HTML renderer in the terminal that is actually navigable. I *think* it's probably a separate project.
-
+#### Glow styles
+I'm going to try to be compatible with other popular markdown styles to help for a smoother transition. Glow compatible json sheets is on my radar
