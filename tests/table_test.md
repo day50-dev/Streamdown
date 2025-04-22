@@ -16,6 +16,3 @@
 | **Wayfire**        | Wayland Compositor/WM | GPLv3       | Text file         | A 3D Wayland compositor acting as a window manager. Lightweight and flexible, with support for plugins and animations.               | Medium         | [https://wayfire.org/](https://wayfire.org/) |
 | **Hyprland**       | Wayland Compositor/WM | MIT         | Text file         | A dynamic tiling Wayland compositor. Highly configurable, focused on performance, and supports animations and complex effects.    | Medium-High    | [https://hyprland.org/](https://hyprland.org/) |
 
-that's it
-
-blah blah
