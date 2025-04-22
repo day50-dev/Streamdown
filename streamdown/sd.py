@@ -261,9 +261,9 @@ def emit_h(level, text):
     text = line_format(text)
     spaces_to_center = (state.current_width() -  visible_length(text)) / 2
     if level == 1:      #
-        return f"{state.space_left()}\n{state.space_left()}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{BOLD[1]}\n{state.space_left()}"
+        return f"{state.space_left()}\n{state.space_left()}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{BOLD[1]}"
     elif level == 2:    ##
-        return f"{state.space_left()}\n{state.space_left()}{BOLD[0]}{FG}{Style.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{RESET}\n{state.space_left()}"
+        return f"{state.space_left()}\n{state.space_left()}{BOLD[0]}{FG}{Style.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}{FGRESET}"
     elif level == 3:    ###
         return f"{state.space_left()}{FG}{Style.Head}{BOLD[0]}{text}{RESET}"
     elif level == 4:    ####
