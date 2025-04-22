@@ -965,6 +965,7 @@ def main():
             os.close(state.exec_slave)  # We don't need slave in parent
             # Set stdin to raw mode so we don't need to press enter
             tty.setcbreak(sys.stdin.fileno())
+            sys.stdout.write("\x1b[?7h")
             emit(sys.stdin)
 
         elif args.filenameList:
