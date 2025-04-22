@@ -36,7 +36,7 @@ from functools import reduce
 from argparse import ArgumentParser
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
-from pygments.formatters import Terminal256Formatter
+from pygments.formatters import TerminalTrueColorFormatter
 from pygments.styles import get_style_by_name
 
 if __package__ is None:
@@ -667,7 +667,8 @@ def parse(stream):
                         lexer = get_lexer_by_name("Bash")
                         custom_style = get_style_by_name("default")
 
-                    formatter = Terminal256Formatter(style=custom_style)
+
+                    formatter = TerminalTrueColorFormatter(style=custom_style)
                     if line.startswith(' ' * state.code_indent):
                         line = line[state.code_indent :]
 
@@ -698,7 +699,7 @@ def parse(stream):
 
                     # Sometimes the highlighter will do things like a full reset or a background reset.
                     # This is not what we want
-                    highlighted_code = re.sub(r"\033\[39(;00|)m", '', highlighted_code)
+                    highlighted_code = re.sub(r"\033\[49(;00|)m", '', highlighted_code)
     
                     # Since we are streaming we ignore the resets and newlines at the end
                     if highlighted_code.endswith(FGRESET + "\n"):
