@@ -196,8 +196,8 @@ class ParseState:
     def reset_inline(self):
         self.inline_code = self.in_bold = self.in_italic = self.in_underline = False
 
-    def full_width(self):
-        return state.current_width(listwidth = True) if Style.PrettyBroken else self.WidthFull
+    def full_width(self, offset = 0):
+        return offset + (state.current_width(listwidth = True) if Style.PrettyBroken else self.WidthFull)
 
     def current_width(self, listwidth = False):
         return self.Width - (len(visible(self.space_left(listwidth))) + Style.Margin)
@@ -682,7 +682,7 @@ def parse(stream):
                 indent, line_wrap = code_wrap(line)
                 
                 state.where_from = "in code"
-                pre = state.space_left(listwidth = True) if Style.PrettyBroken else ''
+                pre = [state.space_left(listwidth = True), ' '] if Style.PrettyBroken else ['', '']
 
                 for tline in line_wrap:
                     # wrap-around is a bunch of tricks. We essentially format longer and longer portions of code. The problem is
@@ -718,8 +718,8 @@ def parse(stream):
 
                     code_line = ' ' * indent + this_batch.strip()
 
-                    margin = state.full_width() - visible_length(code_line) % state.WidthFull
-                    yield f"{pre}{Style.Codebg}{code_line}{' ' * max(0, margin)}{BGRESET}"  
+                    margin = state.full_width( -len(pre[1]) ) - visible_length(code_line) % state.WidthFull
+                    yield f"{pre[0]}{Style.Codebg}{pre[1]}{code_line}{' ' * max(0, margin)}{BGRESET}"  
                 continue
             except Goto:
                 pass
@@ -913,9 +913,10 @@ def width_calc():
             state.WidthFull = width
 
     state.Width = state.WidthFull - 2 * Style.Margin
+    pre = state.space_left(listwidth=True) if Style.PrettyBroken else ''
     Style.Codepad = [
-        f"{RESET}{FG}{Style.Dark}{'▄' * state.full_width()}{RESET}\n",
-        f"{RESET}{FG}{Style.Dark}{'▀' * state.full_width()}{RESET}"
+        f"{pre}{RESET}{FG}{Style.Dark}{'▄' * state.full_width()}{RESET}\n",
+        f"{pre}{RESET}{FG}{Style.Dark}{'▀' * state.full_width()}{RESET}"
     ]
 
 def main():
@@ -947,11 +948,11 @@ def main():
 
     Style.MarginSpaces = " " * Style.Margin
     state.WidthArg = int(args.width) or _style.get("Width") or 0
+    Style.Blockquote = f"{FG}{Style.Grey}│ "
     width_calc()
 
     Style.Codebg = f"{BG}{Style.Dark}"
     Style.Link = f"{FG}{Style.Symbol}{UNDERLINE[0]}"
-    Style.Blockquote = f"{FG}{Style.Grey}│ "
 
     logging.basicConfig(stream=sys.stdout, level=args.loglevel.upper(), format=f'%(message)s')
     state.exec_master, state.exec_slave = pty.openpty()
