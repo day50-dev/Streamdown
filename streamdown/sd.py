@@ -369,7 +369,7 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
     return lines
 
 def line_format(line):
-    not_text = lambda token: not token or len(token.rstrip()) != len(token)
+    not_text = lambda token: not token or not token.isalnum()
     footnotes = lambda match: ''.join([chr(SUPER[int(i)]) for i in match.group(1)])
 
     def process_images(match):
@@ -666,7 +666,8 @@ def parse(stream):
                         custom_style = get_style_by_name("default")
 
                     formatter = Terminal256Formatter(style=custom_style)
-                    line = line[state.code_indent :]
+                    if line.startswith(' ' * state.code_indent):
+                        line = line[state.code_indent :]
 
                 elif line.startswith(" " * state.code_indent):
                     line = line[state.code_indent :]
