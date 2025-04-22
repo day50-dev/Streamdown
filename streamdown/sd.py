@@ -285,7 +285,7 @@ def code_wrap(text_in):
     # get the indentation of the first line
     indent = len(text_in) - len(text_in.lstrip())
     text = text_in.lstrip()
-    mywidth = state.full_width() - indent
+    mywidth = state.full_width(-4 if Style.PrettyBroken else 0) - indent
 
     # We take special care to preserve empty lines
     if len(text) == 0:
@@ -458,6 +458,7 @@ def parse(stream):
     last_line_empty_cache = None
     byte = None
     TimeoutIx = 0
+    lexer = None
     while True:
         if state.is_pty or state.is_exec:
             byte = None
@@ -648,8 +649,8 @@ def parse(stream):
                     logging.debug(f"code: {state.in_code}")
                     state.emit_flush = True
                     # We suppress the newline - it's not an explicit style
-                    state.has_newline = False
-                    yield RESET
+                    #state.has_newline = False
+                    #yield RESET
 
                     if code_type == Code.Backtick:
                         continue
@@ -658,7 +659,7 @@ def parse(stream):
                         # nor do we want to be here.
                         raise Goto()
 
-                if state.code_first_line:
+                if state.code_first_line or lexer is None:
                     state.code_first_line = False
                     try:
                         lexer = get_lexer_by_name(state.code_language)
@@ -666,7 +667,6 @@ def parse(stream):
                     except pygments.util.ClassNotFound:
                         lexer = get_lexer_by_name("Bash")
                         custom_style = get_style_by_name("default")
-
 
                     formatter = TerminalTrueColorFormatter(style=custom_style)
                     if line.startswith(' ' * state.code_indent):
@@ -688,7 +688,7 @@ def parse(stream):
                 indent, line_wrap = code_wrap(line)
                 
                 state.where_from = "in code"
-                pre = [state.space_left(listwidth = True), ' '] if Style.PrettyBroken else ['', '']
+                pre = [state.space_left(listwidth = True), '  '] if Style.PrettyBroken else ['', '']
 
                 for tline in line_wrap:
                     # wrap-around is a bunch of tricks. We essentially format longer and longer portions of code. The problem is
