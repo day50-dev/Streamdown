@@ -20,11 +20,11 @@ import appdirs, toml
 import logging, tempfile
 import os,      sys
 import pty,     select
-import termios, tty
+import termios, tty,    fcntl
 
 import math
 import re
-import shutil
+import shutil,  shlex
 import subprocess
 import traceback
 import colorsys
@@ -214,6 +214,11 @@ class ParseState:
         return pre + Style.MarginSpaces + (Style.Blockquote * self.block_depth) if len(self.current_line) == 0 else "" 
 
 state = ParseState()
+
+def set_pty_size(fd, target_fd):
+    """Set window size of PTY to match the real terminal."""
+    s = fcntl.ioctl(target_fd, termios.TIOCGWINSZ, b"\x00" * 8)
+    fcntl.ioctl(fd, termios.TIOCSWINSZ, s)
 
 def format_table(rowList):
     num_cols = len(rowList)
@@ -955,18 +960,21 @@ def main():
     Style.Link = f"{FG}{Style.Symbol}{UNDERLINE[0]}"
 
     logging.basicConfig(stream=sys.stdout, level=args.loglevel.upper(), format=f'%(message)s')
-    state.exec_master, state.exec_slave = pty.openpty()
+
     try:
         inp = sys.stdin
         if args.exec:
             state.terminal = termios.tcgetattr(sys.stdin)
             state.is_exec = True
-            state.exec_sub = subprocess.Popen(args.exec.split(' '), stdin=state.exec_slave, stdout=state.exec_slave, stderr=state.exec_slave, close_fds=True)
-            os.close(state.exec_slave)  # We don't need slave in parent
-            # Set stdin to raw mode so we don't need to press enter
-            tty.setcbreak(sys.stdin.fileno())
-            sys.stdout.write("\x1b[?7h")
-            emit(sys.stdin)
+            exec_args = shlex.split(args.exec)
+
+            pid, fd = pty.fork()
+            if pid == 0:
+                os.execvp(exec_args[0], exec_args)
+            else:
+                set_pty_size(fd, sys.stdin.fileno())
+                # Set stdin to raw mode so we don't need to press enter
+                emit(sys.stdin)
 
         elif args.filenameList:
             # Let's say we only care about logging in streams
