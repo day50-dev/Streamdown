@@ -272,7 +272,7 @@ def emit_h(level, text):
         return f"{state.space_left()}{text}{RESET}"
 
 def code_wrap(text_in):
-    if not state.PrettyBroken and state.WidthWrap and len(text_in) > state.full_width():
+    if not Style.PrettyBroken and state.WidthWrap and len(text_in) > state.full_width():
         return (0, [text_in])
 
     # get the indentation of the first line
