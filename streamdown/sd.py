@@ -466,7 +466,7 @@ def parse(stream):
         if state.is_pty or state.is_exec:
             byte = None
             ready_in, _, _ = select.select(
-                    [stream.fileno(), state.exec_fd], [], [], state.Timeout)
+                    [state.exec_fd, stream.fileno()], [], [], state.Timeout)
 
             if state.is_exec: 
                 # This is keyboard input
@@ -476,12 +476,12 @@ def parse(stream):
                     state.exec_kb += 1
                     os.write(state.exec_fd, byte)
 
-                    if byte in [b'\n', b'\r']:
-                        state.buffer = b''
-                        print("")
-                        state.exec_kb = 0
-                    else:
-                        continue
+                    #if byte in [b'\n', b'\r']:
+                    #    state.buffer = b''
+                    #    print("")
+                    #    state.exec_kb = 0
+                    #else:
+                    continue
 
                 if state.exec_fd in ready_in:
                     TimeoutIx = 0
