@@ -1,11 +1,4 @@
 #!/bin/bash
-'''':
-if command -v uv &> /dev/null; then
-    exec uv run --script "$0" "$@"
-else
-    exec python3 "$0" "$@"
-fi
-'''
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
@@ -16,6 +9,13 @@ fi
 #     "toml"
 # ]
 # ///
+'''':
+if command -v uv &> /dev/null; then
+    exec uv run --script "$0" "$@"
+else
+    exec python3 "$0" "$@"
+fi
+'''
 import appdirs, toml
 import logging, tempfile
 import os,      sys
