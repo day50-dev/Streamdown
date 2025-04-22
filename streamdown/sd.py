@@ -197,7 +197,7 @@ class ParseState:
         self.inline_code = self.in_bold = self.in_italic = self.in_underline = False
 
     def full_width(self):
-        return state.current_width(listwidth = True) if self.PrettyBroken else self.WidthFull
+        return state.current_width(listwidth = True) if Style.PrettyBroken else self.WidthFull
 
     def current_width(self, listwidth = False):
         return self.Width - (len(visible(self.space_left(listwidth))) + Style.Margin)
