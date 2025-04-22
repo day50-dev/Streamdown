@@ -472,7 +472,7 @@ def parse(stream):
                     state.exec_kb += 1
                     os.write(state.exec_master, byte)
 
-                    if byte == b'\n':
+                    if byte in [b'\n', b'\r']:
                         state.buffer = b''
                         print("")
                         state.exec_kb = 0
@@ -588,9 +588,7 @@ def parse(stream):
         if state.in_table and not state.in_code and not re.match(r"^\s*\|.+\|\s*$", line):
             state.in_table = False
 
-        #
         # <code><pre>
-        #
         if not state.in_code:
             code_match = re.match(r"^\s*```\s*([^\s]+|$)\s*$", line)
             if code_match:
@@ -736,9 +734,7 @@ def parse(stream):
                 traceback.print_exc()
                 pass
 
-        #
         # <table>
-        #
         if re.match(r"^\s*\|.+\|\s*$", line) and not state.in_code:
             cells = [c.strip() for c in line.strip().strip("|").split("|")]
 
@@ -760,7 +756,6 @@ def parse(stream):
             yield from format_table(cells)
             continue
 
-        #
         # <li> <ul> <ol>
         # llama-4 maverick uses + and +- for lists ... for some reason
         content = line
@@ -821,18 +816,15 @@ def parse(stream):
                 yield f"{state.space_left()}{wrapped_line}\n"
 
             continue
-        #
+
         # <h1> ... <h6>
-        # 
         header_match = re.match(r"^\s*(#{1,6})\s+(.*)", line)
         if header_match:
             level = len(header_match.group(1))
             yield emit_h(level, header_match.group(2))
             continue
 
-        #
         # <hr>
-        #
         hr_match = re.match(r"^[\s]*([-\*=_]){3,}[\s]*$", line)
         if hr_match:
             if state.last_line_empty or last_line_empty_cache:
@@ -894,10 +886,10 @@ def emit(inp):
         else:
             chunk = buffer.pop(0)
 
-        print(chunk, end="", flush=True)
+        print(chunk, end="", file=sys.stdout, flush=True)
 
     if len(buffer):
-        print(buffer.pop(0), end="", flush=True)
+        print(buffer.pop(0), file=sys.stdout, end="", flush=True)
 
 def apply_multipliers(name, H, S, V):
     m = _style.get(name)
@@ -1007,7 +999,6 @@ def main():
         base64_bytes = base64.b64encode(code_bytes)
         base64_string = base64_bytes.decode('utf-8')
         print(f"\033]52;c;{base64_string}\a", end="", flush=True)
-
 
     if state.terminal:
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
