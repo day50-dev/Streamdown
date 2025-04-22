@@ -645,6 +645,8 @@ def parse(stream):
 
                     logging.debug(f"code: {state.in_code}")
                     state.emit_flush = True
+                    # We suppress the newline - it's not an explicit style
+                    state.has_newline = False
                     yield RESET
 
                     if code_type == Code.Backtick:
