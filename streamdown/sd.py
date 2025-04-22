@@ -304,7 +304,7 @@ def ansi_collapse(codelist, inp):
     # We break SGR strings into various classes concerning their applicate or removal
     nums = {
         'fg': r'3\d', 'bg': r'4\d',
-        'b': r'2?1', 'i': r'2?3', 'u': r'3?2',
+        'b': r'2?[12]', 'i': r'2?3', 'u': r'3?2',
         'reset': '0'
     }
 
@@ -402,7 +402,7 @@ def line_format(line):
     result = ""
 
     for match in tokenList:
-        token = match.group(1)
+        token = re.sub(r'\s+',' ', match.group(1))
         next_token = line[match.end()] if match.end() < len(line) else ""
         prev_token = line[match.start()-1] if match.start() > 0 else ""
 
@@ -569,7 +569,7 @@ def parse(stream):
         # \n buffer
         if not state.in_list and len(state.ordered_list_numbers) > 0:
             state.ordered_list_numbers[0] = 0
-        elif not line.startswith(' ' * state.list_indent_text):
+        elif (not line.startswith(' ' * state.list_indent_text)) and line.strip() != "":
             state.in_list = False
             state.list_indent_text = 0
 
