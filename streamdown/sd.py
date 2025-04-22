@@ -46,7 +46,7 @@ else:
 
 default_toml = """
 [features]
-CodeSpaces = true
+CodeSpaces = false
 Clipboard  = true
 Logging    = false
 Timeout    = 0.1
@@ -578,7 +578,7 @@ def parse(stream):
         if len(line) - len(line.lstrip()) >= state.first_indent:
             line = line[state.first_indent:]
         else:
-            logging.warning("Indentation decreased from first line.")
+            logging.debug("Indentation decreased from first line.")
 
 
         # Indent guaranteed
