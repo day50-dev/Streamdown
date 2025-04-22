@@ -4,7 +4,8 @@
 <a href=https://pypi.org/project/streamdown><img src=https://badge.fury.io/py/streamdown.svg/></a>
 </p>
 
-The streaming markdown renderer for the terminal that rocks!
+**The streaming markdown renderer for the terminal that rocks**
+
 Streamdown works with [simonw's llm](https://github.com/simonw/llm) along with any other streaming markdown. You even get full readline and keyboard navigation support.
 ```bash
 $ pip install streamdown
