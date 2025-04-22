@@ -42,7 +42,7 @@ default_toml = """
 CodeSpaces = true
 Clipboard  = true
 Logging    = false
-Timeout    = 0.5
+Timeout    = 0.1
 Savebrace  = true
 
 [style]

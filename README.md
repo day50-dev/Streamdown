@@ -83,9 +83,8 @@ Example:
 [features]
 CodeSpaces = false
 Clipboard = false
-Margin = 4
-Width = 120
-Timeout = 1.0
+PrettyPad = true
+PrettyBroken = true
 ```
 
 ## Command Line
