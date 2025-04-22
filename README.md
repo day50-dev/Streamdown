@@ -128,4 +128,4 @@ After the git clone least one of these should work, hopefully. it's using the mo
 ### Future work
 
 #### Glow styles
-I'm going to try to be compatible with other popular markdown styles to help for a smoother transition. Glow compatible json sheets is on my radar
+I'm going to try to be compatible with other popular markdown styles to help for a smoother transition. Glow compatible json sheets is on my radar. There's also mdless and frogmouth. Might be others
