@@ -14,7 +14,7 @@ $ pip install streamdown
 ### Provides clean copyable code for long code lines
 You may have noticed *inferior* renderers inject line breaks when copying code that wraps around. We're better and now you are too!
 ![Handle That Mandle](https://github.com/user-attachments/assets/a27aa70c-f691-4796-84f0-c2eb18c7de23)
-**Tip**: You can make things prettier if you don't mind this guarantee broken. See the `PrettyBroken` flag below!
+**Tip**: You can make things prettier if you don't mind if this guarantee is broken. See the `PrettyBroken` flag below!
 
 ### Supports images
 Here's kitty and alacritty. Try to do that in glow...
