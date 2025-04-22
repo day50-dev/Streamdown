@@ -503,7 +503,7 @@ def parse(stream):
 
         if not (byte == b'\n' or byte is None): continue
 
-        line = state.buffer.decode('utf-8')
+        line = state.buffer.decode('utf-8').replace('\t','  ')
         state.has_newline = line.endswith('\n')
         # I hate this. There should be better ways.
         state.maybe_prompt = not state.has_newline and state.current()['none'] and re.match(r'^.*>\s+$', visible(line))
