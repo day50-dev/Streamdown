@@ -303,11 +303,8 @@ def code_wrap(text_in):
 def ansi_collapse(codelist, inp):
     # We break SGR strings into various classes concerning their applicate or removal
     nums = {
-        'fg': r'3\d',
-        'bg': r'4\d',
-        'b': r'2?1',
-        'i': r'2?3',
-        'u': r'2?2',
+        'fg': r'3\d', 'bg': r'4\d',
+        'b': r'2?1', 'i': r'2?3', 'u': r'3?2',
         'reset': '0'
     }
 
@@ -932,7 +929,7 @@ def width_calc():
 def main():
     global H, S, V
 
-    parser = ArgumentParser(description="Streamdown - A markdown renderer for modern terminals")
+    parser = ArgumentParser(description="Streamdown - A Streaming markdown renderer for modern terminals")
     parser.add_argument("filenameList", nargs="*", help="Input file to process (also takes stdin)")
     parser.add_argument("-l", "--loglevel", default="INFO", help="Set the logging level")
     parser.add_argument("-c", "--color", default=None, help="Set the hsv base: h,s,v")
