@@ -1,5 +1,4 @@
 #!/bin/bash
-# -*- coding: utf-8 -*-
 '''':
 if command -v uv &> /dev/null; then
     exec uv run --script "$0" "$@"
