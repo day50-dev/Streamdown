@@ -1,0 +1,1 @@
+*   **Model Card:**  When this wraps with this link ([https://huggingface.co/microsoft/bitnet-b1.58-2B-4T](https://huggingface.co/microsoft/bitnet-b1.58-2B-4T)) the next line used to be bold because of some stripping error. This should no longer be the case
