@@ -188,8 +188,7 @@ class ParseState:
         self.block_depth = 0
 
         self.exec_sub = None
-        self.exec_master = None
-        self.exec_slave = None
+        self.exec_fd = None
         self.exec_kb = 0
 
         self.exit = 0
@@ -467,7 +466,7 @@ def parse(stream):
         if state.is_pty or state.is_exec:
             byte = None
             ready_in, _, _ = select.select(
-                    [stream.fileno(), state.exec_master], [], [], state.Timeout)
+                    [stream.fileno(), state.exec_fd], [], [], state.Timeout)
 
             if state.is_exec: 
                 # This is keyboard input
@@ -475,7 +474,7 @@ def parse(stream):
                     byte = os.read(stream.fileno(), 1)
 
                     state.exec_kb += 1
-                    os.write(state.exec_master, byte)
+                    os.write(state.exec_fd, byte)
 
                     if byte in [b'\n', b'\r']:
                         state.buffer = b''
@@ -484,9 +483,9 @@ def parse(stream):
                     else:
                         continue
 
-                if state.exec_master in ready_in:
+                if state.exec_fd in ready_in:
                     TimeoutIx = 0
-                    byte = os.read(state.exec_master, 1)
+                    byte = os.read(state.exec_fd, 1)
 
                     if state.exec_kb:
                         os.write(sys.stdout.fileno(), byte)
@@ -968,11 +967,11 @@ def main():
             state.is_exec = True
             exec_args = shlex.split(args.exec)
 
-            pid, fd = pty.fork()
+            pid, state.exec_fd = pty.fork()
             if pid == 0:
                 os.execvp(exec_args[0], exec_args)
             else:
-                set_pty_size(fd, sys.stdin.fileno())
+                set_pty_size(state.exec_fd, sys.stdin.fileno())
                 # Set stdin to raw mode so we don't need to press enter
                 emit(sys.stdin)
 
@@ -1012,9 +1011,7 @@ def main():
 
     if state.terminal:
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
-        os.close(state.exec_master)
-        if state.exec_sub:
-            state.exec_sub.wait()
+
     sys.exit(state.exit)
 
 if __name__ == "__main__":
