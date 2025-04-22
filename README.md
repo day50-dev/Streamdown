@@ -12,7 +12,7 @@ $ pip install streamdown
 ![Streamdown is Amazing](https://github.com/user-attachments/assets/268cb340-78cc-4df0-a773-c5ac95eceeeb)
 
 ### Provides clean copyable code for long code lines
-You may have noticed *inferior* renderers inject line breaks when copying code that wraps around. We're better and now you are too!
+Some *inferior* renderers inject line breaks when copying code that wraps around. We're better and now you are too!
 ![Handle That Mandle](https://github.com/user-attachments/assets/a27aa70c-f691-4796-84f0-c2eb18c7de23)
 **Tip**: You can make things prettier if you don't mind if this guarantee is broken. See the `PrettyBroken` flag below!
 
