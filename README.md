@@ -119,7 +119,7 @@ Do this
     $ ./streamdown/sd.py tests/*md
 
 ## Install from source
-After the git clone least one of these should work, hopefully. it's using the modern uv pip tool.
+After the git clone least one of these should work, hopefully. it's using the modern uv pip tool but is also backwards compatible to the `pip3 install -r requirements.txt` flow.
 
     $ pipx install -e .
     $ pip install -e .
