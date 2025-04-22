@@ -39,7 +39,7 @@ For instance, here is the [latex plugin](https://github.com/kristopolous/Streamd
 
 ## TOML Configuration 
 
-Streamdown uses a TOML configuration file located at `~/.config/streamdown/config.toml` (following the XDG Base Directory Specification). If this file does not exist upon first run, it will be created with default values. 
+It's located at `~/.config/streamdown/config.toml` (following the XDG Base Directory Specification). If this file does not exist upon first run, it will be created with default values. 
 
 Here are the sections:
 
