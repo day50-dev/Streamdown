@@ -46,10 +46,11 @@ Timeout    = 0.5
 Savebrace  = true
 
 [style]
-Margin      = 2 
-ListIndent  = 2
-PrettyPad   = false
-Width       = 0
+Margin          = 2 
+ListIndent      = 2
+PrettyPad       = false
+PrettyBroken    = true
+Width           = 0
 HSV     = [0.8, 0.5, 0.5]
 Dark    = { H = 1.00, S = 1.50, V = 0.25 }
 Mid     = { H = 1.00, S = 1.00, V = 0.50 }
@@ -195,11 +196,12 @@ class ParseState:
     def reset_inline(self):
         self.inline_code = self.in_bold = self.in_italic = self.in_underline = False
 
-    def current_width(self):
-        return self.Width - (len(visible(self.space_left())) + Style.Margin)
+    def current_width(self, listwidth = False):
+        return self.Width - (len(visible(self.space_left(listwidth))) + Style.Margin)
 
-    def space_left(self):
-        return Style.MarginSpaces + (Style.Blockquote * self.block_depth) if len(self.current_line) == 0 else "" 
+    def space_left(self, listwidth = False):
+        pre = ' ' * (len(state.list_item_stack)) * Style.ListIndent if listwidth else ''
+        return pre + Style.MarginSpaces + (Style.Blockquote * self.block_depth) if len(self.current_line) == 0 else "" 
 
 state = ParseState()
 
@@ -267,13 +269,15 @@ def emit_h(level, text):
         return f"{state.space_left()}{text}{RESET}"
 
 def code_wrap(text_in):
-    if state.WidthWrap and len(text_in) > state.WidthFull:
+    ourWidth = state.current_width() if Style.PrettyBroken else state.WidthFull
+
+    if state.WidthWrap and len(text_in) > ourWidth:
         return (0, [text_in])
 
     # get the indentation of the first line
     indent = len(text_in) - len(text_in.lstrip())
     text = text_in.lstrip()
-    mywidth = state.WidthFull - indent
+    mywidth = ourWidth - indent
 
     # We take special care to preserve empty lines
     if len(text) == 0:
@@ -677,6 +681,9 @@ def parse(stream):
                 indent, line_wrap = code_wrap(line)
                 
                 state.where_from = "in code"
+                pre = state.space_left(listwidth = True) if Style.PrettyBroken else ''
+                ourWidth = state.current_width(listwidth = True) if Style.PrettyBroken else state.WidthFull
+
                 for tline in line_wrap:
                     # wrap-around is a bunch of tricks. We essentially format longer and longer portions of code. The problem is
                     # the length can change based on look-ahead context so we need to use our expected place (state.code_gen) and
@@ -711,8 +718,8 @@ def parse(stream):
 
                     code_line = ' ' * indent + this_batch.strip()
 
-                    margin = state.WidthFull - visible_length(code_line) % state.WidthFull
-                    yield f"{Style.Codebg}{code_line}{' ' * max(0, margin)}{BGRESET}"  
+                    margin = ourWidth - visible_length(code_line) % state.WidthFull
+                    yield f"{pre}{Style.Codebg}{code_line}{' ' * max(0, margin)}{BGRESET}"  
                 continue
             except Goto:
                 pass
@@ -796,16 +803,15 @@ def parse(stream):
         # This is intentional ... we can get here in llama 4 using
         # a weird thing
         if state.in_list:
-            indent = (len(state.list_item_stack) - 1) * 2
+            indent = (len(state.list_item_stack) - 1) * Style.ListIndent
             wrap_width = state.current_width() - indent - (2 * Style.ListIndent) 
             
             wrapped_lineList = text_wrap(content, wrap_width, Style.ListIndent,
-                first_line_prefix = f"{(' ' * (indent ))}{FG}{Style.Symbol}{bullet}{RESET} ",
+                first_line_prefix = f"{(' ' * indent)}{FG}{Style.Symbol}{bullet}{RESET} ",
                 subsequent_line_prefix = " " * (indent)
             )
             for wrapped_line in wrapped_lineList:
                 yield f"{state.space_left()}{wrapped_line}\n"
-
 
             continue
         #
@@ -932,9 +938,9 @@ def main():
 
     for color in ["Dark", "Mid", "Symbol", "Head", "Grey", "Bright"]:
         setattr(Style, color, apply_multipliers(color, H, S, V))
-    for attr in ['Margin', 'ListIndent', 'Syntax']:
+    for attr in ['PrettyBroken', 'Margin', 'ListIndent', 'Syntax']:
         setattr(Style, attr, _style.get(attr))
-    
+
     if args.scrape:
         os.makedirs(args.scrape, exist_ok=True)
         state.scrape = args.scrape
