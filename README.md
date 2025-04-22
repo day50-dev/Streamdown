@@ -64,6 +64,8 @@ Defines the base Hue (H), Saturation (S), and Value (V) from which all other pal
 Example:
 ```toml
 [style]
+PrettyPad = true
+PrettyBroken = true
 HSV = [0.7, 0.5, 0.5]
 Dark = { H = 1.0, S = 1.2, V = 0.25 } # Make dark elements less saturated and darker
 Symbol = { H = 1.0, S = 1.8, V = 1.8 } # Make symbols more vibrant
@@ -83,8 +85,6 @@ Example:
 [features]
 CodeSpaces = false
 Clipboard = false
-PrettyPad = true
-PrettyBroken = true
 ```
 
 ## Command Line
