@@ -196,6 +196,9 @@ class ParseState:
     def reset_inline(self):
         self.inline_code = self.in_bold = self.in_italic = self.in_underline = False
 
+    def full_width(self):
+        return state.current_width(listwidth = True) if self.PrettyBroken else self.WidthFull
+
     def current_width(self, listwidth = False):
         return self.Width - (len(visible(self.space_left(listwidth))) + Style.Margin)
 
@@ -269,15 +272,13 @@ def emit_h(level, text):
         return f"{state.space_left()}{text}{RESET}"
 
 def code_wrap(text_in):
-    ourWidth = state.current_width() if Style.PrettyBroken else state.WidthFull
-
-    if state.WidthWrap and len(text_in) > ourWidth:
+    if state.WidthWrap and len(text_in) > state.full_width():
         return (0, [text_in])
 
     # get the indentation of the first line
     indent = len(text_in) - len(text_in.lstrip())
     text = text_in.lstrip()
-    mywidth = ourWidth - indent
+    mywidth = state.full_width() - indent
 
     # We take special care to preserve empty lines
     if len(text) == 0:
@@ -682,7 +683,6 @@ def parse(stream):
                 
                 state.where_from = "in code"
                 pre = state.space_left(listwidth = True) if Style.PrettyBroken else ''
-                ourWidth = state.current_width(listwidth = True) if Style.PrettyBroken else state.WidthFull
 
                 for tline in line_wrap:
                     # wrap-around is a bunch of tricks. We essentially format longer and longer portions of code. The problem is
@@ -718,7 +718,7 @@ def parse(stream):
 
                     code_line = ' ' * indent + this_batch.strip()
 
-                    margin = ourWidth - visible_length(code_line) % state.WidthFull
+                    margin = state.full_width() - visible_length(code_line) % state.WidthFull
                     yield f"{pre}{Style.Codebg}{code_line}{' ' * max(0, margin)}{BGRESET}"  
                 continue
             except Goto:
@@ -914,8 +914,8 @@ def width_calc():
 
     state.Width = state.WidthFull - 2 * Style.Margin
     Style.Codepad = [
-        f"{RESET}{FG}{Style.Dark}{'▄' * state.WidthFull}{RESET}\n",
-        f"{RESET}{FG}{Style.Dark}{'▀' * state.WidthFull}{RESET}"
+        f"{RESET}{FG}{Style.Dark}{'▄' * state.full_width()}{RESET}\n",
+        f"{RESET}{FG}{Style.Dark}{'▀' * state.full_width()}{RESET}"
     ]
 
 def main():
