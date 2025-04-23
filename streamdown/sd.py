@@ -134,7 +134,6 @@ class Code:
 
 class ParseState:
     def __init__(self):
-        self.buffer = b''
         self.current_line = ''
         self.first_line = True
         self.last_line_empty = False
@@ -458,13 +457,19 @@ def line_format(line):
 
     return result
 
-def parse(stream):
-    last_line_empty_cache = None
-    byte = None
+# readinput pulls in buffer_sized chunks
+# Then we have state.buffer which aggregates them until
+# we get to line when it processes. 
+# so
+#   readbuffer -> state.buffer -> line
+#
+def readinput(stream):
     TimeoutIx = 0
+    bufsize = 1024
+    yieldbuf = b''
     while True:
+        readbuffer = None
         if state.is_pty or state.is_exec:
-            byte = None
             ready_in, _, _ = select.select(
                     [state.exec_fd, stream.fileno()], [], [], state.Timeout)
 
@@ -476,25 +481,25 @@ def parse(stream):
                     state.exec_kb += 1
                     os.write(state.exec_fd, byte)
 
-                    #if byte in [b'\n', b'\r']:
-                    #    state.buffer = b''
-                    #    print("")
-                    #    state.exec_kb = 0
-                    #else:
-                    continue
+                    if byte in [b'\n', b'\r']:
+                        print("")
+                        state.exec_kb = 0
+                    else:
+                        continue
 
                 if state.exec_fd in ready_in:
                     TimeoutIx = 0
-                    byte = os.read(state.exec_fd, 1)
+                    readbuffer = os.read(state.exec_fd, bufsize)
 
                     if state.exec_kb:
-                        os.write(sys.stdout.fileno(), byte)
+                        os.write(sys.stdout.fileno(), readbuffer)
+                        continue
 
                 if len(ready_in) == 0:
                     TimeoutIx += 1
 
             elif stream.fileno() in ready_in: 
-                byte = os.read(stream.fileno(), 1)
+                readbuffer = os.read(stream.fileno(), bufsize)
                 TimeoutIx = 0
             elif TimeoutIx == 0:
                 # This is our record separator for debugging - hands peaking
@@ -502,16 +507,33 @@ def parse(stream):
                 TimeoutIx += 1
 
         else:
-            byte = stream.read(1)
+            readbuffer = stream.read(bufsize)
 
-        if byte is not None:
-            if byte == b'': break
-            state.buffer += byte
-            debug_write(byte)
+        if readbuffer is not None:
+            # this means end of file
+            if readbuffer == b'': 
+                return
 
-        if not (byte == b'\n' or byte is None): continue
+            # this is the accumulation, the thing we will be yielding
+            yieldbuf += readbuffer
+            debug_write(readbuffer)
 
-        line = state.buffer.decode('utf-8').replace('\t','  ')
+        while True:
+            pos = yieldbuf.find(b'\n')
+            # this means we don't have a new line
+            if pos == -1:
+                # out of the inner loop
+                break
+
+            pos += 1
+
+            yield yieldbuf[:pos].decode('utf-8').replace('\t', ' ')
+            yieldbuf = yieldbuf[pos:]
+
+
+def parse(stream):
+    last_line_empty_cache = None
+    for line in readinput(stream):
         state.has_newline = line.endswith('\n')
         # I hate this. There should be better ways.
         state.maybe_prompt = not state.has_newline and state.current()['none'] and re.match(r'^.*>\s+$', visible(line))
@@ -521,12 +543,10 @@ def parse(stream):
             state.emit_flag = Code.Flush
             yield line
             state.current_line = ''
-            state.buffer = b''
 
         if not state.has_newline:
             continue
 
-        state.buffer = b''
         # Run through the plugins first
         res = latex.Plugin(line, state, Style)
         if res is True:
