@@ -2,7 +2,7 @@
 <img src=https://github.com/user-attachments/assets/0468eac0-2a00-4e98-82ca-09e6ac679357/>
 <br/>
 <a href=https://pypi.org/project/streamdown><img src=https://badge.fury.io/py/streamdown.svg/></a>
-<br/><strong>Terminal streaming markdown renderer that rocks</strong>
+<br/><strong>Terminal streaming markdown that rocks</strong>
 
 </p>
 
