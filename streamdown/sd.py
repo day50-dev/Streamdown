@@ -468,8 +468,8 @@ def readinput(stream):
     bufsize = 1024
     yieldbuf = b''
     while True:
-        readbuffer = None
         if state.is_pty or state.is_exec:
+            readbuffer = None
             ready_in, _, _ = select.select(
                     [state.exec_fd, stream.fileno()], [], [], state.Timeout)
 
@@ -493,7 +493,7 @@ def readinput(stream):
 
                     if state.exec_kb:
                         os.write(sys.stdout.fileno(), readbuffer)
-                        continue
+                        # continue
 
                 if len(ready_in) == 0:
                     TimeoutIx += 1
@@ -522,10 +522,15 @@ def readinput(stream):
             pos = yieldbuf.find(b'\n')
             # this means we don't have a new line
             if pos == -1:
-                # out of the inner loop
-                break
+                testline = yieldbuf.decode('utf-8')
 
-            pos += 1
+                if state.current()['none'] and re.match(r'^.*>\s+$', visible(testline)):
+                    pos = len(yieldbuf)
+                else:
+                    # out of the inner loop
+                    break
+            else:
+                pos += 1
 
             yield yieldbuf[:pos].decode('utf-8').replace('\t', ' ')
             yieldbuf = yieldbuf[pos:]
