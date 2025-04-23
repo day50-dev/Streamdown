@@ -231,7 +231,7 @@ def format_table(rowList):
     # Note this is where every cell is formatted so if 
     # you are styling, do it before here!
     for row in rowList:
-        wrapped_cell = text_wrap(row, width=col_width)
+        wrapped_cell = text_wrap(row, width=col_width, force_truncate=True)
 
         # Ensure at least one line, even for empty cells
         if not wrapped_cell:
@@ -334,7 +334,7 @@ def ansi_collapse(codelist, inp):
 
     return codelist + inp
 
-def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_line_prefix=""):
+def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_line_prefix="", force_truncate=False):
     if width == -1:
         width = state.Width
 
@@ -357,8 +357,15 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
             # Word doesn't fit, finalize the previous line
             prefix = first_line_prefix if not lines else subsequent_line_prefix
             line_content = prefix + current_line
+            # This is expensive, fix.
+            while force_truncate and visible_length(line_content) >= width:
+                line_content = line_content[:len(line_content) - 2] + "…"
+
             margin = max(0, width - visible_length(line_content))
-            lines.append(line_content + state.bg + ' ' * margin)
+
+            if line_content.strip() != "":
+                lines.append(line_content + state.bg + ' ' * margin)
+
             current_line = (" " * indent) + "".join(current_style) + word
 
         if len(codes):
