@@ -337,10 +337,10 @@ def ansi_collapse(codelist, inp):
 
 
 def split_text(text):
-    return re.split(
-        r'(?<=[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF])|(?=[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF])|\s+',
+    return [x for x in re.split(
+        r'(?<=[\u3000-\u303F\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF])|(?=[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF])|\s+',
         text
-    )
+    ) if x]
 
 def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_line_prefix="", force_truncate=False):
     if width == -1:
@@ -352,6 +352,7 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
     current_line = ""
     current_style = []
     
+    oldword = ''
     for word in words:
         # we apply the style if we see it at the beginning of the word
         codes = extract_ansi_codes(word)
@@ -360,8 +361,12 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
             current_style.append(codes.pop(0))
 
         if len(word) and visible_length(current_line) + visible_length(word) + 1 <= width:  # +1 for space
-
-            current_line += (" " if len(visible(word)) > 0 and current_line and not cjk_count(word) else "") + word
+            space = ""
+            if len(visible(word)) > 0 and current_line:
+                space = " "
+            if (":" in visible(word) or cjk_count(word)) and cjk_count(oldword):
+                space = ""
+            current_line += space + word
         else:
             # Word doesn't fit, finalize the previous line
             prefix = first_line_prefix if not lines else subsequent_line_prefix
@@ -382,6 +387,8 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
 
         if codes:
             current_style = ansi_collapse(current_style, codes)
+
+        oldword = word
 
     if len(lines) < 1:
         return []
