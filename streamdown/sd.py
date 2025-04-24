@@ -99,7 +99,8 @@ ANSIESCAPE = r'\033(?:\[[0-9;?]*[a-zA-Z]|][0-9]*;;.*?\\|\\)'
 KEYCODE_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
-visible_length = lambda x: len(visible(x))
+# cjk characters are double width
+visible_length = lambda x: len(visible(x)) + cjk_count(x)
 extract_ansi_codes = lambda text: re.findall(ESCAPE, text)
 remove_ansi = lambda line, codeList: reduce(lambda line, code: line.replace(code, ''), codeList, line)
 
@@ -334,12 +335,19 @@ def ansi_collapse(codelist, inp):
 
     return codelist + inp
 
+
+def split_text(text):
+    return re.split(
+        r'(?<=[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF])|(?=[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF])|\s+',
+        text
+    )
+
 def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_line_prefix="", force_truncate=False):
     if width == -1:
         width = state.Width
 
     # The empty word clears the buffer at the end.
-    words = line_format(text).split() + [""]
+    words = split_text(line_format(text)) + [""]
     lines = []
     current_line = ""
     current_style = []
@@ -352,7 +360,8 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
             current_style.append(codes.pop(0))
 
         if len(word) and visible_length(current_line) + visible_length(word) + 1 <= width:  # +1 for space
-            current_line += (" " if current_line else "") + word
+
+            current_line += (" " if len(visible(word)) > 0 and current_line and not cjk_count(word) else "") + word
         else:
             # Word doesn't fit, finalize the previous line
             prefix = first_line_prefix if not lines else subsequent_line_prefix
@@ -379,8 +388,20 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
 
     return lines
 
+def cjk_count(s):
+    cjk_re = re.compile(
+        r'[\u4E00-\u9FFF'      # CJK Unified Ideographs
+        r'|\u3400-\u4DBF'       # CJK Unified Ideographs Extension A
+        r'|\uF900-\uFAFF'       # CJK Compatibility Ideographs
+		r'|\uFF00-\uFFEF'       # CJK Compatibility Punctuation
+        r'|\u3000-\u303F'      # CJK Symbols and Punctuation
+        r'|\U0002F800-\U0002FA1F]' # CJK Compatibility Ideographs Supplement
+    )
+    
+    return len(cjk_re.findall(visible(s)))
+
 def line_format(line):
-    not_text = lambda token: not (token.isalnum() or token == '\\')
+    not_text = lambda token: not (token.isalnum() or token == '\\') or cjk_count(token)
     footnotes = lambda match: ''.join([chr(SUPER[int(i)]) for i in match.group(1)])
 
     def process_images(match):
@@ -813,7 +834,7 @@ def parse(stream):
         # This is intentional ... we can get here in llama 4 using
         # a weird thing
         if state.in_list:
-            indent = (len(state.list_item_stack) - 1) * Style.ListIndent
+            indent = (len(state.list_item_stack) - 1) * Style.ListIndent + (len(bullet) - 1)
             wrap_width = state.current_width() - indent - (2 * Style.ListIndent) 
             
             wrapped_lineList = text_wrap(content, wrap_width, Style.ListIndent,
