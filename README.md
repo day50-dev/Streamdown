@@ -33,7 +33,7 @@ Here's kitty and alacritty.
 ![dunder](https://github.com/user-attachments/assets/d41d7fec-6dec-4387-b53d-f2098f269a5e)
 
 #### ...even CJK 
-Compare how streamdown wraps around and spaces this Chinese comparison of programming languages in a markdown table compared to the same file using glow.
+Compare how streamdown wraps around and spaces this tabular Chinese description of programming languages to the same file using glow.
 ![cjk](https://github.com/user-attachments/assets/b831a5f3-7ef0-48b8-8d17-bb7b605df16a)
 
 ### Colors are highly (and quickly) configurable for people who care a lot, or just a little.
