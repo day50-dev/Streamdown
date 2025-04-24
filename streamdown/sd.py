@@ -62,7 +62,7 @@ HSV     = [0.8, 0.5, 0.5]
 Dark    = { H = 1.00, S = 1.50, V = 0.25 }
 Mid     = { H = 1.00, S = 1.00, V = 0.50 }
 Symbol  = { H = 1.00, S = 1.00, V = 1.50 }
-Head    = { H = 1.00, S = 2.00, V = 1.50 }
+Head    = { H = 1.00, S = 1.00, V = 1.75 }
 Grey    = { H = 1.00, S = 0.25, V = 1.37 }
 Bright  = { H = 1.00, S = 2.00, V = 2.00 }
 Syntax  = "monokai"
@@ -556,7 +556,7 @@ def parse(stream):
                 line = line[len(block_match.group(0)):]
         else:
             if state.block_depth > 0:
-                line = FGRESET + line
+                yield FGRESET
                 state.block_depth = 0
 
         # --- Collapse Multiple Empty Lines if not in code blocks ---
