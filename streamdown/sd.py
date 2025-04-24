@@ -150,6 +150,7 @@ class ParseState:
         self.Logging = _features.get("Logging")
         self.Timeout = _features.get("Timeout")
         self.Savebrace = _features.get("Savebrace")
+        self.nl = '\n'
 
         self.WidthArg = None
         self.WidthFull = None
@@ -467,11 +468,13 @@ def readinput(stream):
     TimeoutIx = 0
     bufsize = 1024
     yieldbuf = b''
+    select_listen = [stream.fileno()]
+    if state.exec_fd:
+        select_listen += state.exec_fd
     while True:
         if state.is_pty or state.is_exec:
             readbuffer = None
-            ready_in, _, _ = select.select(
-                    [state.exec_fd, stream.fileno()], [], [], state.Timeout)
+            ready_in, _, _ = select.select(select_listen, [], [], state.Timeout)
 
             if state.is_exec: 
                 # This is keyboard input
@@ -518,22 +521,23 @@ def readinput(stream):
             yieldbuf += readbuffer
             debug_write(readbuffer)
 
+        yieldbuf_str = yieldbuf.decode('utf-8')
         while True:
-            pos = yieldbuf.find(b'\n')
-            # this means we don't have a new line
-            if pos == -1:
-                testline = yieldbuf.decode('utf-8')
-
-                if state.current()['none'] and re.match(r'^.*>\s+$', visible(testline)):
-                    pos = len(yieldbuf)
-                else:
-                    # out of the inner loop
-                    break
+            i = re.search(r'[\r\n]+', yieldbuf_str)
+            if i:
+                endpos = i.span()[1]
+                str = yieldbuf_str[:endpos].replace('\t', ' ')
+                yield str
+                yieldbuf_str = yieldbuf_str[endpos:]
             else:
-                pos += 1
+                break
 
-            yield yieldbuf[:pos].decode('utf-8').replace('\t', ' ')
-            yieldbuf = yieldbuf[pos:]
+        if len(yieldbuf_str) > 0:
+            if state.current()['none'] and re.match(r'^.*>\s+$', visible(yieldbuf_str)):
+                yield yieldbuf_str
+                yieldbuf_str = ''
+
+        yieldbuf = yieldbuf_str.encode('utf-8')
 
 
 def parse(stream):
@@ -541,7 +545,7 @@ def parse(stream):
     for line in readinput(stream):
         state.has_newline = line.endswith('\n')
         # I hate this. There should be better ways.
-        state.maybe_prompt = not state.has_newline and state.current()['none'] and re.match(r'^.*>\s+$', visible(line))
+        state.maybe_prompt = not state.has_newline and state.current()['none'] #and re.match(r'^.*>\s+$', visible(line))
 
         # let's wait for a newline
         if state.maybe_prompt:
@@ -843,7 +847,7 @@ def parse(stream):
                 subsequent_line_prefix = " " * (indent)
             )
             for wrapped_line in wrapped_lineList:
-                yield f"{state.space_left()}{wrapped_line}\n"
+                yield f"{state.space_left()}{wrapped_line}{state.nl}"
 
             continue
 
@@ -875,7 +879,7 @@ def parse(stream):
         else:
             wrapped_lines = text_wrap(line)
             for wrapped_line in wrapped_lines:
-                yield f"{state.space_left()}{wrapped_line}\n"
+                yield f"{state.space_left()}{wrapped_line}{state.nl}"
 
 def emit(inp):
     buffer = []
@@ -892,9 +896,9 @@ def emit(inp):
                 continue
 
         if not state.has_newline:
-            chunk = chunk.rstrip("\n")
+            chunk = chunk.rstrip(state.nl)
         elif not chunk.endswith("\n"):
-            chunk += "\n"
+            chunk += state.nl
 
         if chunk.endswith("\n"):
             state.current_line = ''
@@ -906,7 +910,7 @@ def emit(inp):
         state.reset_inline()
 
         if flush:
-            chunk = "\n".join(buffer)
+            chunk = state.nl.join(buffer)
             buffer = []
             flush = False
 
@@ -919,7 +923,7 @@ def emit(inp):
         print(chunk, end="", file=sys.stdout, flush=True)
 
     if len(buffer):
-        print(buffer.pop(0), file=sys.stdout, end="", flush=True)
+        print(buffer.pop(0), file=sys.stdout, end=nl, flush=True)
 
 def apply_multipliers(name, H, S, V):
     m = _style.get(name)
@@ -944,7 +948,7 @@ def width_calc():
     state.Width = state.WidthFull - 2 * Style.Margin
     pre = state.space_left(listwidth=True) if Style.PrettyBroken else ''
     Style.Codepad = [
-        f"{pre}{RESET}{FG}{Style.Dark}{'▄' * state.full_width()}{RESET}\n",
+        f"{pre}{RESET}{FG}{Style.Dark}{'▄' * state.full_width()}{RESET}{state.nl}",
         f"{pre}{RESET}{FG}{Style.Dark}{'▀' * state.full_width()}{RESET}"
     ]
 
@@ -990,7 +994,9 @@ def main():
         if args.exec:
             state.terminal = termios.tcgetattr(sys.stdin)
             state.is_exec = True
+            state.nl = "\r\n"
             exec_args = shlex.split(args.exec)
+            tty.setraw(sys.stdin.fileno())
 
             pid, state.exec_fd = pty.fork()
             if pid == 0:
