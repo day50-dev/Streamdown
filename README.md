@@ -7,7 +7,7 @@
 </p>
 
 
-Streamdown works with [simonw's llm](https://github.com/simonw/llm) along with any other streaming markdown. You even get full readline and keyboard navigation support.
+Streamdown works with [simonw's llm](https://github.com/simonw/llm) along with any other streaming markdown, even something basic like curl. It's done clean so you get full readline and keyboard navigation support.
 ```bash
 $ pip install streamdown
 ```
