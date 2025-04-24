@@ -32,6 +32,9 @@ Here's kitty and alacritty. Try to do that in glow...
 As well as everything else...
 ![dunder](https://github.com/user-attachments/assets/d41d7fec-6dec-4387-b53d-f2098f269a5e)
 
+Very ... Carefully ... Supported ... 
+![cjk1](https://github.com/user-attachments/assets/75162ade-4734-440e-aaa3-5ffc17a0dd46)
+
 ### Colors are highly (and quickly) configurable for people who care a lot, or just a little.
 ![configurable](https://github.com/user-attachments/assets/19ca2ec9-8ea1-4a79-87ca-8352789269fe)
 
