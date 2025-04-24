@@ -8,7 +8,7 @@
 
 
 Streamdown works with [simonw's llm](https://github.com/simonw/llm) along with any other streaming markdown, even something basic like curl. 
-It supports standard piping like any normal pager or it can be a wrapper.
+It supports standard piping like any normal pager or it can run as a wrapper.
 ```bash
 $ pip install streamdown
 ```
