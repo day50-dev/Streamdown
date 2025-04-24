@@ -34,7 +34,7 @@ Here's kitty and alacritty.
 
 #### ...even CJK 
 Compare how streamdown wraps around and spaces this Chinese comparison of programming languages in a markdown table compared to the same file using glow.
-![cjk1](https://github.com/user-attachments/assets/747274d1-f7ff-4a60-bbb2-ef519d32a495)
+![cjk](https://github.com/user-attachments/assets/b831a5f3-7ef0-48b8-8d17-bb7b605df16a)
 
 ### Colors are highly (and quickly) configurable for people who care a lot, or just a little.
 ![configurable](https://github.com/user-attachments/assets/19ca2ec9-8ea1-4a79-87ca-8352789269fe)
