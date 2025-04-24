@@ -15,12 +15,12 @@ $ pip install streamdown
 ![Streamdown is Amazing](https://github.com/user-attachments/assets/268cb340-78cc-4df0-a773-c5ac95eceeeb)
 
 ### Provides clean copyable code for long code lines
-Some *inferior* renderers inject line breaks when copying code that wraps around. We're better and now you are too!
+Other renderers inject line breaks when copying code that wraps around. We're better and now you are too!
 ![Handle That Mandle](https://github.com/user-attachments/assets/a27aa70c-f691-4796-84f0-c2eb18c7de23)
 **Tip**: You can make things prettier if you don't mind if this guarantee is broken. See the `PrettyBroken` flag below!
 
 ### Supports images
-Here's kitty and alacritty. Try to do that in glow...
+Here's kitty and alacritty. 
 ![doggie](https://github.com/user-attachments/assets/81c43983-68cd-40c1-b1d5-aa3a52004504)
 
 ### Supports hyperlinks (OSC 8) and clipboard (OSC 52)
@@ -29,11 +29,12 @@ Here's kitty and alacritty. Try to do that in glow...
 ### Supports tables
 ![table](https://github.com/user-attachments/assets/dbe3d13e-6bac-4f45-bf30-f1857ed98898)
 
-As well as everything else...
+#### As well as everything else...
 ![dunder](https://github.com/user-attachments/assets/d41d7fec-6dec-4387-b53d-f2098f269a5e)
 
-Very ... Carefully ... Supported ... 
-![cjk1](https://github.com/user-attachments/assets/75162ade-4734-440e-aaa3-5ffc17a0dd46)
+#### ...even CJK 
+Compare how streamdown wraps around and spaces this Chinese comparison of programming languages in a markdown table compared to the same file using glow.
+![cjk1](https://github.com/user-attachments/assets/747274d1-f7ff-4a60-bbb2-ef519d32a495)
 
 ### Colors are highly (and quickly) configurable for people who care a lot, or just a little.
 ![configurable](https://github.com/user-attachments/assets/19ca2ec9-8ea1-4a79-87ca-8352789269fe)
