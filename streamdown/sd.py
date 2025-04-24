@@ -208,7 +208,7 @@ class ParseState:
         return offset + (state.current_width(listwidth = True) if Style.PrettyBroken else self.WidthFull)
 
     def current_width(self, listwidth = False):
-        return self.Width - (len(visible(self.space_left(listwidth))) + Style.Margin)
+        return self.Width - (len(visible(self.space_left(listwidth))))
 
     def space_left(self, listwidth = False):
         pre = ' ' * (len(state.list_item_stack)) * Style.ListIndent if listwidth else ''
@@ -224,15 +224,20 @@ def format_table(rowList):
     # Calculate max width per column (integer division)
     # Subtract num_cols + 1 for the vertical borders '│'
     available_width = state.current_width() - (num_cols + 1)
-    col_width = max(1, available_width // num_cols)
+
+    width_base = available_width // num_cols
+    width_mod  = available_width % num_cols
+
+    col_width_list = [width_base + (1 if i < width_mod else 0) for i in range(num_cols)]
     bg_color = Style.Mid if state.in_table == Style.Head else Style.Dark
     state.bg = f"{BG}{bg_color}"
 
     # First Pass: Wrap text and calculate row heights
     # Note this is where every cell is formatted so if 
     # you are styling, do it before here!
-    for row in rowList:
-        wrapped_cell = text_wrap(row, width=col_width, force_truncate=True)
+    for ix in range(len(rowList)):
+        row = rowList[ix]
+        wrapped_cell = text_wrap(row, width=col_width_list[ix], force_truncate=True)
 
         # Ensure at least one line, even for empty cells
         if not wrapped_cell:
@@ -248,13 +253,14 @@ def format_table(rowList):
         line_segments = []
 
         # Now we want to snatch this row index from all our cells
-        for cell in wrapped_cellList:
+        for iy in range(len(wrapped_cellList)):
+            cell = wrapped_cellList[iy]
             segment = ''
             if ix < len(cell):
                 segment = cell[ix]
 
             # Margin logic is correctly indented here
-            margin_needed = col_width - visible_length(segment)
+            margin_needed = col_width_list[iy] - visible_length(segment)
             margin_segment = segment + (" " * max(0, margin_needed))
             line_segments.append(f"{BG}{bg_color}{extra} {margin_segment}")
 
@@ -269,7 +275,7 @@ def emit_h(level, text):
     text = line_format(text)
     spaces_to_center = (state.current_width() -  visible_length(text)) / 2
     if level == 1:      #
-        return f"{state.space_left()}\n{state.space_left()}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{BOLD[1]}"
+        return f"{state.space_left()}\n{state.space_left()}{BOLD[1]}{' ' * math.floor(spaces_to_center)}{text}{BOLD[1]}"
     elif level == 2:    ##
         return f"{state.space_left()}\n{state.space_left()}{BOLD[0]}{FG}{Style.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}{FGRESET}"
     elif level == 3:    ###
@@ -338,7 +344,16 @@ def ansi_collapse(codelist, inp):
 
 def split_text(text):
     return [x for x in re.split(
-        r'(?<=[\u3000-\u303F\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF])|(?=[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF])|\s+',
+        r'(?<=['
+            r'\u3000-\u303F'
+            r'\u4E00-\u9FFF'
+            r'\u3400-\u4DBF'
+            r'\uF900-\uFAFF'
+          r'])|(?=['
+            #r'\u4E00-\u9FFF'
+            r'\u3400-\u4DBF'
+            r'\uF900-\uFAFF'
+          r'])|\s+',
         text
     ) if x]
 
@@ -347,7 +362,11 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
         width = state.Width
 
     # The empty word clears the buffer at the end.
-    words = split_text(line_format(text)) + [""]
+    formatted = line_format(text)
+    #print(bytes(formatted, 'utf-8'), formatted)
+    words = split_text(formatted) + [""]
+    #print([bytes(i, 'utf-8') for i in words])
+
     lines = []
     current_line = ""
     current_style = []
