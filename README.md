@@ -8,7 +8,7 @@
 
 
 Streamdown works with [simonw's llm](https://github.com/simonw/llm) along with any other streaming markdown, even something basic like curl. 
-It supports standard piping like any normal pager and a clean `execvp` option for robustly wrapping around interactive programs with readline or their own ANSI stuff to manage.
+It supports standard piping like any normal pager or it can run as a wrapper.
 ```bash
 $ pip install streamdown
 ```
@@ -33,7 +33,7 @@ Here's kitty and alacritty.
 ![dunder](https://github.com/user-attachments/assets/d41d7fec-6dec-4387-b53d-f2098f269a5e)
 
 #### ...even CJK 
-Compare how streamdown wraps around and spaces this tabular Chinese description of programming languages to the same file using glow.
+Compare how streamdown wraps and spaces this tabular Chinese description of programming languages to another leading markdown renderer. 很美！
 ![cjk](https://github.com/user-attachments/assets/b831a5f3-7ef0-48b8-8d17-bb7b605df16a)
 
 ### Colors are highly (and quickly) configurable for people who care a lot, or just a little.
