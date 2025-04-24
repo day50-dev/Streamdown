@@ -834,7 +834,7 @@ def parse(stream):
         # This is intentional ... we can get here in llama 4 using
         # a weird thing
         if state.in_list:
-            indent = (len(state.list_item_stack) - 1) * Style.ListIndent + (len(bullet) - 1)
+            indent = (len(state.list_item_stack) - 1) * Style.ListIndent #+ (len(bullet) - 1)
             wrap_width = state.current_width() - indent - (2 * Style.ListIndent) 
             
             wrapped_lineList = text_wrap(content, wrap_width, Style.ListIndent,
