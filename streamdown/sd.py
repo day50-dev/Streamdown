@@ -116,8 +116,8 @@ def savebrace():
     if state.Savebrace and state.code_buffer_raw:
         path = os.path.join(tempfile.gettempdir(), "sd", 'savebrace')
         with open(path, "a") as f:
-            f.write(state.code_buffer_raw)
-        
+            f.write(state.code_buffer_raw + "\x00")
+            f.flush()
 
 class Goto(Exception):
     pass
