@@ -33,7 +33,7 @@ Here's kitty and alacritty.
 ![dunder](https://github.com/user-attachments/assets/d41d7fec-6dec-4387-b53d-f2098f269a5e)
 
 #### ...even CJK 
-Compare how streamdown wraps and spaces this tabular Chinese description of programming languages to other leading markdown renderer.
+Compare how streamdown wraps and spaces this tabular Chinese description of programming languages to other leading markdown renderers.
 
 Only one generates the text without truncation. 很美！
 ![cjk](https://github.com/user-attachments/assets/cae485d7-c478-4836-9732-d9fa49e13bc9)
