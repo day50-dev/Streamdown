@@ -658,7 +658,6 @@ def parse(stream):
                     state.code_language = 'Bash'
 
             if state.in_code:
-                savebrace()
                 state.code_buffer = state.code_buffer_raw = ""
                 state.code_gen = 0
                 state.code_first_line = True
@@ -690,6 +689,7 @@ def parse(stream):
                         open(os.path.join(state.scrape, f"file_{state.scrape_ix}.{ext}"), 'w').write(state.code_buffer_raw)
                         state.scrape_ix += 1
 
+                    savebrace()
                     state.code_language = None
                     state.code_indent = 0
                     code_type = state.in_code
