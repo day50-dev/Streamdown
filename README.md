@@ -26,7 +26,8 @@ Here's kitty and alacritty.
 
 ### Supports hyperlinks (OSC 8) and clipboard (OSC 52)
 The operational `Clipboard` feature puts the final codeblock into your clipboard. See below for details.
-![links.webm](https://github.com/user-attachments/assets/a5f71791-7c58-4183-ad3b-309f470c08a3)
+
+[links.webm](https://github.com/user-attachments/assets/a5f71791-7c58-4183-ad3b-309f470c08a3)
 
 ### Supports tables
 ![table](https://github.com/user-attachments/assets/dbe3d13e-6bac-4f45-bf30-f1857ed98898)
