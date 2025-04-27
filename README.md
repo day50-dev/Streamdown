@@ -30,7 +30,9 @@ Here's kitty and alacritty.
 ![table](https://github.com/user-attachments/assets/dbe3d13e-6bac-4f45-bf30-f1857ed98898)
 
 #### As well as everything else...
-Here's the `Savebrace` feature in action with my `screen-query` and `sd-picker` program from my [llmehelp](https://github.com/kristopolous/llmehelp) tools. You can have an ongoing conversation in tmux with your terminal session and then use tmux popups and fzf to copy and paste coding blocks in. So this is `tmux` + `simonw's llm` + `screen-query` + `streamdown` + `fzf` + `sd-picker` all tightly integrated through a few keystrokes.
+Here's the `Savebrace` feature in action with my `screen-query` and `sd-picker` program from my [llmehelp](https://github.com/kristopolous/llmehelp) tools. You can have an ongoing conversation in tmux with your terminal session and then use popups and fzf to insert coding blocks. So this is `tmux` + `simonw's llm` + `screen-query` + `streamdown` + `fzf` + `sd-picker` all tightly integrated through a few keystrokes.
+
+This allows you to interactively debug with a tight control loop so the agent doesn't ever just wander off doing silly things.
 
 It takes about 2 minutes to set up and about 0.2s to use. Fast, fluid and free.
 ![screenquery](https://github.com/user-attachments/assets/517be4fe-6962-4e4c-b2f2-563471bc48d0)
