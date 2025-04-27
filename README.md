@@ -16,7 +16,7 @@ $ pip install streamdown
 ![Streamdown is Amazing](https://github.com/user-attachments/assets/268cb340-78cc-4df0-a773-c5ac95eceeeb)
 
 ### Provides clean copyable code for long code lines
-Other renderers inject line breaks when copying code that wraps around. We're better and now you are too!
+Other renderers inject line breaks when copying code that wraps around. Streamdown's better and now you are too!
 ![Handle That Mandle](https://github.com/user-attachments/assets/a27aa70c-f691-4796-84f0-c2eb18c7de23)
 **Tip**: You can make things prettier if you don't mind if this guarantee is broken. See the `PrettyBroken` flag below! (There's still 2 other convenient ways of getting code blocks out.)
 
@@ -25,7 +25,7 @@ Here's kitty and alacritty.
 ![doggie](https://github.com/user-attachments/assets/81c43983-68cd-40c1-b1d5-aa3a52004504)
 
 ### Supports hyperlinks (OSC 8) and clipboard (OSC 52)
-The operational `Clipboard` feature puts the final codeblock into your clipboard. See below for details.
+The optional `Clipboard` feature puts the final codeblock into your clipboard. See below for details.
 
 [links.webm](https://github.com/user-attachments/assets/a5f71791-7c58-4183-ad3b-309f470c08a3)
 
