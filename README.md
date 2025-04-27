@@ -31,6 +31,8 @@ Here's kitty and alacritty.
 
 #### As well as everything else...
 Here's the `Savebrace` feature in action with my `screen-query` and `sd-picker` program from my [llmehelp](https://github.com/kristopolous/llmehelp) tools. You can have an ongoing conversation in tmux with your terminal session and then use tmux popups and fzf to copy and paste coding blocks in. So this is `tmux` + `simonw's llm` + `screen-query` + `streamdown` + `fzf` + `sd-picker` all tightly integrated through a few keystrokes.
+
+It takes about 2 minutes to set up and about 0.2s to use. Fast, fluid and free.
 ![screenquery](https://github.com/user-attachments/assets/517be4fe-6962-4e4c-b2f2-563471bc48d0)
 
 #### ...It even supports CJK 
