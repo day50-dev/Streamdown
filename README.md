@@ -30,9 +30,10 @@ Here's kitty and alacritty.
 ![table](https://github.com/user-attachments/assets/dbe3d13e-6bac-4f45-bf30-f1857ed98898)
 
 #### As well as everything else...
-![dunder](https://github.com/user-attachments/assets/d41d7fec-6dec-4387-b53d-f2098f269a5e)
+Here's the `Savebrace` feature in action with my `screen-query` and `sd-picker` program from my [llmehelp](https://github.com/kristopolous/llmehelp) tools. You can have an ongoing conversation in tmux with your terminal session and then use tmux popups and fzf to copy and paste coding blocks in. So this is `tmux` + `simonw's llm` + `screen-query` + `streamdown` + `fzf` + `sd-picker` all tightly integrated through a few keystrokes.
+![screenquery](https://github.com/user-attachments/assets/517be4fe-6962-4e4c-b2f2-563471bc48d0)
 
-#### ...even CJK 
+#### ...It even supports CJK 
 Compare how streamdown wraps and spaces this tabular Chinese description of programming languages to other leading markdown renderers.
 
 Only one generates the text without truncation. 很美！
