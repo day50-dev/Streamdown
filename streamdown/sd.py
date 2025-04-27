@@ -218,11 +218,10 @@ state = ParseState()
 
 def override_background(style_name, background_color):
     base_style = get_style_by_name(style_name)
-    return type(
-        f"{style_name.title().replace('-', '')}CustomBackground",
-        (base_style.__class__,),
-        {"background_color": background_color}
-    )
+    for i in base_style:
+        if i[1]['bgcolor'] is None:
+            i[1]['bgcolor'] = background_color
+    return base_style
 
 def format_table(rowList):
     num_cols = len(rowList)
@@ -725,10 +724,10 @@ def parse(stream):
                     state.code_first_line = False
                     try:
                         lexer = get_lexer_by_name(state.code_language)
-                        custom_style = override_background(Style.Syntax)
+                        custom_style = override_background(Style.Syntax, ansi2hex(Style.Dark))
                     except pygments.util.ClassNotFound:
                         lexer = get_lexer_by_name("Bash")
-                        custom_style = get_style_by_name("default")
+                        custom_style = override_background("default", ansi2hex(Style.Dark))
 
                     formatter = TerminalTrueColorFormatter(style=custom_style)
                     if line.startswith(' ' * state.code_indent):
