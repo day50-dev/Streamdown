@@ -216,6 +216,14 @@ class ParseState:
 
 state = ParseState()
 
+def override_background(style_name, background_color):
+    base_style = get_style_by_name(style_name)
+    return type(
+        f"{style_name.title().replace('-', '')}CustomBackground",
+        (base_style.__class__,),
+        {"background_color": background_color}
+    )
+
 def format_table(rowList):
     num_cols = len(rowList)
     row_height = 0
@@ -717,7 +725,7 @@ def parse(stream):
                     state.code_first_line = False
                     try:
                         lexer = get_lexer_by_name(state.code_language)
-                        custom_style = get_style_by_name(Style.Syntax)
+                        custom_style = override_background(Style.Syntax)
                     except pygments.util.ClassNotFound:
                         lexer = get_lexer_by_name("Bash")
                         custom_style = get_style_by_name("default")
@@ -945,6 +953,11 @@ def emit(inp):
 
     if len(buffer):
         print(buffer.pop(0), file=sys.stdout, end="", flush=True)
+
+def ansi2hex(ansi_code):
+    parts = ansi_code.strip('m').split(";")
+    r, g, b = map(int, parts)
+    return f"#{r:02x}{g:02x}{b:02x}"
 
 def apply_multipliers(name, H, S, V):
     m = _style.get(name)
