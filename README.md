@@ -54,7 +54,7 @@ For instance, here is the [latex plugin](https://github.com/kristopolous/Streamd
 ![calc](https://github.com/user-attachments/assets/0b0027ca-8ef0-4b4a-b4ae-e36ff623a683)
 
 
-## TOML Configuration 
+## Configuration 
 
 It's located at `~/.config/streamdown/config.toml` (following the XDG Base Directory Specification). If this file does not exist upon first run, it will be created with default values. 
 
@@ -62,7 +62,9 @@ Here are the sections:
 
 **`[style]`**
 
-Defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived. The defaults are [at the beginning of the source](https://github.com/kristopolous/Streamdown/blob/main/streamdown/sd.py#L33).
+Defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived. This can also be specified at runtime via command line arguments. See below! 
+
+The default values are [at the beginning of the source](https://github.com/kristopolous/Streamdown/blob/main/streamdown/sd.py#L33).
 
 *   `HSV`: [ 0.0 - 1.0, 0.0 - 1.0, 0.0 - 1.0 ] 
 *   `Dark`: Multipliers for background elements, code blocks. 
