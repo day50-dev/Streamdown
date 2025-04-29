@@ -7,32 +7,37 @@
 </p>
 
 
-Streamdown works with [simonw's llm](https://github.com/simonw/llm) along with any other streaming markdown, even something basic like curl. 
-It supports standard piping like any normal pager or it can run as a wrapper.
+Streamdown works with any streaming markdown such as [simonw's llm](https://github.com/simonw/llm) or even something basic like curl. 
+
+It supports standard piping and files as arguments like any normal pager but can also run as a wrapper so you retain full keyboard interactivity. Arrow keys, control, alt, all still work.
 ```bash
 $ pip install streamdown
 ```
 ![Streamdown is Amazing](https://github.com/user-attachments/assets/268cb340-78cc-4df0-a773-c5ac95eceeeb)
 
 ### Provides clean copyable code for long code lines
-Other renderers inject line breaks when copying code that wraps around. We're better and now you are too!
+Other renderers inject line breaks when copying code that wraps around. Streamdown's better and now you are too!
 ![Handle That Mandle](https://github.com/user-attachments/assets/a27aa70c-f691-4796-84f0-c2eb18c7de23)
-**Tip**: You can make things prettier if you don't mind if this guarantee is broken. See the `PrettyBroken` flag below!
+**Tip**: You can make things prettier if you don't mind if this guarantee is broken. See the `PrettyBroken` flag below! (There's still 2 other convenient ways of getting code blocks out.)
 
 ### Supports images
 Here's kitty and alacritty. 
 ![doggie](https://github.com/user-attachments/assets/81c43983-68cd-40c1-b1d5-aa3a52004504)
 
 ### Supports hyperlinks (OSC 8) and clipboard (OSC 52)
+The optional `Clipboard` feature puts the final codeblock into your clipboard. See below for details.
+
 [links.webm](https://github.com/user-attachments/assets/a5f71791-7c58-4183-ad3b-309f470c08a3)
 
-### Supports tables
-![table](https://github.com/user-attachments/assets/dbe3d13e-6bac-4f45-bf30-f1857ed98898)
+### As well as everything else...
+Here's the `Savebrace` feature with `screen-query` and `sd-picker` from [llmehelp](https://github.com/kristopolous/llmehelp). You can have an ongoing conversation in tmux with your terminal session. Then use popups and fzf to insert command or coding blocks all with a keystroke.
 
-#### As well as everything else...
-![dunder](https://github.com/user-attachments/assets/d41d7fec-6dec-4387-b53d-f2098f269a5e)
+This allows you to interactively debug  in a way that the agent doesn't just wander off doing silly things.
 
-#### ...even CJK 
+It takes about 2 minutes to set up and about 0.2s to use. Fast, fluid and free.
+![screenquery](https://github.com/user-attachments/assets/517be4fe-6962-4e4c-b2f2-563471bc48d0)
+
+### ...It even supports CJK 
 Compare how streamdown wraps and spaces this tabular Chinese description of programming languages to other leading markdown renderers.
 
 Only one generates the text without truncation. 很美！
@@ -46,7 +51,7 @@ For instance, here is the [latex plugin](https://github.com/kristopolous/Streamd
 ![calc](https://github.com/user-attachments/assets/0b0027ca-8ef0-4b4a-b4ae-e36ff623a683)
 
 
-## TOML Configuration 
+## Configuration 
 
 It's located at `~/.config/streamdown/config.toml` (following the XDG Base Directory Specification). If this file does not exist upon first run, it will be created with default values. 
 
@@ -54,7 +59,9 @@ Here are the sections:
 
 **`[style]`**
 
-Defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived. The defaults are [at the beginning of the source](https://github.com/kristopolous/Streamdown/blob/main/streamdown/sd.py#L33).
+Defines the base Hue (H), Saturation (S), and Value (V) from which all other palette colors are derived. This can also be specified at runtime via command line arguments. See below! 
+
+The default values are [at the beginning of the source](https://github.com/kristopolous/Streamdown/blob/main/streamdown/sd.py#L33).
 
 *   `HSV`: [ 0.0 - 1.0, 0.0 - 1.0, 0.0 - 1.0 ] 
 *   `Dark`: Multipliers for background elements, code blocks. 
