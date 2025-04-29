@@ -585,6 +585,7 @@ def parse(stream):
             continue
 
         state.buffer = b''
+        """
         # Run through the plugins first
         res = latex.Plugin(line, state, Style)
         if res is True:
@@ -595,6 +596,7 @@ def parse(stream):
             for row in res:
                 yield row
                 continue
+        """
         
         # running this here avoids stray |
         block_match = re.match(r"^\s*((>\s*)+|<.?think>)", line)
