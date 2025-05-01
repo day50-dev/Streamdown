@@ -92,6 +92,7 @@ BOLD      = ["\033[1m", "\033[22m"]
 UNDERLINE = ["\033[4m", "\033[24m"]
 ITALIC    = ["\033[3m", "\033[23m"]
 STRIKEOUT = ["\033[9m", "\033[29m"]
+LINK      = ["\033]8;;", "\033]8;;\033\\"]
 SUPER     = [ 0x2070, 0x00B9, 0x00B2, 0x00B3, 0x2074, 0x2075, 0x2076, 0x2077, 0x2078, 0x2079 ]
 
 ESCAPE = r"\033\[[0-9;]*[mK]"
@@ -404,6 +405,10 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
             margin = max(0, width - visible_length(line_content))
 
             if line_content.strip() != "":
+                # We make absolutely positively sure beyond any doubt
+                # that we have closed our hyperlink OSC
+                if LINK[0] in line_content:
+                    line_content += LINK[1]
                 lines.append(line_content + state.bg + ' ' * margin)
 
             current_line = (" " * indent) + "".join(current_style) + word
@@ -453,7 +458,7 @@ def line_format(line):
     def process_links(match):
         description = match.group(1)
         url = match.group(2)
-        return f'\033]8;;{url}\033\\{Style.Link}{description}{UNDERLINE[1]}\033]8;;\033\\{FGRESET}'
+        return f'{LINK[0]}{url}\033\\{Style.Link}{description}{UNDERLINE[1]}{LINK[1]}{FGRESET}'
 
     line = re.sub(r"\!\[([^\]]*)\]\(([^\)]+)\)", process_images, line)
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
@@ -470,19 +475,23 @@ def line_format(line):
         # This trick makes sure that things like `` ` `` render right.
         if "`" in token and (not state.inline_code or state.inline_code == token):
             if state.inline_code:
+                savebrace()
                 state.inline_code = False
             else:
                 state.inline_code = token
+                state.code_buffer_raw = ''
 
             if state.inline_code:
                 result += f'{BG}{Style.Mid}'
             else:
                 result += state.bg
+                state.code_buffer_raw = ''
    
         # This is important here because we ignore formatting
         # inside of our code block.
         elif state.inline_code:
             result += token
+            state.code_buffer_raw += token
 
         elif token == '~~' and (state.in_strikeout or not_text(prev_token)):
             state.in_strikeout = not state.in_strikeout
