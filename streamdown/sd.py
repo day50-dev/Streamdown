@@ -475,7 +475,8 @@ def line_format(line):
         # This trick makes sure that things like `` ` `` render right.
         if "`" in token and (not state.inline_code or state.inline_code == token):
             if state.inline_code:
-                savebrace()
+                if ' ' in state.inline_code:
+                    savebrace()
                 state.inline_code = False
             else:
                 state.inline_code = token
