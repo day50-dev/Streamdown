@@ -65,7 +65,7 @@ Symbol  = { H = 1.00, S = 1.00, V = 1.50 }
 Head    = { H = 1.00, S = 1.00, V = 1.75 }
 Grey    = { H = 1.00, S = 0.25, V = 1.37 }
 Bright  = { H = 1.00, S = 2.00, V = 2.00 }
-Syntax  = "monokai"
+Syntax  = "dracula"
 """
 
 def ensure_config_file():
@@ -101,7 +101,7 @@ KEYCODE_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
 # cjk characters are double width
-visible_length = lambda x: len(visible(x)) + cjk_count(x)
+visible_length = lambda x: len(visible(x)) + dbl_count(x)
 extract_ansi_codes = lambda text: re.findall(ESCAPE, text)
 remove_ansi = lambda line, codeList: reduce(lambda line, code: line.replace(code, ''), codeList, line)
 
@@ -219,9 +219,16 @@ state = ParseState()
 
 def override_background(style_name, background_color):
     base_style = get_style_by_name(style_name)
+    base_style.background_color = background_color
     for i in base_style:
-        if i[1]['bgcolor'] is None:
-            i[1]['bgcolor'] = background_color
+        i[1]['bgcolor'] = background_color
+    for i,v in base_style.styles.items():
+        if v and 'bg' in v:
+            base_style.styles[i] = re.sub(r'bg:[^ ]*', '', base_style.styles[i] )
+    for k,v in base_style._styles.items():
+         if v[4] != '':
+             v[4] = ''
+
     return base_style
 
 def format_table(rowList):
@@ -425,6 +432,15 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
         return []
 
     return lines
+
+def dbl_count(s):
+    dbl_re = re.compile(
+        r'[\u2e80-\u2eff\u3000-\u303f\u3400-\u4dbf'
+        r'\U00004e00-\U00009fff\U0001f300-\U0001f6ff'
+        r'\U0001f900-\U0001f9ff\U0001fa70-\U0001faff]',
+        re.UNICODE
+    )
+    return len(dbl_re.findall(visible(s)))
 
 def cjk_count(s):
     cjk_re = re.compile(
@@ -758,6 +774,7 @@ def parse(stream):
                 else:
                     continue
 
+                highlighted_code = highlight(line, lexer, formatter)
                 indent, line_wrap = code_wrap(line)
                 
                 state.where_from = "in code"
@@ -769,14 +786,17 @@ def parse(stream):
                     # then naively search back until our visible_lengths() match. This is not fast and there's certainly smarter
                     # ways of doing it but this thing is way trickery than you think
                     highlighted_code = highlight(state.code_buffer + tline, lexer, formatter)
+                    #print("(",highlighted_code,")")
 
                     # Sometimes the highlighter will do things like a full reset or a background reset.
                     # This is not what we want
-                    highlighted_code = re.sub(r"\033\[49(;00|)m", '', highlighted_code)
+                    highlighted_code = re.sub(r"\033\[[34]9(;00|)m", '', highlighted_code)
     
                     # Since we are streaming we ignore the resets and newlines at the end
                     if highlighted_code.endswith(FGRESET + "\n"):
                         highlighted_code = highlighted_code[: -(1 + len(FGRESET))]
+
+                    #print(bytes(highlighted_code, 'utf-8'))
 
                     # turns out highlight will eat leading newlines on empty lines
                     vislen = visible_length(state.code_buffer.lstrip())

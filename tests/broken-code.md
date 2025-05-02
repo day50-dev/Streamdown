@@ -32,12 +32,12 @@
             return n;
         }
 
-        function🫣 drawMandelbrot() {
+        function drawMandelbrot() {
             for (let x = 0; x < width; x++) {
                 for (let y = 0; y < height; y++) {
                     const cx = xMin + (xMax - xMin) * x / width;
                     const cy = yMin + (yMax - yMin) * y / height;
-                    const color = mandelbro🫣t(cx + cy * 1i, maxIter);
+                    const color = mandelbrot(cx + cy * 1i, maxIter);
                     const r = (color * 255) / maxIter;
                     ctx.fillStyle = `rgb(${r}, ${r}, ${r})`;
                     ctx.fillRect(x, y, 1, 1);
@@ -45,7 +45,7 @@
             }
         }
 
-🫣        drawMandelbrot();
+        drawMandelbrot();
     </script>
 </body>
 </html>
