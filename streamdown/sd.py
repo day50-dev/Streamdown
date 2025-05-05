@@ -1105,6 +1105,8 @@ def main():
         os.close(state.exec_master)
         if state.exec_sub:
             state.exec_sub.wait()
+
+    print(RESET)
     sys.exit(state.exit)
 
 if __name__ == "__main__":
