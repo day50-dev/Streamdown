@@ -115,6 +115,8 @@ def debug_write(text):
 
 def savebrace():
     if state.Savebrace and state.code_buffer_raw:
+        tmp_dir = os.path.join(tempfile.gettempdir(), "sd")
+        os.makedirs(tmp_dir, exist_ok=True)
         path = os.path.join(tempfile.gettempdir(), "sd", 'savebrace')
         with open(path, "a") as f:
             f.write(state.code_buffer_raw + "\x00")
