@@ -45,4 +45,6 @@ sd = "streamdown.sd:main"
 [tool.hatch.build.targets.wheel]
 packages = ["streamdown"]
 include = ["streamdown/plugins/*"]
+exclude = ["venv", "dist", ".git"] 
+
 
