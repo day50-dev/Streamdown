@@ -34,7 +34,7 @@ The optional `Clipboard` feature puts the final codeblock into your clipboard. S
 [links.webm](https://github.com/user-attachments/assets/a5f71791-7c58-4183-ad3b-309f470c08a3)
 
 ### As well as everything else...
-Here's the `Savebrace` feature with `screen-query` and `sd-picker` from [llmehelp](https://github.com/kristopolous/llmehelp). You can have an ongoing conversation in tmux with your terminal session. Then use popups and fzf to insert command or coding blocks all with a keystroke.
+Here's the `Savebrace` feature with `screen-query` and `sq-picker` from [llmehelp](https://github.com/kristopolous/llmehelp). You can have an ongoing conversation in tmux with your terminal session. Then use popups and fzf to insert command or coding blocks all with a keystroke.
 
 This allows you to interactively debug  in a way that the agent doesn't just wander off doing silly things.
 
