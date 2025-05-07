@@ -9,7 +9,7 @@
 
 Streamdown works with any streaming markdown such as [simonw's llm](https://github.com/simonw/llm) or even something basic like curl. 
 
-It is designed for AI and can be used to do parser based sophisticated pipelines and routing cracking open various monolithic AI solutions to permit them to integrate. Think of it as output level routing.
+It is designed for AI and can be used to do parser based sophisticated pipelines and routing, cracking open various monolithic AI solutions to permit them to integrate. Think of it as output level routing at the semantic level.
 
 You can also just use it like a normal person.
 
