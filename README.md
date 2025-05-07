@@ -9,7 +9,7 @@
 
 Streamdown works with any streaming markdown such as [simonw's llm](https://github.com/simonw/llm) or even something basic like curl. 
 
-It is designed with AI and can be used to do markdown-based sophisticated pipelines and routing cracking open various monolithic AI solutions and allowing them to integrate.
+It is designed for AI and can be used to do markdown-based sophisticated pipelines and routing cracking open various monolithic AI solutions and allowing them to integrate.
 
 It supports standard piping and files as arguments like any normal pager but can also run as a wrapper so you retain full keyboard interactivity. Arrow keys, control, alt, all still work.
 ```bash
