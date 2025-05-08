@@ -110,9 +110,19 @@ Clipboard = false
 ## Command Line
 The most exciting feature here is `--exec` with it you can do full readline support like this:
 
-     $ sd --exec "llm chat"
+```shell
+$ sd --exec "llm chat"
+```
 
-And now you have all your readline stuff. It's pretty great.
+And now you have all your readline stuff. It's pretty great. (Also see the Day50 shellwrap project.)
+
+It's also worth noting that things like the `-c` aren't "broken" with regard to file input. You can do something like this:
+
+```shell
+$ ./streamdown/sd.py -c <(echo "[style]\nMargin=10") 
+```
+
+To override the margin.
 
 ```shell
 usage: sd.py [-h] [-l LOGLEVEL] [-b BASE] [-c CONFIG] [-w WIDTH] [-e EXEC]
