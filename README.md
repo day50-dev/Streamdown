@@ -126,8 +126,7 @@ To override the margin.
 
 ```shell
 usage: sd [-h] [-l LOGLEVEL] [-b BASE] [-c CONFIG] [-w WIDTH] [-e EXEC]
-          [-s SCRAPE]
-          [filenameList ...]
+          [-s SCRAPE] [filenameList ...]
 
 Streamdown - A Streaming markdown renderer for modern terminals
 
