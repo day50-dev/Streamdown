@@ -317,6 +317,10 @@ def code_wrap(text_in):
     for i in range(mywidth, len(text), mywidth):
         res.append(text[i : i + mywidth])
 
+    # sometimes just a newline wraps ... this isn't what we want actually
+    if res[-1].strip() == '':
+        res.pop()
+
     return (indent, res)
 
 
@@ -806,12 +810,10 @@ def parse(stream):
                     if highlighted_code.endswith(FGRESET + "\n"):
                         highlighted_code = highlighted_code[: -(1 + len(FGRESET))]
 
-                    #print(bytes(highlighted_code, 'utf-8'))
-
                     # turns out highlight will eat leading newlines on empty lines
                     vislen = visible_length(state.code_buffer.lstrip())
 
-                    delta = 0
+                    delta = -2 
                     while visible_length(highlighted_code[:(state.code_gen-delta)]) > vislen:
                         delta += 1
 
