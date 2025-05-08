@@ -115,21 +115,27 @@ The most exciting feature here is `--exec` with it you can do full readline supp
 And now you have all your readline stuff. It's pretty great.
 
 ```shell
-Streamdown - A markdown renderer for modern terminals
+usage: sd.py [-h] [-l LOGLEVEL] [-b BASE] [-c CONFIG] [-w WIDTH] [-e EXEC]
+             [-s SCRAPE]
+             [filenameList ...]
+
+Streamdown - A Streaming markdown renderer for modern terminals
 
 positional arguments:
   filenameList          Input file to process (also takes stdin)
 
-options:
+optional arguments:
   -h, --help            show this help message and exit
   -l LOGLEVEL, --loglevel LOGLEVEL
                         Set the logging level
-  -c COLOR, --color COLOR
-                        Set the hsv base: h,s,v
+  -b BASE, --base BASE  Set the hsv base: h,s,v
+  -c CONFIG, --config CONFIG
+                        Use a custom config
   -w WIDTH, --width WIDTH
-                        Set the width
-  -e EXEC, --exec EXEC  Wrap a program for more 'proper' i/o handling
-
+                        Set the width WIDTH
+  -e EXEC, --exec EXEC  Wrap a program EXEC for more 'proper' i/o handling
+  -s SCRAPE, --scrape SCRAPE
+                        Scrape code snippets to a directory SCRAPE
 ```
 
 ## Demo

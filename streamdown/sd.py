@@ -68,19 +68,18 @@ Bright  = { H = 1.00, S = 2.00, V = 2.00 }
 Syntax  = "dracula"
 """
 
-def ensure_config_file():
-    config_dir = appdirs.user_config_dir("streamdown")
-    os.makedirs(config_dir, exist_ok=True)
-    config_path = os.path.join(config_dir, "config.toml")
-    if not os.path.exists(config_path):
-        open(config_path, 'w').write(default_toml)
+def ensure_config_file(config):
+    if config:
+        config_path = config
+    else:
+        config_dir = appdirs.user_config_dir("streamdown")
+        os.makedirs(config_dir, exist_ok=True)
+        config_path = os.path.join(config_dir, "config.toml")
+        if not os.path.exists(config_path):
+            open(config_path, 'w').write(default_toml)
+
     return config_path, open(config_path).read()
 
-config_toml_path, config_toml_content = ensure_config_file()
-config = toml.loads(config_toml_content)
-_style = toml.loads(default_toml).get('style') | config.get("style", {})
-_features = toml.loads(default_toml).get('features') | config.get("features", {})
-H, S, V = _style.get("HSV")
 
 FG = "\033[38;2;"
 BG = "\033[48;2;"
@@ -124,7 +123,6 @@ class Goto(Exception):
     pass
 
 class Style:
-    PrettyPad = _style.get("PrettyPad")
     pass
 
 class Code:
@@ -147,12 +145,6 @@ class ParseState:
         self.scrape = None
         self.scrape_ix = 0
         self.terminal = None
-
-        self.CodeSpaces = _features.get("CodeSpaces")
-        self.Clipboard = _features.get("Clipboard")
-        self.Logging = _features.get("Logging")
-        self.Timeout = _features.get("Timeout")
-        self.Savebrace = _features.get("Savebrace")
 
         self.WidthArg = None
         self.WidthFull = None
@@ -1002,8 +994,8 @@ def ansi2hex(ansi_code):
     r, g, b = map(int, parts)
     return f"#{r:02x}{g:02x}{b:02x}"
 
-def apply_multipliers(name, H, S, V):
-    m = _style.get(name)
+def apply_multipliers(style, name, H, S, V):
+    m = style.get(name)
     r, g, b = colorsys.hsv_to_rgb(min(1.0, H * m["H"]), min(1.0, S * m["S"]), min(1.0, V * m["V"]))
     return ';'.join([str(int(x * 256)) for x in [r, g, b]]) + "m"
 
@@ -1031,34 +1023,42 @@ def width_calc():
     ]
 
 def main():
-    global H, S, V
-
     parser = ArgumentParser(description="Streamdown - A Streaming markdown renderer for modern terminals")
     parser.add_argument("filenameList", nargs="*", help="Input file to process (also takes stdin)")
     parser.add_argument("-l", "--loglevel", default="INFO", help="Set the logging level")
-    parser.add_argument("-c", "--color", default=None, help="Set the hsv base: h,s,v")
+    parser.add_argument("-b", "--base", default=None, help="Set the hsv base: h,s,v")
+    parser.add_argument("-c", "--config", default=None, help="Use a custom config")
     parser.add_argument("-w", "--width", default="0", help="Set the width WIDTH")
     parser.add_argument("-e", "--exec", help="Wrap a program EXEC for more 'proper' i/o handling")
     parser.add_argument("-s", "--scrape", help="Scrape code snippets to a directory SCRAPE")
     args = parser.parse_args()
 
-    if args.color:
-        env_colors = args.color.split(",")
+    config_toml_path, config_toml_content = ensure_config_file(args.config)
+    config = toml.loads(config_toml_content)
+    style = toml.loads(default_toml).get('style') | config.get("style", {})
+    features = toml.loads(default_toml).get('features') | config.get("features", {})
+    H, S, V = style.get("HSV")
+
+    if args.base:
+        env_colors = args.base.split(",")
         if len(env_colors) > 0: H = float(env_colors[0])
         if len(env_colors) > 1: S = float(env_colors[1])
         if len(env_colors) > 2: V = float(env_colors[2])
 
     for color in ["Dark", "Mid", "Symbol", "Head", "Grey", "Bright"]:
-        setattr(Style, color, apply_multipliers(color, H, S, V))
-    for attr in ['PrettyBroken', 'Margin', 'ListIndent', 'Syntax']:
-        setattr(Style, attr, _style.get(attr))
+        setattr(Style, color, apply_multipliers(style, color, H, S, V))
+    for attr in ['PrettyPad', 'PrettyBroken', 'Margin', 'ListIndent', 'Syntax']:
+        setattr(Style, attr, style.get(attr))
+    for attr in ['CodeSpaces', 'Clipboard', 'Logging', 'Timout', 'Savebrace']:
+        setattr(state, attr, features.get(attr))
+
 
     if args.scrape:
         os.makedirs(args.scrape, exist_ok=True)
         state.scrape = args.scrape
 
     Style.MarginSpaces = " " * Style.Margin
-    state.WidthArg = int(args.width) or _style.get("Width") or 0
+    state.WidthArg = int(args.width) or style.get("Width") or 0
     Style.Blockquote = f"{FG}{Style.Grey}│ "
     width_calc()
 
