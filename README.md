@@ -9,6 +9,10 @@
 
 Streamdown works with any streaming markdown such as [simonw's llm](https://github.com/simonw/llm) or even something basic like curl. 
 
+It is designed for AI and can be used to do parser based sophisticated pipelines and routing, cracking open various monolithic AI solutions to permit them to integrate. Think of it as output level routing at the semantic level.
+
+You can also just use it like a normal person.
+
 It supports standard piping and files as arguments like any normal pager but can also run as a wrapper so you retain full keyboard interactivity. Arrow keys, control, alt, all still work.
 ```bash
 $ pip install streamdown
@@ -30,7 +34,7 @@ The optional `Clipboard` feature puts the final codeblock into your clipboard. S
 [links.webm](https://github.com/user-attachments/assets/a5f71791-7c58-4183-ad3b-309f470c08a3)
 
 ### As well as everything else...
-Here's the `Savebrace` feature with `screen-query` and `sd-picker` from [llmehelp](https://github.com/kristopolous/llmehelp). You can have an ongoing conversation in tmux with your terminal session. Then use popups and fzf to insert command or coding blocks all with a keystroke.
+Here's the `Savebrace` feature with `screen-query` and `sq-picker` from [llmehelp](https://github.com/kristopolous/llmehelp). You can have an ongoing conversation in tmux with your terminal session. Then use popups and fzf to insert command or coding blocks all with a keystroke.
 
 This allows you to interactively debug  in a way that the agent doesn't just wander off doing silly things.
 
