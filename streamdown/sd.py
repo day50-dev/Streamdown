@@ -699,6 +699,9 @@ def parse(stream):
                 state.bg = f"{BG}{Style.Dark}"
                 state.where_from = "code pad"
                 if Style.PrettyPad or Style.PrettyBroken:
+                    if not Style.PrettyPad:
+                        yield ""
+
                     yield Style.Codepad[0]
                 else:
                     yield ""
@@ -735,10 +738,12 @@ def parse(stream):
 
                     state.where_from = "code pad"
                     if Style.PrettyPad or Style.PrettyBroken:
-                        state.emit_flush = True
                         yield Style.Codepad[1] 
+                        if not Style.PrettyPad:
+                            yield ""
+
                     else:
-                        yield ""
+                        yield RESET
 
                     logging.debug(f"code: {state.in_code}")
                     state.emit_flush = True
