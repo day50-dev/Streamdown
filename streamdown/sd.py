@@ -1049,7 +1049,7 @@ def main():
         setattr(Style, color, apply_multipliers(style, color, H, S, V))
     for attr in ['PrettyPad', 'PrettyBroken', 'Margin', 'ListIndent', 'Syntax']:
         setattr(Style, attr, style.get(attr))
-    for attr in ['CodeSpaces', 'Clipboard', 'Logging', 'Timout', 'Savebrace']:
+    for attr in ['CodeSpaces', 'Clipboard', 'Logging', 'Timeout', 'Savebrace']:
         setattr(state, attr, features.get(attr))
 
 
