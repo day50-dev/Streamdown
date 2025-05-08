@@ -55,7 +55,7 @@ Savebrace  = true
 [style]
 Margin          = 2 
 ListIndent      = 2
-PrettyPad       = false
+PrettyPad       = true
 PrettyBroken    = true
 Width           = 0
 HSV     = [0.8, 0.5, 0.5]
@@ -698,8 +698,10 @@ def parse(stream):
                 state.code_first_line = True
                 state.bg = f"{BG}{Style.Dark}"
                 state.where_from = "code pad"
-                if Style.PrettyPad:
+                if Style.PrettyPad or Style.PrettyBroken:
                     yield Style.Codepad[0]
+                else:
+                    yield ""
 
                 logging.debug(f"In code: ({state.in_code})")
 
@@ -732,8 +734,11 @@ def parse(stream):
                     state.bg = BGRESET
 
                     state.where_from = "code pad"
-                    if Style.PrettyPad:
-                        yield Style.Codepad[1]
+                    if Style.PrettyPad or Style.PrettyBroken:
+                        state.emit_flush = True
+                        yield Style.Codepad[1] 
+                    else:
+                        yield ""
 
                     logging.debug(f"code: {state.in_code}")
                     state.emit_flush = True
@@ -1012,9 +1017,10 @@ def width_calc():
 
     state.Width = state.WidthFull - 2 * Style.Margin
     pre = state.space_left(listwidth=True) if Style.PrettyBroken else ''
+    design  = [FG, '▄','▀'] if Style.PrettyPad else [BG, ' ',' ']
     Style.Codepad = [
-        f"{pre}{RESET}{FG}{Style.Dark}{'▄' * state.full_width()}{RESET}\n",
-        f"{pre}{RESET}{FG}{Style.Dark}{'▀' * state.full_width()}{RESET}"
+        f"{pre}{RESET}{design[0]}{Style.Dark}{design[1] * state.full_width()}{RESET}\n",
+        f"{pre}{RESET}{design[0]}{Style.Dark}{design[2] * state.full_width()}{RESET}"
     ]
 
 def main():
