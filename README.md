@@ -119,7 +119,7 @@ And now you have all your readline stuff. It's pretty great. (Also see the Day50
 It's also worth noting that things like the `-c` aren't "broken" with regard to file input. You can do something like this:
 
 ```shell
-$ ./streamdown/sd.py -c <(echo "[style]\nMargin=10") 
+$ sd -c <(echo "[style]\nMargin=10") 
 ```
 
 To override the margin.
