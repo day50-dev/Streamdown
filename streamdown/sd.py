@@ -1025,7 +1025,7 @@ def width_calc():
     ]
 
 def main():
-    parser = ArgumentParser(description="Streamdown - A Streaming markdown renderer for modern terminalsl.  Latest version: https://github.com/day50-dev/Streamdown")
+    parser = ArgumentParser(description="Streamdown - A Streaming markdown renderer for modern terminals.  Latest version: https://github.com/day50-dev/Streamdown")
     parser.add_argument("filenameList", nargs="*", help="Input file to process (also takes stdin)")
     parser.add_argument("-l", "--loglevel", default="INFO", help="Set the logging level")
     parser.add_argument("-b", "--base", default=None, help="Set the hsv base: h,s,v")
