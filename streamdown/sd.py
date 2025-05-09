@@ -115,6 +115,8 @@ def debug_write(text):
 
 def savebrace():
     if state.Savebrace and state.code_buffer_raw:
+        tmp_dir = os.path.join(tempfile.gettempdir(), "sd")
+        os.makedirs(tmp_dir, exist_ok=True)
         path = os.path.join(tempfile.gettempdir(), "sd", 'savebrace')
         with open(path, "a") as f:
             f.write(state.code_buffer_raw + "\x00")
@@ -1020,7 +1022,7 @@ def width_calc():
 def main():
     global H, S, V
 
-    parser = ArgumentParser(description="Streamdown - A Streaming markdown renderer for modern terminals")
+    parser = ArgumentParser(description="Streamdown - A Streaming markdown renderer for modern terminalsl.  Latest version: https://github.com/day50-dev/Streamdown")
     parser.add_argument("filenameList", nargs="*", help="Input file to process (also takes stdin)")
     parser.add_argument("-l", "--loglevel", default="INFO", help="Set the logging level")
     parser.add_argument("-c", "--color", default=None, help="Set the hsv base: h,s,v")
