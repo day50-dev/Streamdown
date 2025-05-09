@@ -797,8 +797,8 @@ def parse(stream):
                     #print("(",highlighted_code,")")
 
                     # Sometimes the highlighter will do things like a full reset or a background reset.
-                    # This is not what we want
-                    highlighted_code = re.sub(r"\033\[[34]9(;00|)m", '', highlighted_code)
+                    # This is mostly not what we want
+                    highlighted_code = re.sub(r"\033\[[34]9(;00|)m", "\033[23m", highlighted_code)
     
                     # Since we are streaming we ignore the resets and newlines at the end
                     if highlighted_code.endswith(FGRESET + "\n"):
