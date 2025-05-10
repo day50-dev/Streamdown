@@ -481,7 +481,12 @@ def line_format(line):
     tokenList = re.finditer(r"((~~|\*\*_|_\*\*|\*{1,3}|_{1,3}|`+)|[^~_*`]+)", line)
     result = ""
 
+    last_pos = 0
     for match in tokenList:
+        if match.span()[0] > last_pos:
+            result += line[last_pos:match.span()[0]]
+
+        last_pos = match.span()[1]
         token = re.sub(r'\s+',' ', match.group(1))
         next_token = line[match.end()] if match.end() < len(line) else ""
         prev_token = line[match.start()-1] if match.start() > 0 else ""
@@ -509,6 +514,7 @@ def line_format(line):
             state.code_buffer_raw += token
 
         elif token == '~~' and (state.in_strikeout or not_text(prev_token)):
+            print("in strike")
             state.in_strikeout = not state.in_strikeout
             result += STRIKEOUT[0] if state.in_strikeout else STRIKEOUT[1]
 
