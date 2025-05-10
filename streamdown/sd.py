@@ -107,16 +107,16 @@ remove_ansi = lambda line, codeList: reduce(lambda line, code: line.replace(code
 def debug_write(text):
     if state.Logging:
         if state.Logging == True:
-            tmp_dir = os.path.join(tempfile.gettempdir(), "sd")
+            tmp_dir = os.path.join(tempfile.gettempdir(), os.getuid(), "sd")
             os.makedirs(tmp_dir, exist_ok=True)
             state.Logging = tempfile.NamedTemporaryFile(dir=tmp_dir, prefix="dbg", delete=False, mode="wb")
         state.Logging.write(text)
 
 def savebrace():
     if state.Savebrace and state.code_buffer_raw:
-        tmp_dir = os.path.join(tempfile.gettempdir(), "sd")
+        tmp_dir = os.path.join(tempfile.gettempdir(), os.getuid(), "sd")
         os.makedirs(tmp_dir, exist_ok=True)
-        path = os.path.join(tempfile.gettempdir(), "sd", 'savebrace')
+        path = os.path.join(tempfile.gettempdir(), os.getuid(), "sd", 'savebrace')
         with open(path, "a") as f:
             f.write(state.code_buffer_raw + "\x00")
             f.flush()
