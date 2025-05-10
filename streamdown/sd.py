@@ -514,7 +514,6 @@ def line_format(line):
             state.code_buffer_raw += token
 
         elif token == '~~' and (state.in_strikeout or not_text(prev_token)):
-            print("in strike")
             state.in_strikeout = not state.in_strikeout
             result += STRIKEOUT[0] if state.in_strikeout else STRIKEOUT[1]
 
