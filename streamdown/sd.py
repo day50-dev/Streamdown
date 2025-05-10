@@ -104,19 +104,22 @@ visible_length = lambda x: len(visible(x)) + dbl_count(x)
 extract_ansi_codes = lambda text: re.findall(ESCAPE, text)
 remove_ansi = lambda line, codeList: reduce(lambda line, code: line.replace(code, ''), codeList, line)
 
+def gettmpdir():
+    tmp_dir_all = os.path.join(tempfile.gettempdir(), "sd")
+    os.makedirs(tmp_dir_all, mode=0o777, exist_ok=True)
+    tmp_dir = os.path.join(tmp_dir_all, str(os.getuid()))
+    os.makedirs(tmp_dir, exist_ok=True)
+    return tmp_dir
+
 def debug_write(text):
     if state.Logging:
         if state.Logging == True:
-            tmp_dir = os.path.join(tempfile.gettempdir(), os.getuid(), "sd")
-            os.makedirs(tmp_dir, exist_ok=True)
-            state.Logging = tempfile.NamedTemporaryFile(dir=tmp_dir, prefix="dbg", delete=False, mode="wb")
+            state.Logging = tempfile.NamedTemporaryFile(dir=gettmpdir(), prefix="dbg", delete=False, mode="wb")
         state.Logging.write(text)
 
 def savebrace():
     if state.Savebrace and state.code_buffer_raw:
-        tmp_dir = os.path.join(tempfile.gettempdir(), os.getuid(), "sd")
-        os.makedirs(tmp_dir, exist_ok=True)
-        path = os.path.join(tempfile.gettempdir(), os.getuid(), "sd", 'savebrace')
+        path = os.path.join(gettmpdir(), 'savebrace')
         with open(path, "a") as f:
             f.write(state.code_buffer_raw + "\x00")
             f.flush()
