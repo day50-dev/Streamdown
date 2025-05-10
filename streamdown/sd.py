@@ -456,7 +456,7 @@ def cjk_count(s):
     return len(cjk_re.findall(visible(s)))
 
 def line_format(line):
-    not_text = lambda token: not (token.isalnum() or token == '\\') or cjk_count(token)
+    not_text = lambda token: not (token.isalnum() or token in ['\\','"']) or cjk_count(token)
     footnotes = lambda match: ''.join([chr(SUPER[int(i)]) for i in match.group(1)])
 
     def process_images(match):
