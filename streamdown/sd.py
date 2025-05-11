@@ -946,6 +946,11 @@ def parse(stream):
             continue
 
         state.where_from = "emit_normal"
+
+        # if we've gotten to an emit normal then we can assert that our list stack should
+        # be empty. This is a hack.
+        state.list_item_stack = []
+
         if len(line) == 0: yield ""
         if len(line) < state.Width:
             # we want to prevent word wrap
@@ -1012,7 +1017,7 @@ def apply_multipliers(style, name, H, S, V):
 def width_calc():
     if not state.WidthFull or not state.WidthArg:
         if state.WidthArg:
-            state.WidthFull = state.WidthArg
+            width = state.WidthArg
         else:
             width = 80
 
@@ -1022,7 +1027,13 @@ def width_calc():
             except (AttributeError, OSError):
                 pass
 
-            state.WidthFull = width
+
+    # This can't be done because our list item stack can change as well so
+    # unless we want to track that too, we're SOL
+    #if state.WidthFull == width:
+    #    return
+
+    state.WidthFull = width
 
     state.Width = state.WidthFull - 2 * Style.Margin
     pre = state.space_left(listwidth=True) if Style.PrettyBroken else ''
