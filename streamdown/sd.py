@@ -104,19 +104,22 @@ visible_length = lambda x: len(visible(x)) + dbl_count(x)
 extract_ansi_codes = lambda text: re.findall(ESCAPE, text)
 remove_ansi = lambda line, codeList: reduce(lambda line, code: line.replace(code, ''), codeList, line)
 
+def gettmpdir():
+    tmp_dir_all = os.path.join(tempfile.gettempdir(), "sd")
+    os.makedirs(tmp_dir_all, mode=0o777, exist_ok=True)
+    tmp_dir = os.path.join(tmp_dir_all, str(os.getuid()))
+    os.makedirs(tmp_dir, exist_ok=True)
+    return tmp_dir
+
 def debug_write(text):
     if state.Logging:
         if state.Logging == True:
-            tmp_dir = os.path.join(tempfile.gettempdir(), "sd")
-            os.makedirs(tmp_dir, exist_ok=True)
-            state.Logging = tempfile.NamedTemporaryFile(dir=tmp_dir, prefix="dbg", delete=False, mode="wb")
+            state.Logging = tempfile.NamedTemporaryFile(dir=gettmpdir(), prefix="dbg", delete=False, mode="wb")
         state.Logging.write(text)
 
 def savebrace():
     if state.Savebrace and state.code_buffer_raw:
-        tmp_dir = os.path.join(tempfile.gettempdir(), "sd")
-        os.makedirs(tmp_dir, exist_ok=True)
-        path = os.path.join(tempfile.gettempdir(), "sd", 'savebrace')
+        path = os.path.join(gettmpdir(), 'savebrace')
         with open(path, "a") as f:
             f.write(state.code_buffer_raw + "\x00")
             f.flush()
@@ -455,7 +458,7 @@ def cjk_count(s):
     return len(cjk_re.findall(visible(s)))
 
 def line_format(line):
-    not_text = lambda token: not (token.isalnum() or token == '\\') or cjk_count(token)
+    not_text = lambda token: not (token.isalnum() or token in ['\\','"']) or cjk_count(token)
     footnotes = lambda match: ''.join([chr(SUPER[int(i)]) for i in match.group(1)])
 
     def process_images(match):
@@ -483,7 +486,12 @@ def line_format(line):
     tokenList = re.finditer(r"((~~|\*\*_|_\*\*|\*{1,3}|_{1,3}|`+)|[^~_*`]+)", line)
     result = ""
 
+    last_pos = 0
     for match in tokenList:
+        if match.span()[0] > last_pos:
+            result += line[last_pos:match.span()[0]]
+
+        last_pos = match.span()[1]
         token = re.sub(r'\s+',' ', match.group(1))
         next_token = line[match.end()] if match.end() < len(line) else ""
         prev_token = line[match.start()-1] if match.start() > 0 else ""
@@ -940,6 +948,11 @@ def parse(stream):
             continue
 
         state.where_from = "emit_normal"
+
+        # if we've gotten to an emit normal then we can assert that our list stack should
+        # be empty. This is a hack.
+        state.list_item_stack = []
+
         if len(line) == 0: yield ""
         if len(line) < state.Width:
             # we want to prevent word wrap
@@ -1006,7 +1019,7 @@ def apply_multipliers(style, name, H, S, V):
 def width_calc():
     if not state.WidthFull or not state.WidthArg:
         if state.WidthArg:
-            state.WidthFull = state.WidthArg
+            width = state.WidthArg
         else:
             width = 80
 
@@ -1016,7 +1029,13 @@ def width_calc():
             except (AttributeError, OSError):
                 pass
 
-            state.WidthFull = width
+
+    # This can't be done because our list item stack can change as well so
+    # unless we want to track that too, we're SOL
+    #if state.WidthFull == width:
+    #    return
+
+    state.WidthFull = width
 
     state.Width = state.WidthFull - 2 * Style.Margin
     pre = state.space_left(listwidth=True) if Style.PrettyBroken else ''
