@@ -291,8 +291,10 @@ def emit_h(level, text):
         return f"{state.space_left()}{FG}{Style.Head}{BOLD[0]}{text}{RESET}"
     elif level == 4:    ####
         return f"{state.space_left()}{FG}{Style.Symbol}{text}{RESET}"
-    else:  # level 5 or 6
+    elif level == 5:    #####
         return f"{state.space_left()}{text}{RESET}"
+    else: 
+        return f"{state.space_left()}{FG}{Style.Grey}{text}{RESET}"
 
 def code_wrap(text_in):
     if not Style.PrettyBroken and state.WidthWrap and len(text_in) > state.full_width():
