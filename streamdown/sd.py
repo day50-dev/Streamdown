@@ -285,19 +285,23 @@ def format_table(rowList):
 
 def emit_h(level, text):
     text = line_format(text)
-    spaces_to_center = (state.current_width() -  visible_length(text)) / 2
-    if level == 1:      #
-        return f"{state.space_left()}\n{state.space_left()}{BOLD[1]}{' ' * math.floor(spaces_to_center)}{text}{BOLD[1]}"
-    elif level == 2:    ##
-        return f"{state.space_left()}\n{state.space_left()}{BOLD[0]}{FG}{Style.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}{FGRESET}"
-    elif level == 3:    ###
-        return f"{state.space_left()}{FG}{Style.Head}{BOLD[0]}{text}{RESET}"
-    elif level == 4:    ####
-        return f"{state.space_left()}{FG}{Style.Symbol}{text}{RESET}"
-    elif level == 5:    #####
-        return f"{state.space_left()}{text}{RESET}"
-    else: 
-        return f"{state.space_left()}{FG}{Style.Grey}{text}{RESET}"
+    lineList = text_wrap(text)
+    res = []
+    for text in lineList:
+        spaces_to_center = (state.current_width() -  visible_length(text)) / 2
+        if level == 1:      #
+            res.append(f"{state.space_left()}\n{state.space_left()}{BOLD[1]}{' ' * math.floor(spaces_to_center)}{text}{BOLD[1]}")
+        elif level == 2:    ##
+            res.append(f"{state.space_left()}\n{state.space_left()}{BOLD[0]}{FG}{Style.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}{FGRESET}")
+        elif level == 3:    ###
+            res.append(f"{state.space_left()}{FG}{Style.Head}{BOLD[0]}{text}{RESET}")
+        elif level == 4:    ####
+            res.append(f"{state.space_left()}{FG}{Style.Symbol}{text}{RESET}")
+        elif level == 5:    #####
+            res.append(f"{state.space_left()}{text}{RESET}")
+        else: 
+            res.append(f"{state.space_left()}{FG}{Style.Grey}{text}{RESET}")
+    return "\n".join(res)
 
 def code_wrap(text_in):
     if not Style.PrettyBroken and state.WidthWrap and len(text_in) > state.full_width():
