@@ -1058,7 +1058,19 @@ def main():
     parser.add_argument("-w", "--width", default="0", help="Set the width WIDTH")
     parser.add_argument("-e", "--exec", help="Wrap a program EXEC for more 'proper' i/o handling")
     parser.add_argument("-s", "--scrape", help="Scrape code snippets to a directory SCRAPE")
+    parser.add_argument("-v", "--version", action="store_true", help="Show version information")
     args = parser.parse_args()
+
+    if args.version:
+        import importlib.metadata
+
+        try:
+            version = importlib.metadata.version("streamdown")
+        except importlib.metadata.PackageNotFoundError:
+            version = "Unknown"
+
+        print(f"Streamdown - {version}")
+        sys.exit(0)
 
     config_toml_path, config_toml_content = ensure_config_file(args.config)
     config = toml.loads(config_toml_content)
