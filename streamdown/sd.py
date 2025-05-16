@@ -697,7 +697,7 @@ def parse(stream):
 
         # <code><pre>
         if not state.in_code:
-            code_match = re.match(r"^\s*```\s*([^\s]+|$)\s*$", line)
+            code_match = re.match(r"^\s*(```|<pre>)\s*([^\s]+|$)\s*$", line)
             if code_match:
                 state.in_code = Code.Backtick
                 state.code_indent = len(line) - len(line.lstrip())
@@ -731,7 +731,7 @@ def parse(stream):
         if state.in_code:
             try:
                 # This is turning it OFF
-                if ( (                     state.in_code == Code.Backtick and     line.strip() == "```"  ) or 
+                if ( (                     state.in_code == Code.Backtick and     line.strip() in ["</pre>", "```"]  ) or 
                      (state.CodeSpaces and state.in_code == Code.Spaces   and not line.startswith('    ')) ):
                     if state.scrape:
                         ext = "sh"
