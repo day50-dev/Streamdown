@@ -206,7 +206,8 @@ class ParseState:
         return offset + (state.current_width(listwidth = True) if Style.PrettyBroken else self.WidthFull)
 
     def current_width(self, listwidth = False):
-        return self.Width - (len(visible(self.space_left(listwidth))))
+        # this will double count the left margin
+        return self.Width - (len(visible(self.space_left(listwidth)))) + Style.Margin
 
     def space_left(self, listwidth = False):
         pre = ' ' * (len(state.list_item_stack)) * Style.ListIndent if listwidth else ''
@@ -235,7 +236,7 @@ def format_table(rowList):
 
     # Calculate max width per column (integer division)
     # Subtract num_cols + 1 for the vertical borders '│'
-    available_width = state.current_width() - (num_cols + 1)
+    available_width = state.current_width() - (num_cols * 2)
 
     width_base = available_width // num_cols
     width_mod  = available_width % num_cols
@@ -1023,17 +1024,15 @@ def apply_multipliers(style, name, H, S, V):
     return ';'.join([str(int(x * 256)) for x in [r, g, b]]) + "m"
 
 def width_calc():
-    if not state.WidthFull or not state.WidthArg:
-        if state.WidthArg:
-            width = state.WidthArg
-        else:
-            width = 80
-
-            try:
-                width = shutil.get_terminal_size().columns
-                state.WidthWrap = True
-            except (AttributeError, OSError):
-                pass
+    if state.WidthArg:
+       width = state.WidthArg
+    else:
+       try:
+           width = shutil.get_terminal_size().columns
+           state.WidthWrap = True
+       except (AttributeError, OSError):
+           width = 80
+           pass
 
 
     # This can't be done because our list item stack can change as well so
