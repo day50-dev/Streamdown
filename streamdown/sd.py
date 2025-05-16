@@ -726,10 +726,8 @@ def parse(stream):
         if state.in_code:
             try:
                 # This is turning it OFF
-                if not state.code_first_line and (
-                        (                     state.in_code == Code.Backtick and     line.strip() == "```"  ) or
-                        (state.CodeSpaces and state.in_code == Code.Spaces   and not line.startswith('    '))
-                    ):
+                if ( (                     state.in_code == Code.Backtick and     line.strip() == "```"  ) or 
+                     (state.CodeSpaces and state.in_code == Code.Spaces   and not line.startswith('    ')) ):
                     if state.scrape:
                         ext = "sh"
                         try:
