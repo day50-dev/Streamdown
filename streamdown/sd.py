@@ -1063,20 +1063,18 @@ def main():
     args = parser.parse_args()
 
     if args.version:
-        import importlib.metadata
-
         try:
-            version = importlib.metadata.version("streamdown")
+            import importlib.metadata
+            print(importlib.metadata.version("streamdown"))
         except importlib.metadata.PackageNotFoundError:
             import subprocess
-            version = subprocess.run(
+            print(subprocess.run(
                 ['git', 'describe', '--always', '--dirty', '--tags'],
                 cwd=os.path.dirname(os.path.abspath(__file__)),
                 stdout=subprocess.PIPE,
                 text=True
-            ).stdout.strip()
+            ).stdout.strip())
 
-        print(f"Streamdown - {version}")
         sys.exit(0)
 
     config_toml_path, config_toml_content = ensure_config_file(args.config)
