@@ -1068,7 +1068,13 @@ def main():
         try:
             version = importlib.metadata.version("streamdown")
         except importlib.metadata.PackageNotFoundError:
-            version = "Unknown"
+            import subprocess
+            version = subprocess.run(
+                ['git', 'describe', '--always', '--dirty', '--tags'],
+                cwd=os.path.dirname(os.path.abspath(__file__)),
+                stdout=subprocess.PIPE,
+                text=True
+            ).stdout.strip()
 
         print(f"Streamdown - {version}")
         sys.exit(0)
