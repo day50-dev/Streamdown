@@ -447,7 +447,7 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
 def dbl_count(s):
     dbl_re = re.compile(
         r'[\u2e80-\u2eff\u3000-\u303f\u3400-\u4dbf'
-		r'\uFF00-\uFFEF'       # CJK Compatibility Punctuation
+        r'\uFF00-\uFFEF'       # CJK Compatibility Punctuation
         r'\U00004e00-\U00009fff\U0001f300-\U0001f6ff'
         r'\U0001f900-\U0001f9ff\U0001fa70-\U0001faff]',
         re.UNICODE
@@ -459,7 +459,7 @@ def cjk_count(s):
         r'[\u4E00-\u9FFF'      # CJK Unified Ideographs
         r'\u3400-\u4DBF'       # CJK Unified Ideographs Extension A
         r'\uF900-\uFAFF'       # CJK Compatibility Ideographs
-		r'\uFF00-\uFFEF'       # CJK Compatibility Punctuation
+        r'\uFF00-\uFFEF'       # CJK Compatibility Punctuation
         r'\u3000-\u303F'      # CJK Symbols and Punctuation
         r'\U0002F800-\U0002FA1F]' # CJK Compatibility Ideographs Supplement
     )
