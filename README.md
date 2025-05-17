@@ -17,6 +17,11 @@ $ pip install streamdown
 ```
 ![Streamdown is Amazing](https://github.com/user-attachments/assets/268cb340-78cc-4df0-a773-c5ac95eceeeb)
 
+It's realtime. Here it is running over a FIFO socket in tmux on an M4 using bitnet. You can see the unstructured content on the right and the realtime Streamdown render on the left.
+
+[bitnet.webm](https://github.com/user-attachments/assets/62eb625e-82c4-462d-9991-ed681d6fbcd0)
+
+
 ### Provides clean copyable code for long code lines
 Other renderers inject line breaks when copying code that wraps around. Streamdown's better and now you are too!
 ![Handle That Mandle](https://github.com/user-attachments/assets/a27aa70c-f691-4796-84f0-c2eb18c7de23)
@@ -51,6 +56,7 @@ Only one generates the text without truncation. 很美！
 ### Has a [Plugin](https://github.com/kristopolous/Streamdown/tree/main/streamdown/plugins) system to extend the parser and renderers.
 For instance, here is the [latex plugin](https://github.com/kristopolous/Streamdown/blob/main/streamdown/plugins/latex.py) doing math inside a table:
 ![calc](https://github.com/user-attachments/assets/0b0027ca-8ef0-4b4a-b4ae-e36ff623a683)
+
 
 
 It is designed for AI and can be used to do parser based sophisticated pipelines and routing, cracking open various monolithic AI solutions to permit them to integrate. Think of it as output level routing at the semantic level.
