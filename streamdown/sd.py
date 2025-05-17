@@ -386,9 +386,7 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
 
     # The empty word clears the buffer at the end.
     formatted = line_format(text)
-    #print(bytes(formatted, 'utf-8'), formatted)
     words = split_text(formatted) + [""]
-    #print([bytes(i, 'utf-8') for i in words])
 
     lines = []
     current_line = ""
@@ -923,7 +921,7 @@ def parse(stream):
         # a weird thing
         if state.in_list:
             indent = (len(state.list_item_stack) - 1) * Style.ListIndent #+ (len(bullet) - 1)
-            wrap_width = state.current_width() - Style.ListIndent
+            wrap_width = state.current_width(listwidth = True) - Style.ListIndent
             
             wrapped_lineList = text_wrap(content, wrap_width, Style.ListIndent,
                 first_line_prefix = f"{(' ' * indent)}{FG}{Style.Symbol}{bullet}{RESET} ",
