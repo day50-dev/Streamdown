@@ -18,7 +18,7 @@ $ pip install streamdown
 ![Streamdown is Amazing](https://github.com/user-attachments/assets/268cb340-78cc-4df0-a773-c5ac95eceeeb)
 
 ## Fast and Realtime.
-Here it is running over a FIFO socket in tmux on an M4 using bitnet. You can see the unstructured content on the right and the realtime Streamdown render on the left.
+Here it is running over a FIFO pipe through tee in tmux on an M4 using bitnet. I'm not even using any clever unbuffered tricks. You can see the unstructured content on the right and the realtime Streamdown render on the left.
 
 [bitnet.webm](https://github.com/user-attachments/assets/62eb625e-82c4-462d-9991-ed681d6fbcd0)
 
