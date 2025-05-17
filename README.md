@@ -9,9 +9,7 @@
 
 Streamdown works with any streaming markdown such as [simonw's llm](https://github.com/simonw/llm) or even something basic like curl. 
 
-It is designed for AI and can be used to do parser based sophisticated pipelines and routing, cracking open various monolithic AI solutions to permit them to integrate. Think of it as output level routing at the semantic level.
-
-You can also just use it like a normal person.
+It just works. 
 
 It supports standard piping and files as arguments like any normal pager but can also run as a wrapper so you retain full keyboard interactivity. Arrow keys, control, alt, all still work.
 ```bash
@@ -28,7 +26,7 @@ Other renderers inject line breaks when copying code that wraps around. Streamdo
 Here's kitty and alacritty. 
 ![doggie](https://github.com/user-attachments/assets/81c43983-68cd-40c1-b1d5-aa3a52004504)
 
-### Supports hyperlinks (OSC 8) and clipboard (OSC 52)
+### hyperlinks (OSC 8) and clipboard (OSC 52)
 The optional `Clipboard` feature puts the final codeblock into your clipboard. See below for details.
 
 [links.webm](https://github.com/user-attachments/assets/a5f71791-7c58-4183-ad3b-309f470c08a3)
@@ -41,7 +39,7 @@ This allows you to interactively debug  in a way that the agent doesn't just wan
 It takes about 2 minutes to set up and about 0.2s to use. Fast, fluid and free.
 ![screenquery](https://github.com/user-attachments/assets/517be4fe-6962-4e4c-b2f2-563471bc48d0)
 
-### ...It even supports CJK 
+### ...even CJK 
 Compare how streamdown wraps and spaces this tabular Chinese description of programming languages to other leading markdown renderers.
 
 Only one generates the text without truncation. 很美！
@@ -55,6 +53,9 @@ For instance, here is the [latex plugin](https://github.com/kristopolous/Streamd
 ![calc](https://github.com/user-attachments/assets/0b0027ca-8ef0-4b4a-b4ae-e36ff623a683)
 
 
+It is designed for AI and can be used to do parser based sophisticated pipelines and routing, cracking open various monolithic AI solutions to permit them to integrate. Think of it as output level routing at the semantic level.
+
+You can also just use it like a normal person.
 ## Configuration 
 
 It's located at `~/.config/streamdown/config.toml` (following the XDG Base Directory Specification). If this file does not exist upon first run, it will be created with default values. 
