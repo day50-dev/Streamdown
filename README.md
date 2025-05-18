@@ -147,7 +147,7 @@ optional arguments:
                         Set the logging level
   -b BASE, --base BASE  Set the hsv base: h,s,v
   -c CONFIG, --config CONFIG
-                        Use a custom config
+                        Use a custom config override
   -w WIDTH, --width WIDTH
                         Set the width WIDTH
   -e EXEC, --exec EXEC  Wrap a program EXEC for more 'proper' i/o handling

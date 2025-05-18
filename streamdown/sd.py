@@ -1055,7 +1055,7 @@ def main():
     parser.add_argument("filenameList", nargs="*", help="Input file to process (also takes stdin)")
     parser.add_argument("-l", "--loglevel", default="INFO", help="Set the logging level")
     parser.add_argument("-b", "--base", default=None, help="Set the hsv base: h,s,v")
-    parser.add_argument("-c", "--config", default=None, help="Use a custom config")
+    parser.add_argument("-c", "--config", default=None, help="Use a custom config override")
     parser.add_argument("-w", "--width", default="0", help="Set the width WIDTH")
     parser.add_argument("-e", "--exec", help="Wrap a program EXEC for more 'proper' i/o handling")
     parser.add_argument("-s", "--scrape", help="Scrape code snippets to a directory SCRAPE")
