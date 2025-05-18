@@ -69,16 +69,18 @@ Syntax  = "dracula"
 """
 
 def ensure_config_file(config):
-    if config:
-        config_path = config
-    else:
-        config_dir = appdirs.user_config_dir("streamdown")
-        os.makedirs(config_dir, exist_ok=True)
-        config_path = os.path.join(config_dir, "config.toml")
-        if not os.path.exists(config_path):
-            open(config_path, 'w').write(default_toml)
+    config_dir = appdirs.user_config_dir("streamdown")
+    os.makedirs(config_dir, exist_ok=True)
+    config_path = os.path.join(config_dir, "config.toml")
+    if not os.path.exists(config_path):
+        open(config_path, 'w').write(default_toml)
 
-    return config_path, open(config_path).read()
+    toml_res = toml.load(config_path)
+
+    if config:
+        toml_res |= toml.loads(open(config).read())
+
+    return toml_res
 
 
 FG = "\033[38;2;"
@@ -1075,8 +1077,7 @@ def main():
 
         sys.exit(0)
 
-    config_toml_path, config_toml_content = ensure_config_file(args.config)
-    config = toml.loads(config_toml_content)
+    config = ensure_config_file(args.config)
     style = toml.loads(default_toml).get('style') | config.get("style", {})
     features = toml.loads(default_toml).get('features') | config.get("features", {})
     H, S, V = style.get("HSV")
