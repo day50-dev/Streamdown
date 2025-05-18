@@ -65,7 +65,7 @@ Symbol  = { H = 1.00, S = 1.00, V = 1.50 }
 Head    = { H = 1.00, S = 1.00, V = 1.75 }
 Grey    = { H = 1.00, S = 0.25, V = 1.37 }
 Bright  = { H = 1.00, S = 2.00, V = 2.00 }
-Syntax  = "dracula"
+Syntax  = "native"
 """
 
 def ensure_config_file(config):
@@ -78,7 +78,11 @@ def ensure_config_file(config):
     toml_res = toml.load(config_path)
 
     if config:
-        toml_res |= toml.loads(open(config).read())
+        if os.path.exists(config):
+            config_string = open(config).read()
+        else:
+            config_string = config
+        toml_res |= toml.loads(config_string)
 
     return toml_res
 
@@ -701,7 +705,7 @@ def parse(stream):
             if code_match:
                 state.in_code = Code.Backtick
                 state.code_indent = len(line) - len(line.lstrip())
-                state.code_language = code_match.group(1) or 'Bash'
+                state.code_language = code_match.group(2) or 'Bash'
 
             elif state.CodeSpaces and last_line_empty_cache and not state.in_list:
                 code_match = re.match(r"^    \s*[^\s\*]", line)
@@ -778,7 +782,8 @@ def parse(stream):
                     try:
                         lexer = get_lexer_by_name(state.code_language)
                         custom_style = override_background(Style.Syntax, ansi2hex(Style.Dark))
-                    except pygments.util.ClassNotFound:
+                    except pygments.util.ClassNotFound as e:
+                        logging.warning(e)
                         lexer = get_lexer_by_name("Bash")
                         custom_style = override_background("default", ansi2hex(Style.Dark))
 
@@ -811,7 +816,7 @@ def parse(stream):
                     # then naively search back until our visible_lengths() match. This is not fast and there's certainly smarter
                     # ways of doing it but this thing is way trickery than you think
                     highlighted_code = highlight(state.code_buffer + tline, lexer, formatter)
-                    #print("(",highlighted_code,")")
+                    #print("(",bytes(highlighted_code,'utf-8'),")")
 
                     # Sometimes the highlighter will do things like a full reset or a background reset.
                     # This is mostly not what we want
