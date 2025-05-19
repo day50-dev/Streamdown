@@ -6,6 +6,7 @@
 #     "pylatexenc",
 #     "appdirs",
 #     "term-image",
+#     "wcwidth",
 #     "toml"
 # ]
 # ///
@@ -25,13 +26,13 @@ import termios, tty
 import math
 import re
 import shutil
-import subprocess
 import traceback
 import colorsys
 import base64
 from io import BytesIO
 from term_image.image import from_file, from_url
 import pygments.util
+from wcwidth import wcwidth
 from functools import reduce
 from argparse import ArgumentParser
 from pygments import highlight
@@ -91,6 +92,7 @@ FG = "\033[38;2;"
 BG = "\033[48;2;"
 RESET = "\033[0m"
 FGRESET = "\033[39m"
+FORMATRESET = "\033[24;23;22m"
 BGRESET = "\033[49m"
 
 BOLD      = ["\033[1m", "\033[22m"]
@@ -256,7 +258,7 @@ def format_table(rowList):
     # you are styling, do it before here!
     for ix in range(len(rowList)):
         row = rowList[ix]
-        wrapped_cell = text_wrap(row, width=col_width_list[ix], force_truncate=True)
+        wrapped_cell = text_wrap(row, width=col_width_list[ix], force_truncate=True, preserve_format=True)
 
         # Ensure at least one line, even for empty cells
         if not wrapped_cell:
@@ -386,7 +388,7 @@ def split_text(text):
         text
     ) if x]
 
-def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_line_prefix="", force_truncate=False):
+def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_line_prefix="", force_truncate=False, preserve_format=False):
     if width == -1:
         width = state.Width
 
@@ -397,6 +399,7 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
     lines = []
     current_line = ""
     current_style = []
+    resetter = "" if preserve_format else FORMATRESET 
     
     oldword = ''
     for word in words:
@@ -428,7 +431,7 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
                 # that we have closed our hyperlink OSC
                 if LINK[0] in line_content:
                     line_content += LINK[1]
-                lines.append(line_content + state.bg + ' ' * margin)
+                lines.append(line_content + resetter + state.bg + ' ' * margin)
 
             current_line = (" " * indent) + "".join(current_style) + word
 
@@ -451,6 +454,7 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
 def dbl_count(s):
     dbl_re = re.compile(
         r'[\u2e80-\u2eff\u3000-\u303f\u3400-\u4dbf'
+        r'\uAC00-\uD7AF'     # hagul
         r'\uFF00-\uFFEF'       # CJK Compatibility Punctuation
         r'\U00004e00-\U00009fff\U0001f300-\U0001f6ff'
         r'\U0001f900-\U0001f9ff\U0001fa70-\U0001faff]',
@@ -459,16 +463,7 @@ def dbl_count(s):
     return len(dbl_re.findall(visible(s)))
 
 def cjk_count(s):
-    cjk_re = re.compile(
-        r'[\u4E00-\u9FFF'      # CJK Unified Ideographs
-        r'\u3400-\u4DBF'       # CJK Unified Ideographs Extension A
-        r'\uF900-\uFAFF'       # CJK Compatibility Ideographs
-        r'\uFF00-\uFFEF'       # CJK Compatibility Punctuation
-        r'\u3000-\u303F'      # CJK Symbols and Punctuation
-        r'\U0002F800-\U0002FA1F]' # CJK Compatibility Ideographs Supplement
-    )
-    
-    return len(cjk_re.findall(visible(s)))
+    return sum(1 for ch in s if wcwidth(ch) == 2)
 
 def line_format(line):
     not_text = lambda token: not (token.isalnum() or token in ['\\','"']) or cjk_count(token)
@@ -846,7 +841,7 @@ def parse(stream):
                     code_line = ' ' * indent + this_batch.strip()
 
                     margin = state.full_width( -len(pre[1]) ) - visible_length(code_line) % state.WidthFull
-                    yield f"{pre[0]}{Style.Codebg}{pre[1]}{code_line}{' ' * max(0, margin)}{BGRESET}"  
+                    yield f"{pre[0]}{Style.Codebg}{pre[1]}{code_line}{FORMATRESET}{' ' * max(0, margin)}{BGRESET}"  
                 continue
             except Goto:
                 pass
