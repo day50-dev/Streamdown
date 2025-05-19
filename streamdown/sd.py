@@ -108,7 +108,7 @@ KEYCODE_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
 # cjk characters are double width
-visible_length = lambda x: len(visible(x)) + dbl_count(x)
+visible_length = lambda x: sum(wcwidth(c) for c in visible(x))
 extract_ansi_codes = lambda text: re.findall(ESCAPE, text)
 remove_ansi = lambda line, codeList: reduce(lambda line, code: line.replace(code, ''), codeList, line)
 
@@ -419,7 +419,7 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
         else:
             # Word doesn't fit, finalize the previous line
             prefix = first_line_prefix if not lines else subsequent_line_prefix
-            line_content = prefix + current_line
+            line_content = prefix + current_line  
             # This is expensive, fix.
             while force_truncate and visible_length(line_content) >= width:
                 line_content = line_content[:len(line_content) - 2] + "…"
@@ -451,19 +451,17 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
 
     return lines
 
-def dbl_count(s):
-    dbl_re = re.compile(
-        r'[\u2e80-\u2eff\u3000-\u303f\u3400-\u4dbf'
-        r'\uAC00-\uD7AF'     # hagul
-        r'\uFF00-\uFFEF'       # CJK Compatibility Punctuation
-        r'\U00004e00-\U00009fff\U0001f300-\U0001f6ff'
-        r'\U0001f900-\U0001f9ff\U0001fa70-\U0001faff]',
-        re.UNICODE
-    )
-    return len(dbl_re.findall(visible(s)))
-
 def cjk_count(s):
-    return sum(1 for ch in s if wcwidth(ch) == 2)
+    cjk_re = re.compile(
+        r'[\u4E00-\u9FFF'      # CJK Unified Ideographs
+        r'\u3400-\u4DBF'       # CJK Unified Ideographs Extension A
+        r'\uF900-\uFAFF'       # CJK Compatibility Ideographs
+        r'\uFF00-\uFFEF'       # CJK Compatibility Punctuation
+        r'\u3000-\u303F'      # CJK Symbols and Punctuation
+        r'\U0002F800-\U0002FA1F]' # CJK Compatibility Ideographs Supplement
+    )
+    
+    return len(cjk_re.findall(visible(s)))
 
 def line_format(line):
     not_text = lambda token: not (token.isalnum() or token in ['\\','"']) or cjk_count(token)
