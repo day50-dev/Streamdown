@@ -190,7 +190,6 @@ class ParseState:
         self.in_table = False # (Code.[Header|Body] | False)
         self.in_underline = False
         self.in_strikeout = False
-        self.in_pager = False
         self.block_depth = 0
 
         self.exec_sub = None
@@ -1030,8 +1029,6 @@ def apply_multipliers(style, name, H, S, V):
     return ';'.join([str(int(x * 256)) for x in [r, g, b]]) + "m"
 
 def width_calc():
-    if state.in_pager:
-        return
     if state.WidthArg:
        width = state.WidthArg
     else:
@@ -1040,8 +1037,6 @@ def width_calc():
            state.WidthWrap = True
        except (AttributeError, OSError):
            # this means it's a pager, we can just ignore the base64 clipboard
-           state.Clipboard = False
-           state.in_pager = True
            width = 80
            pass
 
@@ -1131,7 +1126,7 @@ def main():
             # Set stdin to raw mode so we don't need to press enter
             tty.setcbreak(sys.stdin.fileno())
             sys.stdout.write("\x1b[?7h")
-            emit(sys.stdin)
+            emit(inp)
 
         elif args.filenameList:
             # Let's say we only care about logging in streams
@@ -1159,7 +1154,7 @@ def main():
         logging.warning(f"Exception thrown: {type(ex)} {ex}")
         traceback.print_exc()
 
-    if state.Clipboard and state.code_buffer_raw:
+    if os.isatty(sys.stdout.fileno()) and state.Clipboard and state.code_buffer_raw:
         code = state.code_buffer_raw
         # code needs to be a base64 encoded string before emitting
         code_bytes = code.encode('utf-8')
