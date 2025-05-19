@@ -978,7 +978,7 @@ def parse(stream):
         state.list_item_stack = []
 
         if len(line) == 0: yield ""
-        if len(line) < state.Width:
+        if visible_length(line) < state.Width:
             # we want to prevent word wrap
             yield f"{state.space_left()}{line_format(line.lstrip())}"
         else:
