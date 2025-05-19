@@ -111,6 +111,7 @@ visible = lambda x: re.sub(ANSIESCAPE, "", x)
 visible_length = lambda x: sum(wcwidth(c) for c in visible(x))
 extract_ansi_codes = lambda text: re.findall(ESCAPE, text)
 remove_ansi = lambda line, codeList: reduce(lambda line, code: line.replace(code, ''), codeList, line)
+split_up = lambda line: re.findall(r'(\x1b[^m]*m|[^\x1b]*)', line)
 
 def gettmpdir():
     tmp_dir_all = os.path.join(tempfile.gettempdir(), "sd")
@@ -810,25 +811,41 @@ def parse(stream):
                     # ways of doing it but this thing is way trickery than you think
                     highlighted_code = highlight(state.code_buffer + tline, lexer, formatter)
                     #print("(",bytes(highlighted_code,'utf-8'),")")
+                    parts = split_up(highlighted_code)
+
+                    #print(parts)
 
                     # Sometimes the highlighter will do things like a full reset or a background reset.
                     # This is mostly not what we want
-                    highlighted_code = re.sub(r"\033\[[34]9(;00|)m", "\033[23m", highlighted_code)
+                    parts = [ re.sub(r"\033\[[34]9(;00|)m", FORMATRESET, x) for x in parts]
     
                     # Since we are streaming we ignore the resets and newlines at the end
-                    if highlighted_code.endswith(FGRESET + "\n"):
-                        highlighted_code = highlighted_code[: -(1 + len(FGRESET))]
+                    #while parts[-1] in ['\n', '', FGRESET, FORMATRESET]:
+                    #    parts.pop()
 
-                    # turns out highlight will eat leading newlines on empty lines
-                    vislen = visible_length(state.code_buffer.lstrip())
+                    #print(parts)
 
-                    delta = -2 
-                    while visible_length(highlighted_code[:(state.code_gen-delta)]) > vislen:
-                        delta += 1
+                    this_fucking_one = visible_length(tline)
+
+                    # now we find the new stuff:
+                    ttl = 0
+                    for i in range(len(parts)-1, 0, -1):
+                        idx = parts[i]
+                        if len(idx) == 0:
+                            continue
+                        ttl += len(idx) if idx[0] != '\x1b' else 0
+
+
+                        if ttl > 1+this_fucking_one:
+                            break
+
+
 
                     state.code_buffer += tline
 
-                    this_batch = highlighted_code[state.code_gen-delta :]
+
+                    this_batch = "".join(parts[i:]) 
+
                     if this_batch.startswith(FGRESET):
                         this_batch = this_batch[len(FGRESET) :]
 
