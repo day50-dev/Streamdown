@@ -30,6 +30,7 @@ dependencies = [
     "pygments",
     "appdirs",
     "toml",
+    "wcwidth",
     "pylatexenc",
     'term-image'
 ]
