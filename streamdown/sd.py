@@ -107,7 +107,7 @@ ANSIESCAPE = r'\033(?:\[[0-9;?]*[a-zA-Z]|][0-9]*;;.*?\\|\\)'
 KEYCODE_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 visible = lambda x: re.sub(ANSIESCAPE, "", x)
-# cjk characters are double width
+# many characters have different widths
 visible_length = lambda x: sum(wcwidth(c) for c in visible(x))
 extract_ansi_codes = lambda text: re.findall(ESCAPE, text)
 remove_ansi = lambda line, codeList: reduce(lambda line, code: line.replace(code, ''), codeList, line)
