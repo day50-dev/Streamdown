@@ -813,19 +813,15 @@ def parse(stream):
                     #print("(",bytes(highlighted_code,'utf-8'),")")
                     parts = split_up(highlighted_code)
 
-                    #print(parts)
-
                     # Sometimes the highlighter will do things like a full reset or a background reset.
                     # This is mostly not what we want
                     parts = [ re.sub(r"\033\[[34]9(;00|)m", FORMATRESET, x) for x in parts]
     
                     # Since we are streaming we ignore the resets and newlines at the end
-                    #while parts[-1] in ['\n', '', FGRESET, FORMATRESET]:
-                    #    parts.pop()
+                    while parts[-1] in [FGRESET, FORMATRESET]:
+                        parts.pop()
 
-                    #print(parts)
-
-                    this_fucking_one = visible_length(tline)
+                    tline_len = visible_length(tline)
 
                     # now we find the new stuff:
                     ttl = 0
@@ -833,26 +829,32 @@ def parse(stream):
                         idx = parts[i]
                         if len(idx) == 0:
                             continue
+
                         ttl += len(idx) if idx[0] != '\x1b' else 0
 
-
-                        if ttl > 1+this_fucking_one:
+                        if ttl > 1+tline_len:
                             break
 
-
+                    # this is *almost* correct, we may have to slice into this by chopping of this visible element.
+                    # the "5" thing is bullshit.
+                    if len(idx) > tline_len and len(idx) - tline_len > 3:
+                        parts[i] = parts[i][len(idx)-tline_len:]
 
                     state.code_buffer += tline
-
-
-                    this_batch = "".join(parts[i:]) 
+                    this_batch = "".join(parts[i:])
 
                     if this_batch.startswith(FGRESET):
                         this_batch = this_batch[len(FGRESET) :]
 
+                    # clean it before prepending with potential format 
+                    this_batch = this_batch.strip()
+                    while i - 1 > 0 and parts[i-1] and parts[i-1][0] == '\x1b':
+                         this_batch = parts[i-1] + this_batch
+                         i -= 1
+
                     ## this is the crucial counter that will determine
                     # the begninning of the next line
                     state.code_gen = len(highlighted_code)
-
                     code_line = ' ' * indent + this_batch.strip()
 
                     margin = state.full_width( -len(pre[1]) ) - visible_length(code_line) % state.WidthFull
