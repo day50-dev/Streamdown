@@ -190,6 +190,7 @@ class ParseState:
         self.in_table = False # (Code.[Header|Body] | False)
         self.in_underline = False
         self.in_strikeout = False
+        self.in_pager = False
         self.block_depth = 0
 
         self.exec_sub = None
@@ -1029,6 +1030,8 @@ def apply_multipliers(style, name, H, S, V):
     return ';'.join([str(int(x * 256)) for x in [r, g, b]]) + "m"
 
 def width_calc():
+    if state.in_pager:
+        return
     if state.WidthArg:
        width = state.WidthArg
     else:
@@ -1036,6 +1039,9 @@ def width_calc():
            width = shutil.get_terminal_size().columns
            state.WidthWrap = True
        except (AttributeError, OSError):
+           # this means it's a pager, we can just ignore the base64 clipboard
+           state.Clipboard = False
+           state.in_pager = True
            width = 80
            pass
 
