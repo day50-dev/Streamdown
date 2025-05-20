@@ -835,10 +835,11 @@ def parse(stream):
                         if ttl > 1+tline_len:
                             break
 
-                    # this is *almost* correct, we may have to slice into this by chopping of this visible element.
-                    # the "5" thing is bullshit.
-                    if len(idx) > tline_len and len(idx) - tline_len > 3:
-                        parts[i] = parts[i][len(idx)-tline_len:]
+                    newlen = visible_length("".join(parts[i:]))
+
+                    snipfrom = newlen - len(tline) + 2
+                    if snipfrom > 0:
+                        parts[i] = parts[i][snipfrom:]
 
                     state.code_buffer += tline
                     this_batch = "".join(parts[i:])
@@ -853,7 +854,7 @@ def parse(stream):
                          i -= 1
 
                     ## this is the crucial counter that will determine
-                    # the begninning of the next line
+                    # the beginning of the next line
                     state.code_gen = len(highlighted_code)
                     code_line = ' ' * indent + this_batch.strip()
 
