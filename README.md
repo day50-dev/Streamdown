@@ -86,8 +86,8 @@ The default values are [at the beginning of the source](https://github.com/krist
 *   `Bright`: Multipliers for level 2 headers. 
 *   `Margin` (integer, default: `2`): The left and right indent for the output. 
 *   `Width` (integer, default: `0`): Along with the `Margin`, `Width` specifies the base width of the content, which when set to 0, means use the terminal width. See [#6](https://github.com/kristopolous/Streamdown/issues/6) for more details
-*   `PrettyPad` (boolean, default: `false`): Uses a unicode vertical pad trick to add a half height background to code blocks. This makes copy/paste have artifacts. See [#2](https://github.com/kristopolous/Streamdown/issues/2). I like it on. But that's just me
-*   `PrettyBroken` (boolean, default: `false`): This will break the copy/paste assurance above. The output is much prettier, but it's also broken. So it's pretty broken. Works nicely with PrettyPad.
+*   `PrettyPad` (boolean, default: `true`): Uses a unicode vertical pad trick to add a half height background to code blocks. This makes copy/paste have artifacts. See [#2](https://github.com/kristopolous/Streamdown/issues/2). I like it on. But that's just me
+*   `PrettyBroken` (boolean, default: `true`): This will break the copy/paste assurance above. The output is much prettier, but it's also broken. So it's pretty broken. Works nicely with PrettyPad.
 *   `ListIndent` (integer, default: `2`): This is the recursive indent for the list styles.
 *   `Syntax` (string, default `monokai`): This is the syntax [highlighting theme which come via pygments](https://pygments.org/styles/).
 
