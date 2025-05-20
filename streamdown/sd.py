@@ -65,7 +65,7 @@ Mid     = { H = 1.00, S = 1.00, V = 0.50 }
 Symbol  = { H = 1.00, S = 1.00, V = 1.50 }
 Head    = { H = 1.00, S = 1.00, V = 1.75 }
 Grey    = { H = 1.00, S = 0.25, V = 1.37 }
-Bright  = { H = 1.00, S = 2.00, V = 2.00 }
+Bright  = { H = 1.00, S = 0.60, V = 2.00 }
 Syntax  = "native"
 """
 
@@ -300,17 +300,17 @@ def emit_h(level, text):
     for text in lineList:
         spaces_to_center = (state.current_width() -  visible_length(text)) / 2
         if level == 1:      #
-            res.append(f"{state.space_left()}\n{state.space_left()}{BOLD[1]}{' ' * math.floor(spaces_to_center)}{text}{BOLD[1]}")
+            res.append(f"{state.space_left()}\n{state.space_left()}{BOLD[0]}{' ' * math.floor(spaces_to_center)}{text}{BOLD[1]}\n")
         elif level == 2:    ##
             res.append(f"{state.space_left()}\n{state.space_left()}{BOLD[0]}{FG}{Style.Bright}{' ' * math.floor(spaces_to_center)}{text}{' ' * math.ceil(spaces_to_center)}{BOLD[1]}{FGRESET}")
         elif level == 3:    ###
-            res.append(f"{state.space_left()}{FG}{Style.Head}{BOLD[0]}{text}{RESET}")
+            res.append(f"{state.space_left()}{FG}{Style.Head}{BOLD[0]}{text}{BOLD[1]}{FGRESET}")
         elif level == 4:    ####
-            res.append(f"{state.space_left()}{FG}{Style.Symbol}{text}{RESET}")
+            res.append(f"{state.space_left()}{FG}{Style.Symbol}{BOLD[0]}{text}{BOLD[1]}{FGRESET}")
         elif level == 5:    #####
-            res.append(f"{state.space_left()}{text}{RESET}")
+            res.append(f"{state.space_left()}{text}{FGRESET}")
         else: 
-            res.append(f"{state.space_left()}{FG}{Style.Grey}{text}{RESET}")
+            res.append(f"{state.space_left()}{FG}{Style.Grey}{text}{FGRESET}")
     return "\n".join(res)
 
 def code_wrap(text_in):
@@ -777,7 +777,7 @@ def parse(stream):
                         lexer = get_lexer_by_name(state.code_language)
                         custom_style = override_background(Style.Syntax, ansi2hex(Style.Dark))
                     except pygments.util.ClassNotFound as e:
-                        logging.warning(e)
+                        logging.debug(e)
                         lexer = get_lexer_by_name("Bash")
                         custom_style = override_background("default", ansi2hex(Style.Dark))
 
@@ -1039,7 +1039,7 @@ def ansi2hex(ansi_code):
 def apply_multipliers(style, name, H, S, V):
     m = style.get(name)
     r, g, b = colorsys.hsv_to_rgb(min(1.0, H * m["H"]), min(1.0, S * m["S"]), min(1.0, V * m["V"]))
-    return ';'.join([str(int(x * 256)) for x in [r, g, b]]) + "m"
+    return ';'.join([str(int(x * 255)) for x in [r, g, b]]) + "m"
 
 def width_calc():
     if state.WidthArg:
