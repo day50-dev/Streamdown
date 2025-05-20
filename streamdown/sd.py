@@ -849,7 +849,7 @@ def parse(stream):
 
                     # clean it before prepending with potential format 
                     this_batch = this_batch.strip()
-                    while i - 1 > 0 and parts[i-1] and parts[i-1][0] == '\x1b':
+                    while i - 1 >= 0 and parts[i-1] and parts[i-1][0] == '\x1b':
                          this_batch = parts[i-1] + this_batch
                          i -= 1
 
