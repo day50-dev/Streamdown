@@ -6,6 +6,7 @@
 #     "pylatexenc",
 #     "appdirs",
 #     "term-image",
+#     "colormath",
 #     "wcwidth",
 #     "toml"
 # ]
@@ -112,6 +113,60 @@ visible_length = lambda x: sum(wcwidth(c) for c in visible(x))
 extract_ansi_codes = lambda text: re.findall(ESCAPE, text)
 remove_ansi = lambda line, codeList: reduce(lambda line, code: line.replace(code, ''), codeList, line)
 split_up = lambda line: re.findall(r'(\x1b[^m]*m|[^\x1b]*)', line)
+
+
+from colormath.color_objects import sRGBColor, HSVColor
+from colormath.color_conversions import convert_color
+from colormath.color_diff import delta_e_cie2000
+from colormath import color_constants
+
+def rgb_to_hex(rgb):
+    return "#{:02x}{:02x}{:02x}".format(int(rgb[0]), int(rgb[1]), int(rgb[2]))
+
+def contrast_ratio(color1, color2):
+    """Calculates the contrast ratio between two sRGB colors according to WCAG 2.0."""
+    def relative_luminance(color):
+        r, g, b = [x / 255.0 for x in color]
+        r = (r / 12.92) if r <= 0.03928 else ((r + 0.055) / 1.055)**2.4
+        g = (g / 12.92) if g <= 0.03928 else ((g + 0.055) / 1.055)**2.4
+        b = (b / 12.92) if b <= 0.03928 else ((b + 0.055) / 1.055)**2.4
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+    lum1 = relative_luminance(color1)
+    lum2 = relative_luminance(color2)
+    return (max(lum1, lum2) + 0.05) / (min(lum1, lum2) + 0.05)
+
+WCAG_THRESHOLD = 4.5
+
+def rgb_to_ansi(rgb):
+    """Convert an RGB tuple to a 24-bit ANSI escape sequence."""
+    r, g, b = rgb
+    return f"\x1b[38;2;{r};{g};{b}m"
+
+
+class ContrastAwareTerminalFormatter(TerminalTrueColorFormatter):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def format(self, tokensource, outfile):
+        for token, text in tokensource:
+            color = self.style.style_for_token(token)['color'] # Get hex color
+
+            if color:
+                fg_color = tuple(int(color[i:i+2], 16) for i in (0, 2, 4)) # Convert to RGB
+
+                ratio = contrast_ratio(fg_color, Style.Dark)
+                if ratio < WCAG_THRESHOLD:
+                    fg_color = tuple(min(255, x + 50) for x in fg_color)
+                    # You'd need color conversions here to do it correctly
+                    text_color_ansi = rgb_to_ansi(fg_color)
+
+                    outfile.write(text_color_ansi + text)
+                else:
+                    text_color_ansi = rgb_to_ansi(fg_color)
+                    outfile.write(text_color_ansi + text)
+            else:
+                outfile.write(text) #No color
 
 def gettmpdir():
     tmp_dir_all = os.path.join(tempfile.gettempdir(), "sd")
@@ -226,15 +281,9 @@ state = ParseState()
 
 def override_background(style_name, background_color):
     base_style = get_style_by_name(style_name)
-    base_style.background_color = background_color
-    for i in base_style:
-        i[1]['bgcolor'] = background_color
     for i,v in base_style.styles.items():
         if v and 'bg' in v:
             base_style.styles[i] = re.sub(r'bg:[^ ]*', '', base_style.styles[i] )
-    for k,v in base_style._styles.items():
-         if v[4] != '':
-             v[4] = ''
 
     return base_style
 
@@ -781,14 +830,14 @@ def parse(stream):
                         lexer = get_lexer_by_name("Bash")
                         custom_style = override_background("default", ansi2hex(Style.Dark))
 
-                    formatter = TerminalTrueColorFormatter(style=custom_style)
+                    formatter = ContrastAwareTerminalFormatter(style=custom_style)
                     if line.startswith(' ' * state.code_indent):
                         line = line[state.code_indent :]
 
                 elif line.startswith(" " * state.code_indent):
                     line = line[state.code_indent :]
 
-                # By now we have the properly stripped code line
+                # By now we have the properly stripped codjke line
                 # in the line variable. Add it to the buffer.
                 state.code_buffer_raw += line
                 state.code_line += line
@@ -797,6 +846,10 @@ def parse(stream):
                     state.code_line = ''
                 else:
                     continue
+
+                lexed = pygments.lex(line, lexer)
+                for token, text in lexed:
+                    print(f"({custom_style.styles[token]}, {text})", end=" ")
 
                 highlighted_code = highlight(line, lexer, formatter)
                 indent, line_wrap = code_wrap(line)
@@ -859,6 +912,7 @@ def parse(stream):
                     code_line = ' ' * indent + this_batch.strip()
 
                     margin = state.full_width( -len(pre[1]) ) - visible_length(code_line) % state.WidthFull
+                    print(f"{pre[0]}{Style.Codebg}{pre[1]}{code_line}{FORMATRESET}{' ' * max(0, margin)}{BGRESET}".encode('utf-8'))  
                     yield f"{pre[0]}{Style.Codebg}{pre[1]}{code_line}{FORMATRESET}{' ' * max(0, margin)}{BGRESET}"  
                 continue
             except Goto:
