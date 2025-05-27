@@ -8,7 +8,7 @@ tag_update() {
 pipy() {
     source .venv/bin/activate
     for i in pip hatch build; do
-        python3 -m pip install --upgrade $i
+        pip install --upgrade $i
     done
     python3 -m build .
     twine upload dist/*${version}*
