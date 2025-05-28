@@ -953,7 +953,7 @@ def parse(stream):
             continue
 
         # <h1> ... <h6>
-        header_match = re.match(r"^\s*(#{1,6})\s+(.*)", line)
+        header_match = re.match(r"^\s*(#{1,6})\s*(.*)", line)
         if header_match:
             level = len(header_match.group(1))
             yield emit_h(level, header_match.group(2))
