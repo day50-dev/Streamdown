@@ -26,7 +26,7 @@ Watch Streamdown run over a FIFO pipe through `tee` in tmux on an M4 using BitNe
 ### Provides clean copyable code for long code lines
 Other renderers inject line breaks when copying code that wraps around. Streamdown's better and now you are too!
 
-Set `PrettyBroken` and `PrettyPad` to False to make Streamdown ensure code is always cleanly mouse Copyable
+Set `PrettyBroken` and `PrettyPad` to False in your toml (see below) to make Streamdown ensure code is always cleanly mouse copyable
 ![Handle That Mandle](https://github.com/user-attachments/assets/a27aa70c-f691-4796-84f0-c2eb18c7de23)
 
 
