@@ -29,6 +29,7 @@ import shutil
 import traceback
 import colorsys
 import base64
+import subprocess
 from io import BytesIO
 from term_image.image import from_file, from_url
 import pygments.util
@@ -1086,7 +1087,6 @@ def main():
             import importlib.metadata
             print(importlib.metadata.version("streamdown"))
         except importlib.metadata.PackageNotFoundError:
-            import subprocess
             print(subprocess.run(
                 ['git', 'describe', '--always', '--dirty', '--tags'],
                 cwd=os.path.dirname(os.path.abspath(__file__)),
