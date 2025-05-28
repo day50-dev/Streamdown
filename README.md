@@ -34,7 +34,7 @@ Set `PrettyBroken` and `PrettyPad` to False to make Streamdown ensure code is al
 Here's kitty and alacritty. 
 ![doggie](https://github.com/user-attachments/assets/81c43983-68cd-40c1-b1d5-aa3a52004504)
 
-### hyperlinks (OSC 8) and clipboard (OSC 52)
+### Hyperlinks (OSC 8) and Clipboard (OSC 52)
 The optional `Clipboard` feature puts the final codeblock into your clipboard. See below for details.
 
 [links.webm](https://github.com/user-attachments/assets/a5f71791-7c58-4183-ad3b-309f470c08a3)
