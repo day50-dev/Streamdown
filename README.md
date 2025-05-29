@@ -67,7 +67,7 @@ It is designed for AI and can be used to do parser based sophisticated pipelines
 You can also just use it like a normal person.
 ## Configuration 
 
-It's located at `~/.config/streamdown/config.toml` in linux and `~/Library/Application Support/streamdown/config.toml` in macOS. If this file does not exist upon first run, it will be created with default values. 
+It's located at `~/.config/streamdown/config.toml` in Linux and `~/Library/Application Support/streamdown/config.toml` in macOS. If this file does not exist upon first run, it will be created with default values. 
 
 Here are the sections:
 
