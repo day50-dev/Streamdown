@@ -836,9 +836,15 @@ def parse(stream):
                         if ttl > 1+tline_len:
                             break
 
+
                     newlen = visible_length("".join(parts[i:]))
 
                     snipfrom = newlen - len(tline) + 2
+                    # this is all getting replaced with the new lexer so let's give a cheap
+                    # fix for now:
+                    if snipfrom == 1:
+                        snipfrom = 0
+
                     if snipfrom > 0:
                         parts[i] = parts[i][snipfrom:]
 
