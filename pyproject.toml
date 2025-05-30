@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "streamdown"
-version = "0.29.0"
+version = "0.30.0"
 description = "A streaming markdown renderer for modern terminals with syntax highlighting"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -36,8 +36,8 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/kristopolous/Streamdown"
-"Bug Tracker" = "https://github.com/kristopolous/Streamdown/issues"
+"Homepage" = "https://github.com/day50-dev/Streamdown"
+"Bug Tracker" = "https://github.com/day50-dev/Streamdown/issues"
 
 [project.scripts]
 streamdown = "streamdown.sd:main"
