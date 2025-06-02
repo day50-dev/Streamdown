@@ -20,8 +20,10 @@ fi
 import appdirs, toml
 import logging, tempfile
 import os,      sys
-import pty,     select
-import termios, tty
+import select
+
+if os.name != 'nt':
+    import pty, termios, tty
 
 import math
 import re
@@ -128,7 +130,7 @@ def debug_write(text):
         state.Logging.write(text)
 
 def savebrace():
-    if state.Savebrace and state.code_buffer_raw:
+    if state.Savebrace and state.code_buffer_raw and os.name != 'nt':
         path = os.path.join(gettmpdir(), 'savebrace')
         with open(path, "a") as f:
             f.write(state.code_buffer_raw + "\x00")
@@ -1134,10 +1136,11 @@ def main():
     Style.Link = f"{FG}{Style.Symbol}{UNDERLINE[0]}"
 
     logging.basicConfig(stream=sys.stdout, level=args.loglevel.upper(), format=f'%(message)s')
-    state.exec_master, state.exec_slave = pty.openpty()
+    if os.name != 'nt':
+        state.exec_master, state.exec_slave = pty.openpty()
     try:
         inp = sys.stdin
-        if args.exec:
+        if args.exec and os.name != 'nt':
             state.terminal = termios.tcgetattr(sys.stdin)
             state.is_exec = True
             state.exec_sub = subprocess.Popen(args.exec.split(' '), stdin=state.exec_slave, stdout=state.exec_slave, stderr=state.exec_slave, close_fds=True)
@@ -1168,7 +1171,7 @@ def main():
         state.exit = 130
         
     except Exception as ex:
-        if state.terminal:
+        if state.terminal and os.name != 'nt':
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
         logging.warning(f"Exception thrown: {type(ex)} {ex}")
         traceback.print_exc()
