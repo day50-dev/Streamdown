@@ -1088,7 +1088,7 @@ def width_calc():
 def main():
     parser = ArgumentParser(
             formatter_class=argparse.RawDescriptionHelpFormatter, description=textwrap.dedent(f"""
-    Streamdown is a Streaming markdown renderer for modern terminals.
+    Streamdown is a streaming markdown renderer for modern terminals.
     https://github.com/day50-dev/Streamdown
 
     paths:

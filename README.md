@@ -138,7 +138,7 @@ To override the margin.
 usage: sd [-h] [-l LOGLEVEL] [-b BASE] [-c CONFIG] [-w WIDTH] [-e EXEC]
           [-s SCRAPE] [filenameList ...]
 
-Streamdown is a Streaming markdown renderer for modern terminals.
+Streamdown is a streaming markdown renderer for modern terminals.
 https://github.com/day50-dev/Streamdown
 
 paths:
