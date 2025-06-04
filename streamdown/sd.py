@@ -121,7 +121,12 @@ split_up = lambda line: re.findall(r'(\x1b[^m]*m|[^\x1b]*)', line)
 def gettmpdir():
     tmp_dir_all = os.path.join(tempfile.gettempdir(), "sd")
     os.makedirs(tmp_dir_all, mode=0o777, exist_ok=True)
-    tmp_dir = os.path.join(tmp_dir_all, str(os.getuid()))
+
+    if os.name != 'nt':
+        tmp_dir = os.path.join(tmp_dir_all, str(os.getuid()))
+    else:
+        tmp_dir = tmp_dir_all
+
     os.makedirs(tmp_dir, exist_ok=True)
     return tmp_dir
 
