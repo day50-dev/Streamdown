@@ -139,8 +139,10 @@ usage: sd [-h] [-l LOGLEVEL] [-b BASE] [-c CONFIG] [-w WIDTH] [-e EXEC]
           [-s SCRAPE] [filenameList ...]
 
 Streamdown is a Streaming markdown renderer for modern terminals.
+
   Latest: https://github.com/day50-dev/Streamdown
   Config: /home/chris/.config/streamdown/config.toml
+  Logs:   /tmp/sd/1000
 
 positional arguments:
   filenameList          Input file to process (also takes stdin)
