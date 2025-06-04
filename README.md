@@ -9,7 +9,7 @@
 
 Streamdown works with any streaming markdown such as [simonw's llm](https://github.com/simonw/llm) or even something basic like curl. 
 
-It's made to be compatible with and consistently render the wide variety of markdown from various llms. 
+It's designed for compatibility with the wide variety of markdown from various LLM models. 
 
 It supports standard piping and files as arguments like any normal pager but can also run as a wrapper so you retain full keyboard interactivity. Arrow keys, control, alt, all still work.
 ```bash
