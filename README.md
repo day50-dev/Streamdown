@@ -108,7 +108,7 @@ Controls optional features:
 *   `CodeSpaces` (boolean, default: `true`): Enables detection of code blocks indented with 4 spaces. Set to `false` to disable this detection method (triple-backtick blocks still work).
 *   `Clipboard` (boolean, default: `true`): Enables copying the last code block encountered to the system clipboard using OSC 52 escape sequences upon exit. Set to `false` to disable.
 *   `Logging` (boolean, default: `false`): Enables logging to tmpdir (/tmp/sd) of the raw markdown for debugging and bug reporting. The logging uses an emoji as a record separator so the actual streaming delays can be simulated and replayed. If you use the `filename` based invocation, that is to say, `sd <filename>`, this type of logging is always off.
-*   `Savebrace` (boolean, default: `true`): Saves the code blocks of a conversation to the append file `/tmp/sd/savebrace` so you can fzf or whatever you want through it. See how it's used in my [llmehelp](https://github.com/kristopolous/llmehelp) scripts, specifically `screen-query` and `sd-picker`.
+*   `Savebrace` (boolean, default: `true`): Saves the code blocks of a conversation to the append file `$TMP/sd/$UID/savebrace` so you can `fzf` or whatever you want through it. See how it's used in DAY50's [sidechat](https://github.com/day50-dev/sidechat).
 
 Example:
 ```toml
