@@ -1089,10 +1089,11 @@ def main():
     parser = ArgumentParser(
             formatter_class=argparse.RawDescriptionHelpFormatter, description=textwrap.dedent(f"""
     Streamdown is a Streaming markdown renderer for modern terminals.
+    https://github.com/day50-dev/Streamdown
 
-      Latest: https://github.com/day50-dev/Streamdown
-      Config: {os.path.join(appdirs.user_config_dir('streamdown'), 'config.toml')}
-      Logs:   {gettmpdir()}
+    paths:
+      config                {os.path.join(appdirs.user_config_dir('streamdown'), 'config.toml')}
+      logs                  {gettmpdir()}
     """))
     parser.add_argument("filenameList", nargs="*", help="Input file to process (also takes stdin)")
     parser.add_argument("-l", "--loglevel", default="INFO", help="Set the logging level")
