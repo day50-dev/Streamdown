@@ -37,6 +37,8 @@ from term_image.image import from_file, from_url
 import pygments.util
 from wcwidth import wcwidth
 from functools import reduce
+import textwrap
+import argparse
 from argparse import ArgumentParser
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
@@ -1079,7 +1081,12 @@ def width_calc():
     ]
 
 def main():
-    parser = ArgumentParser(description="Streamdown - A Streaming markdown renderer for modern terminals.  Latest version: https://github.com/day50-dev/Streamdown")
+    parser = ArgumentParser(
+            formatter_class=argparse.RawDescriptionHelpFormatter, description=textwrap.dedent(f"""
+    Streamdown is a Streaming markdown renderer for modern terminals.
+      Latest: https://github.com/day50-dev/Streamdown
+      Config: {os.path.join(appdirs.user_config_dir('streamdown'), 'config.toml')}
+    """))
     parser.add_argument("filenameList", nargs="*", help="Input file to process (also takes stdin)")
     parser.add_argument("-l", "--loglevel", default="INFO", help="Set the logging level")
     parser.add_argument("-b", "--base", default=None, help="Set the hsv base: h,s,v")
