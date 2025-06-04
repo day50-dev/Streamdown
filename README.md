@@ -67,7 +67,7 @@ It is designed for AI and can be used to do parser based sophisticated pipelines
 You can also just use it like a normal person.
 ## Configuration 
 
-It's platform specific and can be seen with the `-h` flag. If this file does not exist upon first run, it will be created with default values. 
+The location it's stored is platform specific and can be seen with the `-h` flag. If this file does not exist upon first run, it will be created with default values. 
 
 Here are the sections:
 
@@ -162,6 +162,8 @@ optional arguments:
                         Scrape code snippets to a directory SCRAPE
   -v, --version         Show version information
 ```
+
+**Note**: Some features are not supported on some OSs. Please file a ticket if you need a feature on your platform that isn't working.
 
 ## Demo
 Do this
