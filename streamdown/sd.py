@@ -161,7 +161,7 @@ class ParseState:
         self.buffer = b''
         self.current_line = ''
         self.first_line = True
-        self.last_line_empty = False
+        self.last_line_empty = True
         self.is_pty = False
         self.is_exec = False
         self.maybe_prompt = False
