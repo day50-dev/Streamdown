@@ -12,5 +12,5 @@ pipy() {
     python3 -m build .
     twine upload dist/*${version}*
 }
-#tag_update
+tag_update
 pipy
