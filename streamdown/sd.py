@@ -605,6 +605,7 @@ def parse(stream):
             elif stream.fileno() in ready_in: 
                 byte = os.read(stream.fileno(), 1)
                 TimeoutIx = 0
+
             elif TimeoutIx == 0:
                 # This is our record separator for debugging - hands peaking
                 debug_write("🫣".encode('utf-8'))
@@ -614,7 +615,13 @@ def parse(stream):
             byte = stream.read(1)
 
         if byte is not None:
-            if byte == b'': break
+            # This is the eol
+            if byte == b'': 
+                if len(state.buffer) == 0:
+                    break
+                else:
+                    byte = b'\n'
+
             state.buffer += byte
             debug_write(byte)
 
@@ -622,6 +629,7 @@ def parse(stream):
 
         line = state.buffer.decode('utf-8').replace('\t','  ')
         state.has_newline = line.endswith('\n')
+
         # I hate this. There should be better ways.
         state.maybe_prompt = not state.has_newline and state.current()['none'] and re.match(r'^.*>\s+$', visible(line))
 
@@ -666,7 +674,7 @@ def parse(stream):
                 yield FGRESET
                 state.block_depth = 0
 
-        # --- Collapse Multiple Empty Lines if not in code blocks ---
+        # Collapse Multiple Empty Lines if not in code blocks
         if not state.in_code:
             is_empty = line.strip() == ""
 
