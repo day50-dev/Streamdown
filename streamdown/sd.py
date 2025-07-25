@@ -1190,6 +1190,7 @@ def main():
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
         logging.warning(f"Exception thrown: {type(ex)} {ex}")
         traceback.print_exc()
+        state.exit = 1
 
     if os.isatty(sys.stdout.fileno()) and state.Clipboard and state.code_buffer_raw:
         code = state.code_buffer_raw
