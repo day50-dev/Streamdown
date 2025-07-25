@@ -6,7 +6,6 @@ tag_update() {
     git push --tags
 }
 pipy() {
-    source .venv/bin/activate
     for i in pip hatch build; do
         pip install --upgrade $i
     done
