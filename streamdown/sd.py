@@ -57,6 +57,7 @@ Clipboard  = true
 Logging    = false
 Timeout    = 0.1
 Savebrace  = true
+Images     = true
 
 [style]
 Margin          = 2 
@@ -496,7 +497,9 @@ def line_format(line):
         url = match.group(2)
         return f'{LINK[0]}{url}\033\\{Style.Link}{description}{UNDERLINE[1]}{LINK[1]}{FGRESET}'
 
-    line = re.sub(r"\!\[([^\]]*)\]\(([^\)]+)\)", process_images, line)
+    if state.Images:
+        line = re.sub(r"\!\[([^\]]*)\]\(([^\)]+)\)", process_images, line)
+
     line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
     line = re.sub(r"\[\^(\d+)\]:?", footnotes, line)
 
@@ -1142,7 +1145,7 @@ def main():
         setattr(Style, color, apply_multipliers(style, color, H, S, V))
     for attr in ['PrettyPad', 'PrettyBroken', 'Margin', 'ListIndent', 'Syntax']:
         setattr(Style, attr, style.get(attr))
-    for attr in ['CodeSpaces', 'Clipboard', 'Logging', 'Timeout', 'Savebrace']:
+    for attr in ['Images', 'CodeSpaces', 'Clipboard', 'Logging', 'Timeout', 'Savebrace']:
         setattr(state, attr, features.get(attr))
 
 
