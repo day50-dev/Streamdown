@@ -839,7 +839,7 @@ def parse(stream):
                     while parts[-1] in [FGRESET, FORMATRESET]:
                         parts.pop()
 
-                    tline_len = visible_length(tline)
+                    tline_len = visible_length(tline.rstrip('\r\n'))
 
                     # now we find the new stuff:
                     ttl = 0
@@ -850,7 +850,7 @@ def parse(stream):
 
                         ttl += len(idx) if idx[0] != '\x1b' else 0
 
-                        if ttl > 1+tline_len:
+                        if ttl > tline_len:
                             break
 
 
