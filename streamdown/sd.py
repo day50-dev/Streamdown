@@ -58,6 +58,7 @@ Logging    = false
 Timeout    = 0.1
 Savebrace  = true
 Images     = true
+Links      = true
 
 [style]
 Margin          = 2 
@@ -500,7 +501,9 @@ def line_format(line):
     if state.Images:
         line = re.sub(r"\!\[([^\]]*)\]\(([^\)]+)\)", process_images, line)
 
-    line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
+    if state.Links:
+        line = re.sub(r"\[([^\]]+)\]\(([^\)]+)\)", process_links, line)
+
     line = re.sub(r"\[\^(\d+)\]:?", footnotes, line)
 
     tokenList = re.finditer(r"((~~|\*\*_|_\*\*|\*{1,3}|_{1,3}|`+)|[^~_*`]+)", line)
@@ -1145,7 +1148,7 @@ def main():
         setattr(Style, color, apply_multipliers(style, color, H, S, V))
     for attr in ['PrettyPad', 'PrettyBroken', 'Margin', 'ListIndent', 'Syntax']:
         setattr(Style, attr, style.get(attr))
-    for attr in ['Images', 'CodeSpaces', 'Clipboard', 'Logging', 'Timeout', 'Savebrace']:
+    for attr in ['Links', 'Images', 'CodeSpaces', 'Clipboard', 'Logging', 'Timeout', 'Savebrace']:
         setattr(state, attr, features.get(attr))
 
 
