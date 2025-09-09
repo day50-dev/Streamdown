@@ -206,6 +206,7 @@ class ParseState:
         self.in_underline = False
         self.in_strikeout = False
         self.block_depth = 0
+        self.block_type = None
 
         self.exec_sub = None
         self.exec_master = None
@@ -667,16 +668,20 @@ def parse(stream):
         block_match = re.match(r"^\s*((>\s*)+|<.?think>)", line)
         if not state.in_code and block_match:
             if block_match.group(1) == '</think>':
+                line = ''
                 state.block_depth = 0
                 yield RESET
             elif block_match.group(1) == '<think>':
+                line = ''
                 state.block_depth = 1
+                state.block_type = 'think'
             else:
                 state.block_depth = block_match.group(0).count('>')
+                state.block_type = '>'
                 # we also need to consume those tokens
                 line = line[len(block_match.group(0)):]
         else:
-            if state.block_depth > 0:
+            if state.block_type == '>' and state.block_depth > 0:
                 yield FGRESET
                 state.block_depth = 0
 
