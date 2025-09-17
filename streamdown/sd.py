@@ -665,14 +665,18 @@ def parse(stream):
         """
         
         # running this here avoids stray |
-        block_match = re.match(r"^\s*((>\s*)+|<.?think>)", line)
+        # So kimi doesn't newline after the <think> token and it uses some unicode triangle?. They'll 
+        # newline at the end of it, but not the beginning.
+        block_match = re.match(r"^\s*((>\s*)+|[◁<].?think[>▷])(.*)", line)
         if not state.in_code and block_match:
-            if block_match.group(1) == '</think>':
+            # wtf is this you might ask! Not all thinking models use < and > ...
+            # because why make life easy?
+            if block_match.group(1)[1:7] == '/think':
                 line = ''
                 state.block_depth = 0
                 yield RESET
-            elif block_match.group(1) == '<think>':
-                line = ''
+            elif block_match.group(1)[1:6] == 'think':
+                line = block_match.group(3)
                 state.block_depth = 1
                 state.block_type = 'think'
             else:
