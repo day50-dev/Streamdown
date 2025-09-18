@@ -680,10 +680,10 @@ def parse(stream):
                 state.block_depth = 1
                 state.block_type = 'think'
             else:
-                state.block_depth = block_match.group(0).count('>')
+                state.block_depth = block_match.group(1).count('>')
                 state.block_type = '>'
                 # we also need to consume those tokens
-                line = line[len(block_match.group(0)):]
+                line = line[len(block_match.group(1)):]
         else:
             if state.block_type == '>' and state.block_depth > 0:
                 yield FGRESET
