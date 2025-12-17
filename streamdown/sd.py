@@ -167,6 +167,7 @@ class ParseState:
         self.is_pty = False
         self.is_exec = False
         self.maybe_prompt = False
+        self.prompt_regex = None
         self.emit_flag = None
         self.scrape = None
         self.scrape_ix = 0
@@ -637,8 +638,7 @@ def parse(stream):
         line = state.buffer.decode('utf-8').replace('\t','  ')
         state.has_newline = line.endswith('\n')
 
-        # I hate this. There should be better ways.
-        state.maybe_prompt = not state.has_newline and state.current()['none'] and re.match(r'^.*>\s+$', visible(line))
+        state.maybe_prompt = not state.has_newline and state.current()['none'] and re.match(state.prompt_regex, visible(line))
 
         # let's wait for a newline
         if state.maybe_prompt:
@@ -1124,6 +1124,7 @@ def main():
     parser.add_argument("-c", "--config", default=None, help="Use a custom config override")
     parser.add_argument("-w", "--width", default="0", help="Set the width WIDTH")
     parser.add_argument("-e", "--exec", help="Wrap a program EXEC for more 'proper' i/o handling")
+    parser.add_argument("-p", "--prompt", default="^.*>\\s+$", help="A PCRE regex prompt to detect (default: %(default)s)")
     parser.add_argument("-s", "--scrape", help="Scrape code snippets to a directory SCRAPE")
     parser.add_argument("-v", "--version", action="store_true", help="Show version information")
     args = parser.parse_args()
@@ -1167,6 +1168,7 @@ def main():
 
     Style.MarginSpaces = " " * Style.Margin
     state.WidthArg = int(args.width) or style.get("Width") or 0
+    state.prompt_regex = re.compile(args.prompt)
     Style.Blockquote = f"{FG}{Style.Grey}│ "
     width_calc()
 
