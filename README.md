@@ -158,6 +158,8 @@ optional arguments:
   -w WIDTH, --width WIDTH
                         Set the width WIDTH
   -e EXEC, --exec EXEC  Wrap a program EXEC for more 'proper' i/o handling
+  -p PROMPT, --prompt PROMPT
+                        A PCRE regex prompt to detect (default: ^.*>\s+$)
   -s SCRAPE, --scrape SCRAPE
                         Scrape code snippets to a directory SCRAPE
   -v, --version         Show version information
