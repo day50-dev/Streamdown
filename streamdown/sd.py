@@ -129,7 +129,10 @@ def gettmpdir():
     else:
         tmp_dir = tmp_dir_all
 
+    prev_mask = os.umask(0)
+    # This is shared among all users
     os.makedirs(tmp_dir, exist_ok=True)
+    os.umask(prev_mask)
     return tmp_dir
 
 def debug_write(text):
