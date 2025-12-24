@@ -126,6 +126,8 @@ $ sd --exec "llm chat"
 
 And now you have all your readline stuff. It's pretty great. (Also see the DAY50 shellwrap project.)
 
+This relies on "guessing" what a prompt will look like. But don't worry, you can change that with the `--prompt` option if yours is a bit unique. It's a PCRE regex, so you can be a bit flexible.
+
 It's also worth noting that things like the `-c` aren't "broken" with regard to file input. You can do something like this:
 
 ```shell
