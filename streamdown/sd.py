@@ -141,6 +141,10 @@ def debug_write(text):
             state.Logging = tempfile.NamedTemporaryFile(dir=gettmpdir(), prefix="dbg", delete=False, mode="wb")
         state.Logging.write(text)
 
+def sub_extract(line, upto):
+    # this takes the line up to the upto string and then returns the ansi codes
+    return ''.join(extract_ansi_codes(line[:line.find(upto)]))
+
 def savebrace():
     if state.Savebrace and state.code_buffer_raw and os.name != 'nt':
         path = os.path.join(gettmpdir(), 'savebrace')
@@ -449,7 +453,7 @@ def text_wrap(text, width = -1, indent = 0, first_line_prefix="", subsequent_lin
                 # that we have closed our hyperlink OSC
                 if LINK[0] in line_content:
                     line_content += LINK[1]
-                lines.append(line_content + resetter + state.bg + ' ' * margin)
+                lines.append(line_content + resetter + sub_extract(line_content, LINK[0]) + state.bg + ' ' * margin)
 
             current_line = (" " * indent) + "".join(current_style) + word
 
@@ -499,6 +503,9 @@ def line_format(line):
 
     # Apply OSC 8 hyperlink formatting after other formatting
     def process_links(match):
+        #import pdb
+        #pdb.set_trace()
+        print(match)
         description = match.group(1)
         url = match.group(2)
         return f'{LINK[0]}{url}\033\\{Style.Link}{description}{UNDERLINE[1]}{LINK[1]}{FGRESET}'
