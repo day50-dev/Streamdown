@@ -661,18 +661,20 @@ def parse(stream):
             continue
 
         state.buffer = b''
-        """
-        # Run through the plugins first
-        res = latex.Plugin(line, state, Style)
-        if res is True:
-            # This means everything was consumed by our plugin and 
-            # we should continue
-            continue
-        elif res is not None:
-            for row in res:
-                yield row
+        # Run through the plugins first (skip in code blocks)
+        if not state.in_code:
+            res = latex.Plugin(line, state, Style)
+            if res is True:
+                # This means everything was consumed by our plugin and
+                # we should continue
                 continue
-        """
+            elif isinstance(res, str):
+                line = res
+            elif res is not None:
+                for row in res:
+                    yield row
+                    continue
+                continue
         
         # running this here avoids stray |
         # So kimi doesn't newline after the <think> token and it uses some unicode triangle?. They'll 

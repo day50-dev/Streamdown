@@ -9,3 +9,6 @@ There's two drivers:
  * line-buffer.sh: Some parts of the parser waits for newlines, and this tool will feed line by line.
 
 They both accept a TIMEOUT env variable
+
+Math conversion tests:
+  python3 tests/test_math_conversion.py
