@@ -1039,7 +1039,10 @@ def parse(stream):
 
 def terminal_prep(what):
     if Style.Plaintext:
-        return "\n".join([x.rstrip() for x in strip_ansi(what)])
+        line = "\n".join([x.rstrip() for x in strip_ansi(what).split("\n")])
+        if len(line.strip()) == 0:
+          return ""
+        return line
     return what
 
 def emit(inp):
