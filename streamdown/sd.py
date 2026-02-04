@@ -1039,7 +1039,7 @@ def parse(stream):
 
 def terminal_prep(what):
     if Style.Plaintext:
-        return strip_ansi(what)
+        return "\n".join([x.rstrip() for x in strip_ansi(what)])
     return what
 
 def emit(inp):
