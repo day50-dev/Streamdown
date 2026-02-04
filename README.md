@@ -138,7 +138,8 @@ To override the margin.
 
 ```shell
 usage: sd [-h] [-l LOGLEVEL] [-b BASE] [-c CONFIG] [-w WIDTH] [-e EXEC]
-          [-s SCRAPE] [filenameList ...]
+          [-p PROMPT] [-s SCRAPE] [-v] [--strip]
+          [filenameList ...]
 
 Streamdown is a streaming markdown renderer for modern terminals.
 https://github.com/day50-dev/Streamdown
@@ -150,21 +151,18 @@ paths:
 positional arguments:
   filenameList          Input file to process (also takes stdin)
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  -l LOGLEVEL, --loglevel LOGLEVEL
+  -l, --loglevel LOGLEVEL
                         Set the logging level
-  -b BASE, --base BASE  Set the hsv base: h,s,v
-  -c CONFIG, --config CONFIG
-                        Use a custom config override
-  -w WIDTH, --width WIDTH
-                        Set the width WIDTH
-  -e EXEC, --exec EXEC  Wrap a program EXEC for more 'proper' i/o handling
-  -p PROMPT, --prompt PROMPT
-                        A PCRE regex prompt to detect (default: ^.*>\s+$)
-  -s SCRAPE, --scrape SCRAPE
-                        Scrape code snippets to a directory SCRAPE
+  -b, --base BASE       Set the hsv base: h,s,v
+  -c, --config CONFIG   Use a custom config override
+  -w, --width WIDTH     Set the width WIDTH
+  -e, --exec EXEC       Wrap a program EXEC for more 'proper' i/o handling
+  -p, --prompt PROMPT   A PCRE regex prompt to detect (default: ^.*>\s+$)
+  -s, --scrape SCRAPE   Scrape code snippets to a directory SCRAPE
   -v, --version         Show version information
+  --strip               Just strip the markdown and output plaintext
 ```
 
 **Note**: Some features are not supported on some OSs. Please file a ticket if you need a feature on your platform that isn't working.
