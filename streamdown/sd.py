@@ -117,6 +117,7 @@ visible = lambda x: re.sub(ANSIESCAPE, "", x)
 # many characters have different widths
 visible_length = lambda x: sum(wcwidth(c) for c in visible(x))
 extract_ansi_codes = lambda text: re.findall(ESCAPE, text)
+strip_ansi = lambda line: re.sub(ANSIESCAPE, '', line)
 remove_ansi = lambda line, codeList: reduce(lambda line, code: line.replace(code, ''), codeList, line)
 split_up = lambda line: re.findall(r'(\x1b[^m]*m|[^\x1b]*)', line)
 
@@ -1036,6 +1037,11 @@ def parse(stream):
             for wrapped_line in wrapped_lines:
                 yield f"{state.space_left()}{wrapped_line}\n"
 
+def terminal_prep(what):
+    if Style.Plaintext:
+        return strip_ansi(what)
+    return what
+
 def emit(inp):
     buffer = []
     flush = False
@@ -1075,10 +1081,10 @@ def emit(inp):
         else:
             chunk = buffer.pop(0)
 
-        print(chunk, end="", file=sys.stdout, flush=True)
+        print(terminal_prep(chunk), end="", file=sys.stdout, flush=True)
 
     if len(buffer):
-        print(buffer.pop(0), file=sys.stdout, end="", flush=True)
+        print(terminal_prep(buffer.pop(0)), file=sys.stdout, end="", flush=True)
 
 def ansi2hex(ansi_code):
     parts = ansi_code.strip('m').split(";")
@@ -1137,6 +1143,7 @@ def main():
     parser.add_argument("-p", "--prompt", default="^.*>\\s+$", help="A PCRE regex prompt to detect (default: %(default)s)")
     parser.add_argument("-s", "--scrape", help="Scrape code snippets to a directory SCRAPE")
     parser.add_argument("-v", "--version", action="store_true", help="Show version information")
+    parser.add_argument("--strip", action="store_true", help="Just strip the markdown and output plaintext")
     args = parser.parse_args()
 
     if args.version:
@@ -1166,7 +1173,7 @@ def main():
 
     for color in ["Dark", "Mid", "Symbol", "Head", "Grey", "Bright"]:
         setattr(Style, color, apply_multipliers(style, color, H, S, V))
-    for attr in ['PrettyPad', 'PrettyBroken', 'Margin', 'ListIndent', 'Syntax']:
+    for attr in ['PrettyPad', 'PrettyBroken', 'Margin', 'ListIndent', 'Syntax', 'Plaintext']:
         setattr(Style, attr, style.get(attr))
     for attr in ['Links', 'Images', 'CodeSpaces', 'Clipboard', 'Logging', 'Timeout', 'Savebrace']:
         setattr(state, attr, features.get(attr))
@@ -1176,6 +1183,7 @@ def main():
         os.makedirs(args.scrape, exist_ok=True)
         state.scrape = args.scrape
 
+    Style.Plaintext = args.strip
     Style.MarginSpaces = " " * Style.Margin
     state.WidthArg = int(args.width) or style.get("Width") or 0
     state.prompt_regex = re.compile(args.prompt)
