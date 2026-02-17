@@ -506,7 +506,7 @@ def line_format(line):
     def process_links(match):
         #import pdb
         #pdb.set_trace()
-        print(match)
+        #print(match)
         description = match.group(1)
         url = match.group(2)
         return f'{LINK[0]}{url}\033\\{Style.Link}{description}{UNDERLINE[1]}{LINK[1]}{FGRESET}'
