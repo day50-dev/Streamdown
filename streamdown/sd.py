@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
