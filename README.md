@@ -6,8 +6,7 @@
 
 </p>
 
-
-Streamdown works with any streaming markdown such as [simonw's llm](https://github.com/simonw/llm) or even something basic like curl. 
+Render markdown with any terminal application, in any context, in realtime.
 
 It's designed for compatibility with the wide variety of markdown from various LLM models. 
 
