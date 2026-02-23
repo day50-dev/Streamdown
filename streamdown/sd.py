@@ -235,7 +235,6 @@ class Streamdown:
                 self.state.exec_sub.wait()
 
         print(terminal_prep(RESET), end="")
-        sys.exit(self.state.exit)
 
     def render(self,inp):
         """Renders the content"""
@@ -1311,3 +1310,4 @@ if __name__ == "__main__":
         state.exit = 1
 
     _sd.tidyup()
+    sys.exit(state.exit)
