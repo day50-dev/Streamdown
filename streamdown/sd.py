@@ -156,8 +156,44 @@ def savebrace():
 class Goto(Exception):
     pass
 
-class Style:
-    pass
+class Streamdown:
+    def __init__(self):
+        self.Style = StyleClass()
+        self.state = ParseState()
+        pass
+    
+    def setup(self, config_path=None, H = None, S = None, V = None, plaintext = False):
+        config = ensure_config_file(config_path)
+        style = toml.loads(default_toml).get('style') | config.get("style", {})
+        features = toml.loads(default_toml).get('features') | config.get("features", {})
+
+        _H, _S, _V = style.get("HSV")
+        H = H or _H
+        S = S or _S
+        V = V or _V
+
+        for color in ["Dark", "Mid", "Symbol", "Head", "Grey", "Bright"]:
+            setattr(self.Style, color, apply_multipliers(style, color, H, S, V))
+        for attr in ['PrettyPad', 'PrettyBroken', 'Margin', 'ListIndent', 'Syntax', 'Plaintext']:
+            setattr(self.Style, attr, style.get(attr))
+
+        self.Style.Codebg = f"{BG}{self.Style.Dark}"
+        self.Style.Link = f"{FG}{self.Style.Symbol}{UNDERLINE[0]}"
+        self.Style.Plaintext = plaintext
+        self.Style.Blockquote = f"{FG}{self.Style.Grey}│ "
+        self.Style.MarginSpaces = " " * self.Style.Margin
+
+        for attr in ['Links', 'Images', 'CodeSpaces', 'Clipboard', 'Logging', 'Timeout', 'Savebrace']:
+            setattr(self.state, attr, features.get(attr))
+
+        self.state.WidthArg = int(args.width) or style.get("Width") or 0
+        self.state.prompt_regex = re.compile(args.prompt)
+        width_calc()
+
+class StyleClass:
+    def __init__(self):
+        pass
+
 
 class Code:
     Spaces = 'spaces'
@@ -243,8 +279,6 @@ class ParseState:
     def space_left(self, listwidth = False):
         pre = ' ' * (len(state.list_item_stack)) * Style.ListIndent if listwidth else ''
         return pre + Style.MarginSpaces + (Style.Blockquote * self.block_depth) if len(self.current_line) == 0 else "" 
-
-state = ParseState()
 
 def override_background(style_name, background_color):
     base_style = get_style_by_name(style_name)
@@ -1127,7 +1161,26 @@ def width_calc():
         f"{pre}{RESET}{design[0]}{Style.Dark}{design[2] * state.full_width()}{RESET}"
     ]
 
-def main():
+def cleanup():
+
+    if os.isatty(sys.stdout.fileno()) and state.Clipboard and state.code_buffer_raw:
+        code = state.code_buffer_raw
+        # code needs to be a base64 encoded string before emitting
+        code_bytes = code.encode('utf-8')
+        base64_bytes = base64.b64encode(code_bytes)
+        base64_string = base64_bytes.decode('utf-8')
+        print(f"\033]52;c;{base64_string}\a", end="", flush=True)
+
+    if state.terminal:
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
+        os.close(state.exec_master)
+        if state.exec_sub:
+            state.exec_sub.wait()
+
+    print(terminal_prep(RESET), end="")
+    sys.exit(state.exit)
+
+if __name__ == "__main__":
     parser = ArgumentParser(
             formatter_class=argparse.RawDescriptionHelpFormatter, description=textwrap.dedent(f"""
     Streamdown is a streaming markdown renderer for modern terminals.
@@ -1149,6 +1202,10 @@ def main():
     parser.add_argument("--strip", action="store_true", help="Just strip the markdown and output plaintext")
     args = parser.parse_args()
 
+    _sd = Streamdown()
+    Style = _sd.Style
+    state = _sd.state
+
     if args.version:
         try:
             import importlib.metadata
@@ -1163,10 +1220,9 @@ def main():
 
         sys.exit(0)
 
-    config = ensure_config_file(args.config)
-    style = toml.loads(default_toml).get('style') | config.get("style", {})
-    features = toml.loads(default_toml).get('features') | config.get("features", {})
-    H, S, V = style.get("HSV")
+    H = None
+    S = None
+    V = None
 
     if args.base:
         env_colors = args.base.split(",")
@@ -1174,28 +1230,13 @@ def main():
         if len(env_colors) > 1: S = float(env_colors[1])
         if len(env_colors) > 2: V = float(env_colors[2])
 
-    for color in ["Dark", "Mid", "Symbol", "Head", "Grey", "Bright"]:
-        setattr(Style, color, apply_multipliers(style, color, H, S, V))
-    for attr in ['PrettyPad', 'PrettyBroken', 'Margin', 'ListIndent', 'Syntax', 'Plaintext']:
-        setattr(Style, attr, style.get(attr))
-    for attr in ['Links', 'Images', 'CodeSpaces', 'Clipboard', 'Logging', 'Timeout', 'Savebrace']:
-        setattr(state, attr, features.get(attr))
-
+    _sd.setup(config_path=args.config, H=H, S=S, V=V)
 
     if args.scrape:
         os.makedirs(args.scrape, exist_ok=True)
         state.scrape = args.scrape
 
-    Style.Plaintext = args.strip
-    Style.MarginSpaces = " " * Style.Margin
-    state.WidthArg = int(args.width) or style.get("Width") or 0
-    state.prompt_regex = re.compile(args.prompt)
-    Style.Blockquote = f"{FG}{Style.Grey}│ "
-    width_calc()
-
-    Style.Codebg = f"{BG}{Style.Dark}"
-    Style.Link = f"{FG}{Style.Symbol}{UNDERLINE[0]}"
-
+    
     logging.basicConfig(stream=sys.stdout, level=args.loglevel.upper(), format=f'%(message)s')
     if os.name != 'nt':
         state.exec_master, state.exec_slave = pty.openpty()
@@ -1238,22 +1279,4 @@ def main():
         traceback.print_exc()
         state.exit = 1
 
-    if os.isatty(sys.stdout.fileno()) and state.Clipboard and state.code_buffer_raw:
-        code = state.code_buffer_raw
-        # code needs to be a base64 encoded string before emitting
-        code_bytes = code.encode('utf-8')
-        base64_bytes = base64.b64encode(code_bytes)
-        base64_string = base64_bytes.decode('utf-8')
-        print(f"\033]52;c;{base64_string}\a", end="", flush=True)
-
-    if state.terminal:
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
-        os.close(state.exec_master)
-        if state.exec_sub:
-            state.exec_sub.wait()
-
-    print(terminal_prep(RESET), end="")
-    sys.exit(state.exit)
-
-if __name__ == "__main__":
-    main()
+    cleanup()
