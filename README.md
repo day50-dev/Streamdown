@@ -8,7 +8,7 @@
 
 Beautify markdown from any terminal application, any source, in any context, in realtime.
 
-Streamdownr is designed for the wide variety of markdown from various LLM models. 
+Streamdown is designed for the wide variety of markdown from various LLM models. 
 
 The CLI supports standard piping and files as arguments like any normal pager but can also run as a wrapper so you retain full keyboard interactivity. Arrow keys, control, alt, all still work.
 ```bash
