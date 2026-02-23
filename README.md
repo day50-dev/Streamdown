@@ -6,7 +6,7 @@
 
 </p>
 
-Render markdown with any terminal application, in any context, in realtime.
+Beautifully render markdown from any terminal application, any source, in any context, in realtime.
 
 It's designed for compatibility with the wide variety of markdown from various LLM models. 
 
