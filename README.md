@@ -8,12 +8,21 @@
 
 Beautify markdown from any terminal application, any source, in any context, in realtime.
 
-It's designed for compatibility with the wide variety of markdown from various LLM models. 
+Streamdownr is designed for the wide variety of markdown from various LLM models. 
 
-It supports standard piping and files as arguments like any normal pager but can also run as a wrapper so you retain full keyboard interactivity. Arrow keys, control, alt, all still work.
+The CLI supports standard piping and files as arguments like any normal pager but can also run as a wrapper so you retain full keyboard interactivity. Arrow keys, control, alt, all still work.
 ```bash
-$ pip install streamdown
+$ uv tool install streamdown
 ```
+
+You can also use it in code as a library
+
+```
+sd = Streamdown()
+sd.render(content)
+sd.tidyup()
+```
+
 ![Streamdown is Amazing](https://github.com/user-attachments/assets/268cb340-78cc-4df0-a773-c5ac95eceeeb)
 
 ## Fast and Realtime.

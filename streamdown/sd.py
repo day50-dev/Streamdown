@@ -32,13 +32,13 @@ import traceback
 import colorsys
 import base64
 import subprocess
-from io import BytesIO
-from term_image.image import from_file, from_url
 import pygments.util
-from wcwidth import wcwidth
-from functools import reduce
 import textwrap
 import argparse
+from io import BytesIO
+from term_image.image import from_file, from_url
+from wcwidth import wcwidth
+from functools import reduce
 from argparse import ArgumentParser
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
@@ -160,13 +160,40 @@ class Streamdown:
     def __init__(self):
         self.Style = StyleClass()
         self.state = ParseState()
+        self._setup = False
         pass
     
-    def setup(self, config_path=None, H = None, S = None, V = None, plaintext = False):
+    def setup(self, config_path=None, H = None, S = None, V = None, plaintext = False, scrape = None):
+        """Configure and initialize the Streamdown instance.
+
+        Load configuration, set style based on HSV values, and initialise feature
+
+        Loads the TOML configuration, merges any HSV overrides, builds the colour
+        palette and stores feature flags in ``self.state``. The method does not
+        return a value.
+
+        Parameters
+        ----------
+        config_path : str, optional
+            Path to a TOML configuration file.
+        H, S, V : float, optional
+            Override HSV values.
+        plaintext : bool, optional
+            Strip colour codes from output.
+
+        Raises
+        ------
+        FileNotFoundError, tomli.TomlDecodeError 
+        """
+
         config = ensure_config_file(config_path)
         style = toml.loads(default_toml).get('style') | config.get("style", {})
         features = toml.loads(default_toml).get('features') | config.get("features", {})
 
+        if scrape:
+            os.makedirs(scrape, exist_ok=True)
+            self.state.scrape = scrape
+            
         _H, _S, _V = style.get("HSV")
         H = H or _H
         S = S or _S
@@ -189,11 +216,38 @@ class Streamdown:
         self.state.WidthArg = int(args.width) or style.get("Width") or 0
         self.state.prompt_regex = re.compile(args.prompt)
         width_calc()
+        self._setup = True
+
+    def tidyup(self):
+        """Returns the terminal to normal"""
+        if os.isatty(sys.stdout.fileno()) and self.state.Clipboard and self.state.code_buffer_raw:
+            code = self.state.code_buffer_raw
+            # code needs to be a base64 encoded string before emitting
+            code_bytes = code.encode('utf-8')
+            base64_bytes = base64.b64encode(code_bytes)
+            base64_string = base64_bytes.decode('utf-8')
+            print(f"\033]52;c;{base64_string}\a", end="", flush=True)
+
+        if self.state.terminal:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.state.terminal)
+            os.close(self.state.exec_master)
+            if self.state.exec_sub:
+                self.state.exec_sub.wait()
+
+        print(terminal_prep(RESET), end="")
+        sys.exit(self.state.exit)
+
+    def render(self,inp):
+        """Renders the content"""
+
+        if not self._setup:
+            self.setup()
+
+        return emit(inp)
 
 class StyleClass:
     def __init__(self):
         pass
-
 
 class Code:
     Spaces = 'spaces'
@@ -1161,24 +1215,6 @@ def width_calc():
         f"{pre}{RESET}{design[0]}{Style.Dark}{design[2] * state.full_width()}{RESET}"
     ]
 
-def cleanup():
-
-    if os.isatty(sys.stdout.fileno()) and state.Clipboard and state.code_buffer_raw:
-        code = state.code_buffer_raw
-        # code needs to be a base64 encoded string before emitting
-        code_bytes = code.encode('utf-8')
-        base64_bytes = base64.b64encode(code_bytes)
-        base64_string = base64_bytes.decode('utf-8')
-        print(f"\033]52;c;{base64_string}\a", end="", flush=True)
-
-    if state.terminal:
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, state.terminal)
-        os.close(state.exec_master)
-        if state.exec_sub:
-            state.exec_sub.wait()
-
-    print(terminal_prep(RESET), end="")
-    sys.exit(state.exit)
 
 if __name__ == "__main__":
     parser = ArgumentParser(
@@ -1230,13 +1266,8 @@ if __name__ == "__main__":
         if len(env_colors) > 1: S = float(env_colors[1])
         if len(env_colors) > 2: V = float(env_colors[2])
 
-    _sd.setup(config_path=args.config, H=H, S=S, V=V)
+    _sd.setup(config_path=args.config, H=H, S=S, V=V, scrape=args.scrape)
 
-    if args.scrape:
-        os.makedirs(args.scrape, exist_ok=True)
-        state.scrape = args.scrape
-
-    
     logging.basicConfig(stream=sys.stdout, level=args.loglevel.upper(), format=f'%(message)s')
     if os.name != 'nt':
         state.exec_master, state.exec_slave = pty.openpty()
@@ -1257,8 +1288,8 @@ if __name__ == "__main__":
             state.Logging = False
             for fname in args.filenameList:
                 if len(args.filenameList) > 1:
-                    emit(BytesIO(f"\n------\n# {fname}\n\n------\n".encode('utf-8')))
-                emit(open(fname, "rb"))
+                    _sd.render(BytesIO(f"\n------\n# {fname}\n\n------\n".encode('utf-8')))
+                _sd.render(open(fname, "rb"))
                 
         elif sys.stdin.isatty():
             parser.print_help()
@@ -1267,7 +1298,7 @@ if __name__ == "__main__":
             # this is a more sophisticated thing that we'll do in the main loop
             state.is_pty = True
             os.set_blocking(inp.fileno(), False) 
-            emit(inp)
+            _sd.render(inp)
 
     except (OSError, KeyboardInterrupt):
         state.exit = 130
@@ -1279,4 +1310,4 @@ if __name__ == "__main__":
         traceback.print_exc()
         state.exit = 1
 
-    cleanup()
+    _sd.tidyup()
