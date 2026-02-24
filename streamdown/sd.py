@@ -46,9 +46,9 @@ from pygments.formatters import TerminalTrueColorFormatter
 from pygments.styles import get_style_by_name
 
 if __package__ is None:
-    from plugins import latex
+    from plugins import *
 else:
-    from .plugins import latex
+    from .plugins import *
 
 default_toml = """
 [features]
@@ -118,6 +118,7 @@ visible = lambda x: re.sub(ANSIESCAPE, "", x)
 visible_length = lambda x: sum(wcwidth(c) for c in visible(x))
 extract_ansi_codes = lambda text: re.findall(ESCAPE, text)
 strip_ansi = lambda line: re.sub(ANSIESCAPE, '', line)
+scir = lambda line: strip_ansi(line) if state.block_depth > 0 else line
 remove_ansi = lambda line, codeList: reduce(lambda line, code: line.replace(code, ''), codeList, line)
 split_up = lambda line: re.findall(r'(\x1b[^m]*m|[^\x1b]*)', line)
 
@@ -163,7 +164,9 @@ class Streamdown:
         self._setup = False
         pass
     
-    def setup(self, config_path=None, H = None, S = None, V = None, plaintext = False, scrape = None):
+    def setup(self, config_path = None, 
+              H = None, S = None, V = None, 
+              plaintext = False, scrape = None, width = None, prompt = None):
         """Configure and initialize the Streamdown instance.
 
         Load configuration, set style based on HSV values, and initialise feature
@@ -180,6 +183,10 @@ class Streamdown:
             Override HSV values.
         plaintext : bool, optional
             Strip colour codes from output.
+        width : int, optional
+            Width to generated
+        prompt : str, optional
+            When detecting prompts in the exec mode this hints at what a valid prompt looks like
 
         Raises
         ------
@@ -213,8 +220,8 @@ class Streamdown:
         for attr in ['Links', 'Images', 'CodeSpaces', 'Clipboard', 'Logging', 'Timeout', 'Savebrace']:
             setattr(self.state, attr, features.get(attr))
 
-        self.state.WidthArg = int(args.width) or style.get("Width") or 0
-        self.state.prompt_regex = re.compile(args.prompt)
+        self.state.WidthArg = int(width) or style.get("Width") or 0
+        self.state.prompt_regex = re.compile(prompt)
         width_calc()
         self._setup = True
 
@@ -1085,7 +1092,7 @@ def parse(stream):
                 subsequent_line_prefix = " " * (indent)
             )
             for wrapped_line in wrapped_lineList:
-                yield f"{state.space_left()}{wrapped_line}\n"
+                yield f"{state.space_left()}{scir(wrapped_line)}\n"
 
             continue
 
@@ -1215,7 +1222,12 @@ def width_calc():
     ]
 
 
-if __name__ == "__main__":
+_sd = Streamdown()
+Style = _sd.Style
+state = _sd.state
+
+def main():
+    global _sd, Style, state
     parser = ArgumentParser(
             formatter_class=argparse.RawDescriptionHelpFormatter, description=textwrap.dedent(f"""
     Streamdown is a streaming markdown renderer for modern terminals.
@@ -1237,9 +1249,6 @@ if __name__ == "__main__":
     parser.add_argument("--strip", action="store_true", help="Just strip the markdown and output plaintext")
     args = parser.parse_args()
 
-    _sd = Streamdown()
-    Style = _sd.Style
-    state = _sd.state
 
     if args.version:
         try:
@@ -1265,7 +1274,7 @@ if __name__ == "__main__":
         if len(env_colors) > 1: S = float(env_colors[1])
         if len(env_colors) > 2: V = float(env_colors[2])
 
-    _sd.setup(config_path=args.config, H=H, S=S, V=V, scrape=args.scrape)
+    _sd.setup(config_path=args.config, H=H, S=S, V=V, scrape=args.scrape, width=args.width, prompt=args.prompt)
 
     logging.basicConfig(stream=sys.stdout, level=args.loglevel.upper(), format=f'%(message)s')
     if os.name != 'nt':
@@ -1311,3 +1320,6 @@ if __name__ == "__main__":
 
     _sd.tidyup()
     sys.exit(state.exit)
+
+if __name__ == "__main__": 
+    main()
