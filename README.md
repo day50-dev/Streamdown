@@ -187,4 +187,4 @@ After the git clone least one of these should work, hopefully. it's using the mo
     $ pip install -e .
     $ uv pip install -e . 
 
-Explore the rest of [DAY50](https://github.com/day50-dev). Feel free to follow us, there's some exciting stuff coming.
+Explore the rest of [DA`/50](https://github.com/day50-dev). Feel free to follow us, there's some exciting stuff coming.
